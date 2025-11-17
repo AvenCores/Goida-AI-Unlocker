@@ -52,7 +52,8 @@ def _safe_remove(path: str, retries: int = 3, delay: float = 0.3):
 # ----------- NEW: fetch remote additional hosts -------------------
 def _fetch_remote_additional() -> tuple[str, str]:
     """Return (version, hosts_add) fetched from remote additional_hosts.py.
-    On failure returns ("", "")."""
+    On failure returns ("", "").
+    If hosts_add is empty, version is also returned as empty."""
     import time as _t
     try:
         raw_txt = urllib.request.urlopen(f"{ADDITIONAL_HOSTS_URL}?t={int(_t.time())}", timeout=10).read().decode("utf-8", errors="ignore")
@@ -63,6 +64,9 @@ def _fetch_remote_additional() -> tuple[str, str]:
         hosts_block = hosts_match.group(1).strip() if hosts_match else ""
         # Normalise line indentation
         hosts_block = _tw.dedent(hosts_block)
+        # If hosts_add is empty, also return empty version
+        if not hosts_block:
+            version = ""
         return version, hosts_block
     except Exception:
         return "", ""
@@ -99,8 +103,9 @@ def update_hosts_as_admin():
         content = urllib.request.urlopen(url).read().decode("utf-8", errors="ignore")
 
         # --- Добавляем блок с дополнительными записями и меткой версии ---
+        # Only add version marker if there's actual content (not empty hosts_add)
         add_ver, add_hosts_remote = _fetch_remote_additional()
-        if add_hosts_remote:
+        if add_hosts_remote:  # Only add if hosts_add is not empty
             extra_block = f"\n# additional_hosts_version {add_ver}\n{add_hosts_remote.strip()}\n"
             content += extra_block
 
@@ -498,11 +503,22 @@ def get_hosts_version_status() -> tuple[str, str]:
         remote_line = _get_remote_main_hosts_line_cached()
         remote_add_ver = _get_remote_add_version_cached()
 
-        # Up-to-date only if both the main hosts list AND additional hosts versions match
-        up_to_date = (
-            local_line == remote_line and local_line.startswith("#") and
-            remote_add_ver and (local_add_ver == remote_add_ver)
-        )
+        # Up-to-date only if the main hosts list matches.
+        # For additional hosts: if remote version is not empty, local must match it.
+        # If remote version is empty (no additional hosts content), local can be anything.
+        main_match = local_line == remote_line and local_line.startswith("#")
+        
+        # Additional hosts match: either both empty, or both have same version
+        # (This accounts for when hosts_add is empty - no version line added)
+        if remote_add_ver:
+            # Remote has additional content - require versions to match
+            add_match = (local_add_ver == remote_add_ver)
+        else:
+            # Remote has no additional content - local should also have none
+            add_match = (local_add_ver == "")
+        
+        up_to_date = main_match and add_match
+        
         if up_to_date:
             return "Актуально", "#43b581"
         else:
