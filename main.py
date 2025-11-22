@@ -6,6 +6,10 @@ import os
 import threading  # Added for running blocking tasks in background
 import atexit
 import time as _time  # for retry sleeps
+import re as _re  # Pre-compile regex patterns for better performance
+_ADDITIONAL_HOSTS_VERSION_RE = _re.compile(r'# additional_hosts_version\s+(\S+)')
+_HOSTS_VERSION_BLOCK_RE = _re.compile(r'version_add\s*=\s*["\']([^"\']+)["\']')
+_HOSTS_CONTENT_RE = _re.compile(r'hosts_add\s*=\s*"""(.*?)"""', _re.S)
 try:
     from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QStackedWidget, QSizePolicy, QToolButton, QAbstractButton, QGridLayout
     from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QSize
@@ -57,9 +61,8 @@ def _fetch_remote_additional() -> tuple[str, str]:
     import time as _t
     try:
         raw_txt = urllib.request.urlopen(f"{ADDITIONAL_HOSTS_URL}?t={int(_t.time())}", timeout=10).read().decode("utf-8", errors="ignore")
-        import re as _re, textwrap as _tw
-        ver_match = _re.search(r'version_add\s*=\s*["\']([^"\']+)["\']', raw_txt)
-        hosts_match = _re.search(r'hosts_add\s*=\s*"""(.*?)"""', raw_txt, _re.S)
+        ver_match = _HOSTS_VERSION_BLOCK_RE.search(raw_txt)
+        hosts_match = _HOSTS_CONTENT_RE.search(raw_txt)
         version = ver_match.group(1) if ver_match else ""
         hosts_block = hosts_match.group(1).strip() if hosts_match else ""
         # Normalise line indentation
@@ -81,8 +84,43 @@ def check_installation():
         with open(hosts_path, 'r', encoding='utf-8-sig') as f:
             content = f.read()
         return "# Блокировка реально плохих сайтов" in content
-    except Exception as e:
+    except Exception:
         return False
+
+# ---------- NEW: helpers for additional hosts version ----------
+def _extract_additional_version(text: str) -> str:
+    """Return version string from line '# additional_hosts_version X'. Uses pre-compiled regex."""
+    match = _ADDITIONAL_HOSTS_VERSION_RE.search(text)
+    return match.group(1) if match else ""
+
+def _get_remote_add_version() -> str:
+    """Return remote version_add (wrapper around _fetch_remote_additional)."""
+    ver, _ = _fetch_remote_additional()
+    return ver
+# --------------------------------------------------------------
+
+# --- NEW: URL content cache to reduce network requests ---
+_URL_CACHE = {}
+_URL_CACHE_TTL = 300  # 5 minutes
+
+def _fetch_url_cached(url: str, timeout: int = 10, add_timestamp: bool = True) -> str:
+    """Fetch URL with caching. add_timestamp adds ?t=timestamp to bypass browser cache."""
+    cache_key = url
+    now = _time.time()
+    
+    if cache_key in _URL_CACHE:
+        cached_time, cached_content = _URL_CACHE[cache_key]
+        if now - cached_time < _URL_CACHE_TTL:
+            return cached_content
+    
+    try:
+        full_url = f"{url}?t={int(now)}" if add_timestamp else url
+        content = urllib.request.urlopen(full_url, timeout=timeout).read().decode("utf-8", errors="ignore")
+        _URL_CACHE[cache_key] = (now, content)
+        return content
+    except Exception:
+        return ""
+# ---------------------------------------------------------------
 
 def update_hosts_as_admin():
     """Скачивает и устанавливает актуальный hosts. Возвращает True при успехе.
@@ -99,8 +137,8 @@ def update_hosts_as_admin():
         temp_fd, temp_path = tempfile.mkstemp()
         os.close(temp_fd)
 
-        # Скачиваем контент основного hosts-списка и декодируем в текст
-        content = urllib.request.urlopen(url).read().decode("utf-8", errors="ignore")
+        # Скачиваем контент основного hosts-списка и декодируем в текст (with caching)
+        content = _fetch_url_cached(url)
 
         # --- Добавляем блок с дополнительными записями и меткой версии ---
         # Only add version marker if there's actual content (not empty hosts_add)
@@ -159,7 +197,20 @@ def is_windows_dark_theme():
     except Exception:
         return False
 
+# --- NEW: Cache compiled stylesheets to avoid recomputation ---
+_STYLESHEET_CACHE = {}
+
 def get_stylesheet(dark):
+    """Get stylesheet dictionary. Results cached to avoid recomputation on theme switches."""
+    cache_key = f"dark_{dark}"
+    if cache_key in _STYLESHEET_CACHE:
+        return _STYLESHEET_CACHE[cache_key]
+    
+    result = _build_stylesheet(dark)
+    _STYLESHEET_CACHE[cache_key] = result
+    return result
+
+def _build_stylesheet(dark):
     if dark:
         return {
             "main": """
@@ -412,23 +463,7 @@ def _extract_update_line(content: bytes) -> str:
     except Exception:
         return ""
 
-
-# ---------- NEW: helpers for additional hosts version ----------
-def _extract_additional_version(text: str) -> str:
-    """Return version string from line '# additional_hosts_version X'."""
-    for line in text.splitlines():
-        if line.lower().startswith("# additional_hosts_version"):
-            parts = line.strip().split()
-            if len(parts) >= 2:
-                return parts[-1]
-    return ""
-
-
-def _get_remote_add_version() -> str:
-    """Return remote version_add (wrapper around _fetch_remote_additional)."""
-    ver, _ = _fetch_remote_additional()
-    return ver
-# --------------------------------------------------------------
+# Note: _extract_additional_version and _get_remote_add_version are defined above
 
 
 def get_hosts_version_status() -> tuple[str, str]:
@@ -459,8 +494,7 @@ def get_hosts_version_status() -> tuple[str, str]:
             and now - _remote_main_line_cache[0] < _REMOTE_CACHE_TTL
         ):
             return _remote_main_line_cache[1]
-        import time as _t
-        remote_url = f"https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts?t={int(_t.time())}"
+        remote_url = f"https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts?t={int(_time.time())}"
         try:
             line = _extract_update_line(urllib.request.urlopen(remote_url, timeout=10).read())
         except Exception:
@@ -500,8 +534,25 @@ def get_hosts_version_status() -> tuple[str, str]:
             text_content = raw_content.decode("utf-8", errors="ignore")
             local_add_ver = _extract_additional_version(text_content)
 
-        remote_line = _get_remote_main_hosts_line_cached()
-        remote_add_ver = _get_remote_add_version_cached()
+        # Parallel fetch of remote versions using threads for better performance
+        remote_line_result = [None]
+        remote_add_ver_result = [None]
+        
+        def fetch_main():
+            remote_line_result[0] = _get_remote_main_hosts_line_cached()
+        
+        def fetch_add():
+            remote_add_ver_result[0] = _get_remote_add_version_cached()
+        
+        t1 = threading.Thread(target=fetch_main, daemon=True)
+        t2 = threading.Thread(target=fetch_add, daemon=True)
+        t1.start()
+        t2.start()
+        t1.join(timeout=15)  # Wait max 15 seconds
+        t2.join(timeout=15)
+        
+        remote_line = remote_line_result[0] or ""
+        remote_add_ver = remote_add_ver_result[0] or ""
 
         # Up-to-date only if the main hosts list matches.
         # For additional hosts: if remote version is not empty, local must match it.
@@ -610,27 +661,33 @@ if __name__ == "__main__":
         return label
 
     def refresh_icons(root_widget=None):
-        """Re-tint all buttons/labels that carry 'icon_name' property."""
+        """Re-tint all buttons/labels that carry 'icon_name' property. Uses batch collection for efficiency."""
         if root_widget is None:
             root_widget = main_window
-        # Update button icons (QPushButton/QToolButton)
+        
+        # Collect all icon-bearing widgets first (avoid repeated scans)
+        buttons_with_icons = []
+        labels_with_icons = []
+        
         for btn in root_widget.findChildren(QAbstractButton):
             name = btn.property("icon_name")
-            if not name:
-                continue
-            force_dark = bool(btn.property("icon_force_dark"))
-            force_white = bool(btn.property("icon_force_white"))
-            btn.setIcon(get_icon(name, btn.iconSize().width(), force_dark=force_dark, force_white=force_white))
-        # Update QLabel icons
+            if name:
+                buttons_with_icons.append((btn, name, btn.property("icon_force_dark"), btn.property("icon_force_white")))
+        
         for lbl in root_widget.findChildren(QLabel):
             name = lbl.property("icon_name")
-            if not name:
-                continue
-            size = lbl.pixmap().width() if lbl.pixmap() else 32
-            force_dark = bool(lbl.property("icon_force_dark"))
-            force_white = bool(lbl.property("icon_force_white"))
-            lbl.setPixmap(get_icon(name, size, force_dark=force_dark, force_white=force_white).pixmap(size, size))
-        # function ends implicitly
+            if name:
+                pixmap = lbl.pixmap()
+                size = pixmap.width() if pixmap else 32
+                labels_with_icons.append((lbl, name, size, lbl.property("icon_force_dark"), lbl.property("icon_force_white")))
+        
+        # Update all collected buttons
+        for btn, name, force_dark, force_white in buttons_with_icons:
+            btn.setIcon(get_icon(name, btn.iconSize().width(), force_dark=bool(force_dark), force_white=bool(force_white)))
+        
+        # Update all collected labels
+        for lbl, name, size, force_dark, force_white in labels_with_icons:
+            lbl.setPixmap(get_icon(name, size, force_dark=bool(force_dark), force_white=bool(force_white)).pixmap(size, size))
     # ------------------------------------------------------------
 
     # --------- Load application version from app_info.json ---------
@@ -912,35 +969,67 @@ netsh winsock reset
         fade_out.start()
 
     def update_subwindow_styles():
+        """Update styles for all subwindows. Batch updates to minimize redraws."""
         if not main_window.stacked_widget: return
+        
+        # Collect all widgets that need updating
+        buttons_to_update = []
+        labels_to_update = []
+        
         for i in range(main_window.stacked_widget.count()):
             w = main_window.stacked_widget.widget(i)
-            if w is central_widget: continue
+            if w is central_widget: 
+                continue
+            
             w.setStyleSheet(main_window.styles["main"])
+            
+            # Collect buttons
             for child in w.findChildren(QPushButton):
                 text = child.text().lower()
                 if any(keyword in text for keyword in ["донат", "о программе", "github", "вернуться", "меню", "telegram", "youtube", "rutube", "дзен", "dzen", "vk"]):
-                    child.setStyleSheet(main_window.styles["theme"])
+                    buttons_to_update.append((child, main_window.styles["theme"]))
                 elif "копировать" in text or "окей" in text:
-                    child.setStyleSheet(main_window.styles["button1"])
+                    buttons_to_update.append((child, main_window.styles["button1"]))
                 elif "удалить" in text:
-                    child.setStyleSheet(main_window.styles["button2"])
-                else: child.setStyleSheet(main_window.styles["button1"])
+                    buttons_to_update.append((child, main_window.styles["button2"]))
+                else: 
+                    buttons_to_update.append((child, main_window.styles["button1"]))
 
+            # Collect labels
             for child in w.findChildren(QLabel):
                 obj_name = child.objectName()
                 if obj_name == "about_title":
-                    child.setText(main_window.styles["about_title_html"])
-                    child.setStyleSheet(main_window.styles["about_title_style"])
+                    labels_to_update.append((child, "title", main_window.styles))
                 elif obj_name == "about_info":
-                    child.setText(main_window.styles["about_info_html"])
+                    labels_to_update.append((child, "info", main_window.styles))
                 elif obj_name == "about_link":
-                    child.setText(main_window.styles["about_link_html"])
-                elif obj_name == "message_emoji": continue
-                else: child.setStyleSheet(main_window.styles["label"])
+                    labels_to_update.append((child, "link", main_window.styles))
+                elif obj_name == "message_emoji": 
+                    continue
+                else: 
+                    labels_to_update.append((child, "label", main_window.styles))
 
-            # Re-tint icons for this subwindow once after styles are updated
-            refresh_icons(w)
+        # Apply all button styles in batch
+        for btn, style in buttons_to_update:
+            btn.setStyleSheet(style)
+        
+        # Apply all label styles in batch
+        for lbl, label_type, styles in labels_to_update:
+            if label_type == "title":
+                lbl.setText(styles["about_title_html"])
+                lbl.setStyleSheet(styles["about_title_style"])
+            elif label_type == "info":
+                lbl.setText(styles["about_info_html"])
+            elif label_type == "link":
+                lbl.setText(styles["about_link_html"])
+            else:
+                lbl.setStyleSheet(styles["label"])
+
+        # Re-tint icons for all updated subwindows
+        for i in range(main_window.stacked_widget.count()):
+            w = main_window.stacked_widget.widget(i)
+            if w is not central_widget:
+                refresh_icons(w)
 
     def show_message_and_return(msg, success=True, animate=True):
         message_widget = QWidget()
@@ -1158,11 +1247,14 @@ netsh winsock reset
                 with open(resource_path("app_info.json"), "r", encoding="utf-8") as _f:
                     _local = _json.load(_f)
                 local_ver = _local.get("version", "0.0.0")
-                import time as _t
                 remote_url = _local.get("update_info_url")
                 if not remote_url:
                     raise RuntimeError("URL обновления не найден.")
-                remote_data = _json.loads(urllib.request.urlopen(f"{remote_url}?t={int(_t.time())}", timeout=10).read().decode("utf-8"))
+                # Use cached URL fetch for better performance
+                remote_content = _fetch_url_cached(remote_url)
+                if not remote_content:
+                    raise RuntimeError("Не удалось получить информацию об обновлении.")
+                remote_data = _json.loads(remote_content)
                 remote_ver = remote_data.get("version", "0.0.0")
                 download_url = remote_data.get("download_url", "https://github.com/AvenCores/Goida-AI-Unlocker")
 
