@@ -1,4 +1,4 @@
-version_add = "1.0.9"
+version_add = "1.1.0"
 
 hosts_add = """
 0.0.0.0 ad.mail.ru
