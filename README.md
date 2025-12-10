@@ -168,4 +168,4 @@ pyinstaller main.py --onefile --noconsole --icon=icon.ico --clean --strip --name
 
 ---
 # 💰 Поддержать автора
-+ **SBER**: `2202 2050 7215 4401`
++ **SBER**: `2202 2050 1464 4675`
