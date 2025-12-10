@@ -1470,7 +1470,7 @@ netsh winsock reset
         title_lbl.setStyleSheet("font-size:22px; font-weight:600;")
         card_layout.addWidget(title_lbl)
 
-        card = "2202 2050 7215 4401"
+        card = "2202 2050 1464 4675"
         card_lbl = QLabel(f"ㅤSBER: <b>{card}</b>ㅤ")
         card_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_lbl.setStyleSheet("font-size:16px;")
