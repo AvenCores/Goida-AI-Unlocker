@@ -83,7 +83,7 @@ def check_installation():
     try:
         with open(hosts_path, 'r', encoding='utf-8-sig') as f:
             content = f.read()
-        return "# Блокировка реально плохих сайтов" in content
+        return "dns.malw.link" in content
     except Exception:
         return False
 
