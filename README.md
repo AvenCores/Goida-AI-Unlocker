@@ -52,7 +52,7 @@
 
 ## 📸 Скриншот интерфейса
 <div align="center">
-  <img width="640" height="640" alt="Goida_AI_Unlocker_MRE6ut72zG" src="https://github.com/user-attachments/assets/678bce0c-f826-4b1d-88ee-d8557bd6616d" />
+  <img width="640" height="640" alt="Goida_AI_Unlocker_MRE6ut72zG" src="https://github.com/user-attachments/assets/0f8ee75d-9d6f-424c-b227-876059ba448a" />
 </div>
 
 ---
