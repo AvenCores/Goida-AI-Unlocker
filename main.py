@@ -456,12 +456,20 @@ class CustomWindow(QMainWindow):
 
 # ----------------------- NEW: hosts version helpers -----------------------
 
-def _extract_update_line(content: bytes) -> str:
-    """Return the second line (index 1) from hosts content without leading/trailing spaces."""
+def _extract_update_line(content: bytes) -> tuple[str, str]:
+    """Return (update_line, date_str) from hosts content.
+    date_str is extracted from line like '# Последнее обновление: 19 декабря 2025'"""
     try:
-        return content.decode("utf-8", errors="ignore").splitlines()[1].strip()
+        lines = content.decode("utf-8", errors="ignore").splitlines()
+        if len(lines) > 1:
+            line = lines[1].strip()
+            # Extract date from format: # Последнее обновление: 19 декабря 2025
+            if "Последнее обновление:" in line:
+                date_part = line.split("Последнее обновление:", 1)[1].strip()
+                return line, date_part
+        return "", ""
     except Exception:
-        return ""
+        return "", ""
 
 # Note: _extract_additional_version and _get_remote_add_version are defined above
 
@@ -520,26 +528,32 @@ def get_hosts_version_status() -> tuple[str, str]:
     # --- END: short-lived cache for remote checks ---
 
     if sys.platform != "win32":
-        return "Не установлен", "#e06c75"
-
+        return "Не установлен", "#e06c75", ""
+    
     hosts_path = r"C:\\Windows\\System32\\drivers\\etc\\hosts"
-    # If hosts file missing or our block not installed -> treat as not installed
     if not (os.path.exists(hosts_path) and check_installation()):
-        return "Не установлен", "#e06c75"
-
+        return "Не установлен", "#e06c75", ""
+    
     try:
         with open(hosts_path, "rb") as lf:
             raw_content = lf.read()
-            local_line = _extract_update_line(raw_content)
+            local_line, local_date = _extract_update_line(raw_content)
             text_content = raw_content.decode("utf-8", errors="ignore")
             local_add_ver = _extract_additional_version(text_content)
 
-        # Parallel fetch of remote versions using threads for better performance
         remote_line_result = [None]
         remote_add_ver_result = [None]
+        remote_date_result = [None]  # NEW: для хранения даты
         
         def fetch_main():
-            remote_line_result[0] = _get_remote_main_hosts_line_cached()
+            remote_line, remote_date = _extract_update_line(
+                urllib.request.urlopen(
+                    f"https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts?t={int(_time.time())}", 
+                    timeout=10
+                ).read()
+            )
+            remote_line_result[0] = remote_line
+            remote_date_result[0] = remote_date  # NEW: сохраняем дату
         
         def fetch_add():
             remote_add_ver_result[0] = _get_remote_add_version_cached()
@@ -557,26 +571,25 @@ def get_hosts_version_status() -> tuple[str, str]:
         # Up-to-date only if the main hosts list matches.
         # For additional hosts: if remote version is not empty, local must match it.
         # If remote version is empty (no additional hosts content), local can be anything.
+        remote_line = remote_line_result[0] or ""
+        remote_date = remote_date_result[0] or ""  # NEW: получаем дату
+        remote_add_ver = remote_add_ver_result[0] or ""
+        
         main_match = local_line == remote_line and local_line.startswith("#")
         
-        # Additional hosts match: either both empty, or both have same version
-        # (This accounts for when hosts_add is empty - no version line added)
         if remote_add_ver:
-            # Remote has additional content - require versions to match
             add_match = (local_add_ver == remote_add_ver)
         else:
-            # Remote has no additional content - local should also have none
             add_match = (local_add_ver == "")
         
         up_to_date = main_match and add_match
         
         if up_to_date:
-            return "Актуально", "#43b581"
+            return "Актуально", "#43b581", remote_date  # NEW: возвращаем дату
         else:
-            return "Устарело", "#e06c75"
+            return "Устарело", "#e06c75", remote_date  # NEW: возвращаем дату
     except Exception:
-        # Any error counts as outdated
-        return "Устарело", "#e06c75"
+        return "Устарело", "#e06c75", ""
 # --------------------- END NEW helpers ---------------------
 
 if __name__ == "__main__":
@@ -811,6 +824,20 @@ if __name__ == "__main__":
     version_label.setStyleSheet(main_window.styles["label"])
     # -----------------------------------------------------------------
 
+    # NEW: Метка для даты обновления
+    update_date_label = QLabel("Дата обновления: проверка...")
+    update_date_label.setTextFormat(Qt.TextFormat.RichText)
+    update_date_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    # Цвет текста белый, фон наследуется от родителя, скругление
+    text_color = "#ffffff" if main_window.dark_theme else "#1a1a1a"
+    update_date_label.setStyleSheet(f"""
+        font-size: 14px; 
+        color: {text_color};
+        border-radius: 8px;
+        padding: 4px 8px;
+        margin: 2px;
+    """)
+
     # Группируем две надписи для компактного вида
     status_container = QWidget()
     status_container.setObjectName("status_block")
@@ -820,6 +847,7 @@ if __name__ == "__main__":
     status_vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
     status_vbox.addWidget(textinformer)
     status_vbox.addWidget(version_label)
+    status_vbox.addWidget(update_date_label)
 
     # Apply initial block style depending on theme
     _light_block = "background:#f3f4f7; border:1.5px solid #cfd4db; border-radius:12px;"
@@ -1416,6 +1444,15 @@ netsh winsock reset
                 # -------- NEW: update version label style --------
                 version_label.setStyleSheet(main_window.styles["label"])
                 # --------------------------------------------------
+                # --- Update date label style ---
+                text_color = "#ffffff" if main_window.dark_theme else "#1a1a1a"
+                update_date_label.setStyleSheet(f"""
+                    font-size: 14px; 
+                    color: {text_color};
+                    border-radius: 8px;
+                    padding: 4px 8px;
+                    margin: 2px;
+                """)
                 button.setStyleSheet(main_window.styles["button1"])
                 button2.setStyleSheet(main_window.styles["button2"])
                 theme_button.setStyleSheet(main_window.styles["theme"])
@@ -1715,12 +1752,25 @@ netsh winsock reset
             return
         setattr(update_version_label, "_running", True)
         setattr(update_version_label, "_last_run", now_ts)
-
+        
         def worker():
-            word, clr = get_hosts_version_status()
+            word, clr, update_date = get_hosts_version_status()  # NEW: получаем дату
             def apply():
+                # Обновляем основную метку версии
                 version_label.setText(
                     f"Версия hosts - <span style='color:{clr}; font-weight:bold;'>{word}</span>")
+                
+                # NEW: Добавляем метку с датой обновления
+                if update_date:
+                    # Если нужно создать отдельную метку для даты:
+                    # Создайте QLabel для даты в основном интерфейсе и обновляйте ее здесь
+                    date_text = f"Дата обновления hosts: {update_date}"
+                else:
+                    date_text = "Дата обновления hosts: неизвестно"
+                
+                # Пример: если у вас есть метка update_date_label
+                update_date_label.setText(date_text)
+                
                 # Изменяем надпись кнопки в зависимости от актуальности
                 if word == "Устарело":
                     button.setText(" Обновить обход блокировок")
