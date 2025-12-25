@@ -1,5 +1,6 @@
 .venv/
+linux-venv/
 build/
 dist/
 __pycache__/
-Goida AI Unlocker.spec 
+Goida AI Unlocker.spec
