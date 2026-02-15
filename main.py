@@ -276,6 +276,36 @@ def _build_stylesheet(dark):
             "about_link_html": "<a href='#' style='color:#0078d4; text-decoration:none; font-size:13px;'>⟵ В меню</a>",
         }
 
+class DraggableTitleBar(QWidget):
+    def __init__(self, main_window: "CustomWindow"):
+        super().__init__(main_window)
+        self._main_window = main_window
+        self._drag_pos = None
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self._main_window.start_system_move():
+                event.accept()
+                return
+            self._drag_pos = event.globalPosition().toPoint()
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._drag_pos is not None and (event.buttons() & Qt.MouseButton.LeftButton):
+            delta = event.globalPosition().toPoint() - self._drag_pos
+            self._main_window.move(self._main_window.pos() + delta)
+            self._drag_pos = event.globalPosition().toPoint()
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_pos = None
+        super().mouseReleaseEvent(event)
+
+
 class CustomWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -286,18 +316,14 @@ class CustomWindow(QMainWindow):
         self.styles = {}
         self.title_bar: Optional[QWidget] = None
 
-    def mousePressEvent(self, event):
-        if (event.button() == Qt.MouseButton.LeftButton and self.title_bar is not None and self.title_bar.underMouse()):
-            self.dragPos = event.globalPosition().toPoint()
-
-    def mouseMoveEvent(self, event):
-        if hasattr(self, 'dragPos') and self.dragPos:
-            delta = event.globalPosition().toPoint() - self.dragPos
-            self.move(self.pos() + delta)
-            self.dragPos = event.globalPosition().toPoint()
-
-    def mouseReleaseEvent(self, event):
-        self.dragPos = None
+    def start_system_move(self) -> bool:
+        handle = self.windowHandle()
+        if handle is None:
+            return False
+        try:
+            return bool(handle.startSystemMove())
+        except Exception:
+            return False
 
 def _extract_update_line(content: bytes) -> tuple[str, str]:
     try:
@@ -492,7 +518,7 @@ if __name__ == "__main__":
     main_layout.setContentsMargins(0, 0, 0, 0)
     main_layout.setSpacing(0)
 
-    title_bar = QWidget()
+    title_bar = DraggableTitleBar(main_window)
     title_bar.setObjectName("titleBar")
     title_bar.setFixedHeight(32)
     main_window.title_bar = title_bar
@@ -500,6 +526,7 @@ if __name__ == "__main__":
     title_bar_layout.setContentsMargins(12, 0, 8, 0)
     title_bar_layout.setSpacing(0)
     title_label = QLabel("Goida AI Unlocker")
+    title_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
     title_label.setStyleSheet("QLabel { color: #666666; font-size: 13px; font-weight: bold; background: transparent; }")
     title_bar_layout.addWidget(title_label)
     title_bar_layout.addStretch()

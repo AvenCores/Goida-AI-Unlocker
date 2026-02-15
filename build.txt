@@ -1,1 +1,3 @@
-pyinstaller main.py --onefile --noconsole --icon=icon.ico --clean --strip --name="Goida AI Unlocker" --add-data "icon.ico;." --add-data "app_info.json;." --add-data "icons;icons"
+Windows: pyinstaller main.py --onefile --noconsole --icon=icon.ico --clean --strip --name="Goida AI Unlocker" --add-data "icon.ico;." --add-data "app_info.json;." --add-data "icons;icons"
+
+Linux: pyinstaller main.py --onefile --noconsole --icon=icon.ico --clean --strip --name="Goida AI Unlocker" --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons"
