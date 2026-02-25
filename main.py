@@ -26,6 +26,16 @@ def open_target(path: str):
 
 # --------------------------------
 
+def open_hosts_file():
+    """Open hosts with a sensible default editor."""
+    try:
+        if sys.platform == 'win32':
+            subprocess.Popen(["notepad.exe", HOSTS_PATH])
+        else:
+            open_target(HOSTS_PATH)
+    except Exception as e:
+        print(f"Open error {HOSTS_PATH}: {e}")
+
 _ADDITIONAL_HOSTS_VERSION_RE = _re.compile(r'# additional_hosts_version\s+(\S+)')
 _HOSTS_VERSION_BLOCK_RE = _re.compile(r'version_add\s*=\s*["\']([^"\']+)["\']')
 _HOSTS_CONTENT_RE = _re.compile(r'hosts_add\s*=\s*"""(.*?)"""', _re.S)
@@ -651,6 +661,13 @@ if __name__ == "__main__":
     update_button.setProperty("icon_force_dark", True)
     update_button.setStyleSheet(main_window.styles["theme"])
     update_button.clicked.connect(lambda: check_for_updates())
+    open_hosts_button = QPushButton(" \u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0444\u0430\u0439\u043b hosts")
+    open_hosts_button.setIcon(get_icon("book-open.svg", 18, force_dark=True))
+    open_hosts_button.setIconSize(QSize(18, 18))
+    open_hosts_button.setProperty("icon_name", "book-open.svg")
+    open_hosts_button.setProperty("icon_force_dark", True)
+    open_hosts_button.setStyleSheet(main_window.styles["theme"])
+    open_hosts_button.clicked.connect(open_hosts_file)
 
     def restore_original_hosts():
         temp_path: str | None = None
@@ -1064,6 +1081,8 @@ netsh winsock reset
                 button2.setStyleSheet(main_window.styles["button2"])
                 theme_button.setStyleSheet(main_window.styles["theme"])
                 donate_button.setStyleSheet(main_window.styles["theme"])
+                open_hosts_button.setStyleSheet(main_window.styles["theme"])
+                update_button.setStyleSheet(main_window.styles["theme"])
                 about_button.setStyleSheet(main_window.styles["theme"])
                 _light_block = "background:#f3f4f7; border:1.5px solid #cfd4db; border-radius:12px;"
                 _dark_block = "background:#2d333b; border:1.5px solid #3c434d; border-radius:12px;"
@@ -1175,6 +1194,7 @@ netsh winsock reset
 
     layout.addWidget(button)
     layout.addWidget(button2)
+    layout.addWidget(open_hosts_button)
     theme_donate_hbox = QHBoxLayout()
     theme_donate_hbox.setSpacing(12)
     theme_donate_hbox.addWidget(theme_button)
