@@ -11,6 +11,8 @@ import shutil
 
 # --- Cross-platform helpers ---
 HOSTS_PATH = r"C:\Windows\System32\drivers\etc\hosts" if sys.platform == 'win32' else "/etc/hosts"
+HOSTS_BACKUP_DIR = os.path.join(os.path.expanduser("~"), ".goida-ai-unlocker", "hosts-backups")
+HOSTS_BACKUP_PREFIX = "hosts_backup_"
 
 def open_target(path: str):
     """Кроссплатформенное открытие файла или ссылки."""
@@ -36,12 +38,85 @@ def open_hosts_file():
     except Exception as e:
         print(f"Open error {HOSTS_PATH}: {e}")
 
+def get_hosts_backup_dir() -> str:
+    return HOSTS_BACKUP_DIR
+
+def _get_hosts_backup_timestamp() -> str:
+    return _time.strftime("%Y%m%d_%H%M%S")
+
+def _sanitize_backup_action(action: str) -> str:
+    cleaned = "".join(ch if (ch.isalnum() or ch in ("_", "-")) else "_" for ch in action.strip().lower())
+    return cleaned or "manual"
+
+def create_hosts_backup(action: str) -> str | None:
+    try:
+        with open(HOSTS_PATH, "rb") as src:
+            previous_hosts = src.read()
+    except Exception as e:
+        print(f"Backup read error {HOSTS_PATH}: {e}")
+        return None
+
+    backup_dir = get_hosts_backup_dir()
+    try:
+        os.makedirs(backup_dir, exist_ok=True)
+        action_tag = _sanitize_backup_action(action)
+        backup_name = f"{HOSTS_BACKUP_PREFIX}{action_tag}_{_get_hosts_backup_timestamp()}_{_time.time_ns() % 1_000_000:06d}.txt"
+        backup_path = os.path.join(backup_dir, backup_name)
+        created_at = _time.strftime("%Y-%m-%d %H:%M:%S")
+        header = (
+            "# Goida AI Unlocker hosts backup\n"
+            f"# action {action_tag}\n"
+            f"# created_at {created_at}\n"
+            f"# source {HOSTS_PATH}\n\n"
+        ).encode("utf-8")
+        with open(backup_path, "wb") as dst:
+            dst.write(header)
+            dst.write(previous_hosts)
+        return backup_path
+    except Exception as e:
+        print(f"Backup write error {backup_dir}: {e}")
+        return None
+
+def get_latest_hosts_backup_file() -> str | None:
+    backup_dir = get_hosts_backup_dir()
+    if not os.path.isdir(backup_dir):
+        return None
+    files = []
+    for name in os.listdir(backup_dir):
+        lower_name = name.lower()
+        if lower_name.startswith(HOSTS_BACKUP_PREFIX) and lower_name.endswith(".txt"):
+            full_path = os.path.join(backup_dir, name)
+            if os.path.isfile(full_path):
+                files.append(full_path)
+    if not files:
+        return None
+    return max(files, key=os.path.getmtime)
+
+def open_hosts_backup_folder():
+    backup_dir = get_hosts_backup_dir()
+    os.makedirs(backup_dir, exist_ok=True)
+    open_target(backup_dir)
+
+def open_latest_hosts_backup_file():
+    latest_backup = get_latest_hosts_backup_file()
+    if latest_backup and os.path.exists(latest_backup):
+        open_target(latest_backup)
+    else:
+        app = QApplication.instance()
+        parent = app.activeWindow() if app else None
+        QMessageBox.information(
+            parent,
+            "Backup не найден",
+            "Последний backup-файл не найден. Открою папку с backup.",
+        )
+        open_hosts_backup_folder()
+
 _ADDITIONAL_HOSTS_VERSION_RE = _re.compile(r'# additional_hosts_version\s+(\S+)')
 _HOSTS_VERSION_BLOCK_RE = _re.compile(r'version_add\s*=\s*["\']([^"\']+)["\']')
 _HOSTS_CONTENT_RE = _re.compile(r'hosts_add\s*=\s*"""(.*?)"""', _re.S)
 
 try:
-    from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QStackedWidget, QSizePolicy, QToolButton, QAbstractButton, QGridLayout
+    from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QStackedWidget, QSizePolicy, QToolButton, QAbstractButton, QGridLayout, QMenu, QMessageBox
     from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QSize
     from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor, QFontMetrics
     from PySide6.QtSvg import QSvgRenderer
@@ -123,12 +198,15 @@ def _fetch_url_cached(url: str, timeout: int = 10, add_timestamp: bool = True) -
     except Exception:
         return ""
 
-def update_hosts_as_admin():
+def update_hosts_as_admin(action: str = "install"):
     url = "https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts"
     temp_path: str | None = None
     ps_script_path: str | None = None
     
     try:
+        if not create_hosts_backup(action):
+            return False
+
         temp_fd, temp_path = tempfile.mkstemp()
         os.close(temp_fd)
         content = _fetch_url_cached(url)
@@ -225,6 +303,28 @@ def get_stylesheet(dark):
     result = _build_stylesheet(dark)
     _STYLESHEET_CACHE[cache_key] = result
     return result
+
+def get_status_block_style(dark: bool) -> str:
+    if dark:
+        return (
+            "background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #1d2a40, stop:1 #1a2537); "
+            "border:1.5px solid #3e5274; border-radius:16px;"
+        )
+    return (
+        "background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #ffffff, stop:1 #eef4ff); "
+        "border:1.5px solid #d6e1f2; border-radius:16px;"
+    )
+
+def get_card_block_style(dark: bool) -> str:
+    if dark:
+        return (
+            "background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #22314b, stop:1 #1d2940); "
+            "border:2.5px solid #435a81; border-radius:16px;"
+        )
+    return (
+        "background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #ffffff, stop:1 #edf4ff); "
+        "border:2.5px solid #d3dff0; border-radius:16px;"
+    )
 
 def _build_stylesheet(dark):
     if dark:
@@ -668,11 +768,44 @@ if __name__ == "__main__":
     open_hosts_button.setProperty("icon_force_dark", True)
     open_hosts_button.setStyleSheet(main_window.styles["theme"])
     open_hosts_button.clicked.connect(open_hosts_file)
+    backup_hosts_button = QPushButton(" Бэкапы hosts")
+    backup_hosts_button.setIcon(get_icon("clock.svg", 18, force_dark=True))
+    backup_hosts_button.setIconSize(QSize(18, 18))
+    backup_hosts_button.setProperty("icon_name", "clock.svg")
+    backup_hosts_button.setProperty("icon_force_dark", True)
+    backup_hosts_button.setStyleSheet(main_window.styles["theme"])
+
+    def show_hosts_backup_menu():
+        menu = QMenu(main_window)
+        if main_window.dark_theme:
+            menu.setStyleSheet(
+                "QMenu { background:#2d333b; color:#f3f6fd; border:1px solid #3c434d; border-radius:10px; padding:6px; }"
+                "QMenu::item { padding:6px 16px; border-radius:8px; margin:2px 0; }"
+                "QMenu::item:selected { background:#246cf0; color:#ffffff; border-radius:8px; }"
+            )
+        else:
+            menu.setStyleSheet(
+                "QMenu { background:#ffffff; color:#1a1a1a; border:1px solid #cfd4db; border-radius:10px; padding:6px; }"
+                "QMenu::item { padding:6px 16px; border-radius:8px; margin:2px 0; }"
+                "QMenu::item:selected { background:#0078d4; color:#ffffff; border-radius:8px; }"
+            )
+        open_file_action = menu.addAction("Открыть последний backup-файл")
+        open_folder_action = menu.addAction("Открыть папку backup")
+        selected_action = menu.exec(backup_hosts_button.mapToGlobal(backup_hosts_button.rect().bottomLeft()))
+        if selected_action == open_file_action:
+            open_latest_hosts_backup_file()
+        elif selected_action == open_folder_action:
+            open_hosts_backup_folder()
+
+    backup_hosts_button.clicked.connect(show_hosts_backup_menu)
 
     def restore_original_hosts():
         temp_path: str | None = None
         ps_script_path: str | None = None
         try:
+            if not create_hosts_backup("uninstall"):
+                return False
+
             default_hosts = (
                 '127.0.0.1       localhost\n::1             localhost\n'
             )
@@ -1082,11 +1215,10 @@ netsh winsock reset
                 theme_button.setStyleSheet(main_window.styles["theme"])
                 donate_button.setStyleSheet(main_window.styles["theme"])
                 open_hosts_button.setStyleSheet(main_window.styles["theme"])
+                backup_hosts_button.setStyleSheet(main_window.styles["theme"])
                 update_button.setStyleSheet(main_window.styles["theme"])
                 about_button.setStyleSheet(main_window.styles["theme"])
-                _light_block = "background:#f3f4f7; border:1.5px solid #cfd4db; border-radius:12px;"
-                _dark_block = "background:#2d333b; border:1.5px solid #3c434d; border-radius:12px;"
-                status_container.setStyleSheet(_dark_block if main_window.dark_theme else _light_block)
+                status_container.setStyleSheet(get_status_block_style(main_window.dark_theme))
                 update_subwindow_styles()
                 refresh_icons()
                 main_window.setUpdatesEnabled(True)
@@ -1127,9 +1259,7 @@ netsh winsock reset
         card_layout.addWidget(card_lbl)
         copy_btn = QPushButton("Скопировать номер карты")
         card_layout.addWidget(copy_btn)
-        light_style = "background:#f3f4f7; border:2.5px solid #cfd4db; border-radius:12px;"
-        dark_style = "background:#2d333b; border:2.5px solid #3c434d; border-radius:12px;"
-        card_container.setStyleSheet(dark_style if main_window.dark_theme else light_style)
+        card_container.setStyleSheet(get_card_block_style(main_window.dark_theme))
         donate_layout.addWidget(card_container)
         back_button = QPushButton("  В меню  ")
         back_button.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1195,6 +1325,7 @@ netsh winsock reset
     layout.addWidget(button)
     layout.addWidget(button2)
     layout.addWidget(open_hosts_button)
+    layout.addWidget(backup_hosts_button)
     theme_donate_hbox = QHBoxLayout()
     theme_donate_hbox.setSpacing(12)
     theme_donate_hbox.addWidget(theme_button)
