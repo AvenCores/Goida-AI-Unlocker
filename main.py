@@ -304,28 +304,6 @@ def get_stylesheet(dark):
     _STYLESHEET_CACHE[cache_key] = result
     return result
 
-def get_status_block_style(dark: bool) -> str:
-    if dark:
-        return (
-            "background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #1d2a40, stop:1 #1a2537); "
-            "border:1.5px solid #3e5274; border-radius:16px;"
-        )
-    return (
-        "background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #ffffff, stop:1 #eef4ff); "
-        "border:1.5px solid #d6e1f2; border-radius:16px;"
-    )
-
-def get_card_block_style(dark: bool) -> str:
-    if dark:
-        return (
-            "background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #22314b, stop:1 #1d2940); "
-            "border:2.5px solid #435a81; border-radius:16px;"
-        )
-    return (
-        "background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #ffffff, stop:1 #edf4ff); "
-        "border:2.5px solid #d3dff0; border-radius:16px;"
-    )
-
 def _build_stylesheet(dark):
     if dark:
         return {
@@ -1218,7 +1196,9 @@ netsh winsock reset
                 backup_hosts_button.setStyleSheet(main_window.styles["theme"])
                 update_button.setStyleSheet(main_window.styles["theme"])
                 about_button.setStyleSheet(main_window.styles["theme"])
-                status_container.setStyleSheet(get_status_block_style(main_window.dark_theme))
+                _light_block = "background:#f3f4f7; border:1.5px solid #cfd4db; border-radius:12px;"
+                _dark_block = "background:#2d333b; border:1.5px solid #3c434d; border-radius:12px;"
+                status_container.setStyleSheet(_dark_block if main_window.dark_theme else _light_block)
                 update_subwindow_styles()
                 refresh_icons()
                 main_window.setUpdatesEnabled(True)
@@ -1259,7 +1239,9 @@ netsh winsock reset
         card_layout.addWidget(card_lbl)
         copy_btn = QPushButton("Скопировать номер карты")
         card_layout.addWidget(copy_btn)
-        card_container.setStyleSheet(get_card_block_style(main_window.dark_theme))
+        light_style = "background:#f3f4f7; border:2.5px solid #cfd4db; border-radius:12px;"
+        dark_style = "background:#2d333b; border:2.5px solid #3c434d; border-radius:12px;"
+        card_container.setStyleSheet(dark_style if main_window.dark_theme else light_style)
         donate_layout.addWidget(card_container)
         back_button = QPushButton("  В меню  ")
         back_button.setCursor(Qt.CursorShape.PointingHandCursor)
