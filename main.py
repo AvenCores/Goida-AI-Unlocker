@@ -104,12 +104,78 @@ def open_latest_hosts_backup_file():
     else:
         app = QApplication.instance()
         parent = app.activeWindow() if app else None
-        QMessageBox.information(
-            parent,
-            "Backup не найден",
-            "Последний backup-файл не найден. Открою папку с backup.",
+        dialog = QMessageBox(parent)
+        dialog.setWindowTitle("Backup не найден")
+        dialog.setIcon(QMessageBox.Icon.NoIcon)
+        dialog.setText("<b style='font-size:15px;'>Backup не найден</b>")
+        dialog.setInformativeText(
+            "Последний backup-файл отсутствует.\n"
+            "Открыть папку с backup-файлами?"
         )
-        open_hosts_backup_folder()
+        dialog.setTextFormat(Qt.TextFormat.RichText)
+        dialog.setStandardButtons(
+            QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Cancel
+        )
+        dialog.setDefaultButton(QMessageBox.StandardButton.Open)
+        dialog.setEscapeButton(QMessageBox.StandardButton.Cancel)
+
+        open_button = dialog.button(QMessageBox.StandardButton.Open)
+        cancel_button = dialog.button(QMessageBox.StandardButton.Cancel)
+        if open_button:
+            open_button.setText("Открыть папку")
+            open_button.setObjectName("backupOpenButton")
+        if cancel_button:
+            cancel_button.setText("Отмена")
+            cancel_button.setObjectName("backupCancelButton")
+        for label in dialog.findChildren(QLabel):
+            if label.text().strip():
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        dark_theme = bool(getattr(parent, "dark_theme", False))
+        if dark_theme:
+            dialog.setStyleSheet("""
+                QMessageBox { background-color: #1f242d; }
+                QMessageBox QLabel {
+                    color: #f3f6fd;
+                    font-size: 13px;
+                    max-width: 250px;
+                    background: transparent;
+                    border: none;
+                }
+                QPushButton#backupOpenButton {
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #2d7dff, stop:1 #2962d9);
+                    color: white; border: none; border-radius: 8px; padding: 7px 12px; min-width: 112px; font-weight: 600;
+                }
+                QPushButton#backupOpenButton:hover { background: #246cf0; }
+                QPushButton#backupCancelButton {
+                    background: #e6e8ec; color: #222; border: 1px solid #cfd4db; border-radius: 8px; padding: 7px 12px; min-width: 96px;
+                }
+                QPushButton#backupCancelButton:hover { background: #d1d4d8; }
+            """)
+        else:
+            dialog.setStyleSheet("""
+                QMessageBox { background-color: #ffffff; }
+                QMessageBox QLabel {
+                    color: #1a1a1a;
+                    font-size: 13px;
+                    max-width: 250px;
+                    background: transparent;
+                    border: none;
+                }
+                QPushButton#backupOpenButton {
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #0078d4, stop:1 #0063b1);
+                    color: white; border: none; border-radius: 8px; padding: 7px 12px; min-width: 112px; font-weight: 600;
+                }
+                QPushButton#backupOpenButton:hover { background: #006cbd; }
+                QPushButton#backupCancelButton {
+                    background: #f3f4f7; color: #1a1a1a; border: 1px solid #cfd4db; border-radius: 8px; padding: 7px 12px; min-width: 96px;
+                }
+                QPushButton#backupCancelButton:hover { background: #e6e8ec; }
+            """)
+
+        result = dialog.exec()
+        if result == QMessageBox.StandardButton.Open:
+            open_hosts_backup_folder()
 
 _ADDITIONAL_HOSTS_VERSION_RE = _re.compile(r'# additional_hosts_version\s+(\S+)')
 _HOSTS_VERSION_BLOCK_RE = _re.compile(r'version_add\s*=\s*["\']([^"\']+)["\']')
