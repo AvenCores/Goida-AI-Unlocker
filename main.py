@@ -291,44 +291,99 @@ def update_hosts_as_admin(action: str = "install"):
 $source = "{temp_path}"
 $dest = "{HOSTS_PATH}"
 Copy-Item -Path $source -Destination $dest -Force
-Clear-DnsClientCache
-ipconfig /flushdns
-ipconfig /release
-ipconfig /renew
-netsh winsock reset
+try {{ Clear-DnsClientCache }} catch {{}}
+try {{ ipconfig /flushdns }} catch {{}}
 '''
             with tempfile.NamedTemporaryFile('w', delete=False, suffix='.ps1', encoding='utf-8') as ps_file:
                 ps_file.write(ps_content)
                 ps_script_path = ps_file.name
 
-            command = [
-                "powershell", "-WindowStyle", "Hidden", "-Command",
-                f'Start-Process powershell -Verb runAs -WindowStyle Hidden -ArgumentList \'-NoProfile -ExecutionPolicy Bypass -File "{ps_script_path}"\' -Wait'
-            ]
-            subprocess.run(command, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
-            
+            # Сначала пробуем через Start-Process -Verb runAs (стандартный UAC-запрос)
+            elevated = False
+            try:
+                command = [
+                    "powershell", "-WindowStyle", "Hidden", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                    "-Command",
+                    f'Start-Process powershell -Verb runAs -WindowStyle Hidden -ArgumentList \'-NoProfile -ExecutionPolicy Bypass -File "{ps_script_path}"\' -Wait'
+                ]
+                result = subprocess.run(command, creationflags=subprocess.CREATE_NO_WINDOW, timeout=120)
+                elevated = (result.returncode == 0)
+            except Exception:
+                elevated = False
+
+            # Если UAC не сработал — пробуем напрямую (вдруг уже запущены от админа)
+            if not elevated:
+                try:
+                    result2 = subprocess.run(
+                        ["powershell", "-WindowStyle", "Hidden", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                         "-File", ps_script_path],
+                        creationflags=subprocess.CREATE_NO_WINDOW, timeout=60
+                    )
+                    elevated = (result2.returncode == 0)
+                except Exception:
+                    elevated = False
+
+            if not elevated:
+                raise PermissionError("Не удалось получить права администратора. Запустите программу от имени Администратора.")
+
         else:
-            # Linux Logic
-            # Пытаемся использовать pkexec для получения прав root и копирования файла
-            # Также пытаемся сбросить DNS разными способами
+            # Linux / macOS Logic
             flush_cmd = (
-                "resolvectl flush-caches || "
-                "systemd-resolve --flush-caches || "
-                "/etc/init.d/nscd restart || "
-                "killall -HUP dnsmasq || "
+                "resolvectl flush-caches 2>/dev/null || "
+                "systemd-resolve --flush-caches 2>/dev/null || "
+                "/etc/init.d/nscd restart 2>/dev/null || "
+                "killall -HUP dnsmasq 2>/dev/null || "
                 "true"
             )
-            
-            # Если мы уже root, просто копируем
+
+            # Если уже root — просто копируем
             if os.geteuid() == 0:
                 shutil.copy(temp_path, HOSTS_PATH)
                 os.chmod(HOSTS_PATH, 0o644)
                 subprocess.run(flush_cmd, shell=True)
             else:
-                # Используем pkexec для выполнения bash команды
-                # Мы копируем temp файл в /etc/hosts и ставим права
-                bash_cmd = f"cp '{temp_path}' {HOSTS_PATH} && chmod 644 {HOSTS_PATH} && {flush_cmd}"
-                subprocess.run(["pkexec", "bash", "-c", bash_cmd], check=True)
+                bash_cmd = f"cp '{temp_path}' '{HOSTS_PATH}' && chmod 644 '{HOSTS_PATH}' && {flush_cmd}"
+                elevated = False
+
+                # 1. Пробуем pkexec (графический диалог, предпочтительно)
+                if shutil.which("pkexec"):
+                    try:
+                        result = subprocess.run(
+                            ["pkexec", "bash", "-c", bash_cmd],
+                            timeout=120
+                        )
+                        elevated = (result.returncode == 0)
+                    except Exception:
+                        elevated = False
+
+                # 2. Fallback: sudo (терминальный ввод пароля)
+                if not elevated and shutil.which("sudo"):
+                    try:
+                        result = subprocess.run(
+                            ["sudo", "bash", "-c", bash_cmd],
+                            timeout=120
+                        )
+                        elevated = (result.returncode == 0)
+                    except Exception:
+                        elevated = False
+
+                # 3. Fallback: gksudo / kdesudo (устаревшие графические обёртки)
+                if not elevated:
+                    for su_tool in ("gksudo", "kdesudo"):
+                        if shutil.which(su_tool):
+                            try:
+                                result = subprocess.run(
+                                    [su_tool, "bash", "-c", bash_cmd],
+                                    timeout=120
+                                )
+                                elevated = (result.returncode == 0)
+                                if elevated:
+                                    break
+                            except Exception:
+                                continue
+
+                if not elevated:
+                    raise PermissionError("Не удалось получить права root. Введите пароль при запросе или запустите программу от имени root.")
 
         _time.sleep(1)
         return True
@@ -879,27 +934,45 @@ if __name__ == "__main__":
 $source = "{temp_path}"
 $dest = "{HOSTS_PATH}"
 Copy-Item -Path $source -Destination $dest -Force
-Clear-DnsClientCache
-ipconfig /flushdns
-ipconfig /release
-ipconfig /renew
-netsh winsock reset
+try {{ Clear-DnsClientCache }} catch {{}}
+try {{ ipconfig /flushdns }} catch {{}}
 '''
                 with tempfile.NamedTemporaryFile('w', delete=False, suffix='.ps1', encoding='utf-8') as ps_file:
                     ps_file.write(ps_content)
                     ps_script_path = ps_file.name
-                command = [
-                    "powershell", "-WindowStyle", "Hidden", "-Command",
-                    f'Start-Process powershell -Verb runAs -WindowStyle Hidden -ArgumentList \'-NoProfile -ExecutionPolicy Bypass -File "{ps_script_path}"\' -Wait'
-                ]
-                subprocess.run(command, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+
+                elevated = False
+                try:
+                    command = [
+                        "powershell", "-WindowStyle", "Hidden", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                        "-Command",
+                        f'Start-Process powershell -Verb runAs -WindowStyle Hidden -ArgumentList \'-NoProfile -ExecutionPolicy Bypass -File "{ps_script_path}"\' -Wait'
+                    ]
+                    result = subprocess.run(command, creationflags=subprocess.CREATE_NO_WINDOW, timeout=120)
+                    elevated = (result.returncode == 0)
+                except Exception:
+                    elevated = False
+
+                if not elevated:
+                    try:
+                        result2 = subprocess.run(
+                            ["powershell", "-WindowStyle", "Hidden", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                             "-File", ps_script_path],
+                            creationflags=subprocess.CREATE_NO_WINDOW, timeout=60
+                        )
+                        elevated = (result2.returncode == 0)
+                    except Exception:
+                        elevated = False
+
+                if not elevated:
+                    raise PermissionError("Не удалось получить права администратора. Запустите программу от имени Администратора.")
             else:
-                # Linux logic
+                # Linux / macOS logic
                 flush_cmd = (
-                    "resolvectl flush-caches || "
-                    "systemd-resolve --flush-caches || "
-                    "/etc/init.d/nscd restart || "
-                    "killall -HUP dnsmasq || "
+                    "resolvectl flush-caches 2>/dev/null || "
+                    "systemd-resolve --flush-caches 2>/dev/null || "
+                    "/etc/init.d/nscd restart 2>/dev/null || "
+                    "killall -HUP dnsmasq 2>/dev/null || "
                     "true"
                 )
                 if os.geteuid() == 0:
@@ -907,8 +980,36 @@ netsh winsock reset
                     os.chmod(HOSTS_PATH, 0o644)
                     subprocess.run(flush_cmd, shell=True)
                 else:
-                    bash_cmd = f"cp '{temp_path}' {HOSTS_PATH} && chmod 644 {HOSTS_PATH} && {flush_cmd}"
-                    subprocess.run(["pkexec", "bash", "-c", bash_cmd], check=True)
+                    bash_cmd = f"cp '{temp_path}' '{HOSTS_PATH}' && chmod 644 '{HOSTS_PATH}' && {flush_cmd}"
+                    elevated = False
+
+                    if shutil.which("pkexec"):
+                        try:
+                            result = subprocess.run(["pkexec", "bash", "-c", bash_cmd], timeout=120)
+                            elevated = (result.returncode == 0)
+                        except Exception:
+                            elevated = False
+
+                    if not elevated and shutil.which("sudo"):
+                        try:
+                            result = subprocess.run(["sudo", "bash", "-c", bash_cmd], timeout=120)
+                            elevated = (result.returncode == 0)
+                        except Exception:
+                            elevated = False
+
+                    if not elevated:
+                        for su_tool in ("gksudo", "kdesudo"):
+                            if shutil.which(su_tool):
+                                try:
+                                    result = subprocess.run([su_tool, "bash", "-c", bash_cmd], timeout=120)
+                                    elevated = (result.returncode == 0)
+                                    if elevated:
+                                        break
+                                except Exception:
+                                    continue
+
+                    if not elevated:
+                        raise PermissionError("Не удалось получить права root. Введите пароль при запросе или запустите программу от имени root.")
 
             _time.sleep(1)
             return True
