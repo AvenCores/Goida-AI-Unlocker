@@ -105,13 +105,10 @@ def open_latest_hosts_backup_file():
         app = QApplication.instance()
         parent = app.activeWindow() if app else None
         dialog = QMessageBox(parent)
-        dialog.setWindowTitle("Backup не найден")
+        dialog.setWindowTitle(tr("backup_missing_title"))
         dialog.setIcon(QMessageBox.Icon.NoIcon)
-        dialog.setText("<b style='font-size:15px;'>Backup не найден</b>")
-        dialog.setInformativeText(
-            "Последний backup-файл отсутствует.\n"
-            "Открыть папку с backup-файлами?"
-        )
+        dialog.setText(f"<b style='font-size:15px;'>{tr('backup_missing_title')}</b>")
+        dialog.setInformativeText(tr("backup_missing_info"))
         dialog.setTextFormat(Qt.TextFormat.RichText)
         dialog.setStandardButtons(
             QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Cancel
@@ -122,10 +119,10 @@ def open_latest_hosts_backup_file():
         open_button = dialog.button(QMessageBox.StandardButton.Open)
         cancel_button = dialog.button(QMessageBox.StandardButton.Cancel)
         if open_button:
-            open_button.setText("Открыть папку")
+            open_button.setText(tr("open_folder"))
             open_button.setObjectName("backupOpenButton")
         if cancel_button:
-            cancel_button.setText("Отмена")
+            cancel_button.setText(tr("cancel"))
             cancel_button.setObjectName("backupCancelButton")
         for label in dialog.findChildren(QLabel):
             if label.text().strip():
@@ -183,7 +180,7 @@ _HOSTS_CONTENT_RE = _re.compile(r'hosts_add\s*=\s*"""(.*?)"""', _re.S)
 
 try:
     from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QStackedWidget, QSizePolicy, QToolButton, QAbstractButton, QGridLayout, QMenu, QMessageBox
-    from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QSize
+    from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QSize, QLocale
     from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor, QFontMetrics
     from PySide6.QtSvg import QSvgRenderer
 except ImportError:
@@ -196,6 +193,245 @@ import textwrap as _tw
 
 ADDITIONAL_HOSTS_URL = "https://raw.githubusercontent.com/AvenCores/Goida-AI-Unlocker/refs/heads/main/additional_hosts.py"
 APP_VERSION = "0.0.0"
+SUPPORTED_LANGUAGES = ("ru", "en")
+CURRENT_LANGUAGE = "ru"
+
+TRANSLATIONS = {
+    "ru": {
+        "backup_missing_title": "Backup не найден",
+        "backup_missing_info": "Последний backup-файл отсутствует.\nОткрыть папку с backup-файлами?",
+        "open_folder": "Открыть папку",
+        "cancel": "Отмена",
+        "author_label": "Автор: AvenCores",
+        "back_to_menu": "В меню",
+        "status_installed": "Установлен",
+        "status_not_installed": "Не установлен",
+        "unlock_status": "ㅤОбход блокировок - <span style='color:{color}; font-weight:bold;'>{status}</span>ㅤ",
+        "version_checking": "Проверка версии…",
+        "update_date_checking": "Дата обновления: проверка...",
+        "install_button_install": " Установить обход блокировок",
+        "install_button_update": " Обновить обход блокировок",
+        "uninstall_button": " Удалить обход блокировок",
+        "theme_button": " Сменить тему",
+        "language_button": " English",
+        "donate_button": " Донат",
+        "about_button": " О программе",
+        "update_button": " Проверить обновления",
+        "open_hosts_button": " Открыть файл hosts",
+        "backup_hosts_button": " Бэкапы hosts",
+        "backup_menu_open_file": "Открыть последний backup-файл",
+        "backup_menu_open_folder": "Открыть папку backup",
+        "ok": "Окей",
+        "installed_version": "ㅤУстановленная версия: <b>v{version}</b>ㅤ",
+        "latest_version": "Последняя версия: <b>v{version}</b>",
+        "latest_version_padded": "ㅤПоследняя версия: <b>v{version}</b>ㅤ",
+        "new_version_available": "Доступна новая версия!",
+        "download": "Скачать",
+        "latest_version_installed": "ㅤУ вас установлена последняя версия.ㅤ",
+        "update_url_missing": "URL обновления не найден.",
+        "update_info_unavailable": "Не удалось получить информацию об обновлении.",
+        "updates_check_failed": "Не удалось проверить обновления.",
+        "processing_install": "Установка обхода...\nㅤПожалуйста, подождите.ㅤ",
+        "processing_update": "Обновление обхода...\nㅤПожалуйста, подождите.ㅤ",
+        "processing_uninstall": "Удаление обхода...\nㅤПожалуйста, подождите.ㅤ",
+        "install_success": "Файл hosts успешно установлен!\nㅤВозможно потребуется перезапустить браузер.ㅤ",
+        "update_success": "Файл hosts успешно обновлён!\nㅤВозможно потребуется перезапустить браузер.ㅤ",
+        "uninstall_success": "Файл hosts успешно восстановлен!\nㅤВозможно потребуется перезапустить браузер.ㅤ",
+        "admin_hint_windows": "Запустите программу от имени Администратора.",
+        "admin_hint_unix": "Введите пароль root при запросе.",
+        "install_error": "Не удалось установить файл hosts.\nㅤ{hint}ㅤ",
+        "update_error": "Не удалось обновить файл hosts.\nㅤ{hint}ㅤ",
+        "uninstall_error": "Не удалось восстановить файл hosts.\nㅤ{hint}ㅤ",
+        "donate_title": "Поддержать автора",
+        "copy_card": "Скопировать номер карты",
+        "copied": "Скопировано",
+        "repository": "Репозиторий",
+        "hosts_status_not_installed": "Не установлен",
+        "hosts_status_up_to_date": "Актуально",
+        "hosts_status_outdated": "Устарело",
+        "hosts_version_status": "Версия hosts - <span style='color:{color}; font-weight:bold;'>{status}</span>",
+        "hosts_update_date": "Дата обновления hosts: {date}",
+        "hosts_update_date_unknown": "Дата обновления hosts: неизвестно",
+    },
+    "en": {
+        "backup_missing_title": "Backup not found",
+        "backup_missing_info": "The latest backup file is missing.\nOpen the backup folder?",
+        "open_folder": "Open folder",
+        "cancel": "Cancel",
+        "author_label": "Author: AvenCores",
+        "back_to_menu": "Back to menu",
+        "status_installed": "Installed",
+        "status_not_installed": "Not installed",
+        "unlock_status": "ㅤBypass status - <span style='color:{color}; font-weight:bold;'>{status}</span>ㅤ",
+        "version_checking": "Checking version…",
+        "update_date_checking": "Update date: checking...",
+        "install_button_install": " Install bypass",
+        "install_button_update": " Update bypass",
+        "uninstall_button": " Remove bypass",
+        "theme_button": " Change theme",
+        "language_button": " Русский",
+        "donate_button": " Donate",
+        "about_button": " About",
+        "update_button": " Check for updates",
+        "open_hosts_button": " Open hosts file",
+        "backup_hosts_button": " Hosts backups",
+        "backup_menu_open_file": "Open latest backup file",
+        "backup_menu_open_folder": "Open backup folder",
+        "ok": "OK",
+        "installed_version": "ㅤInstalled version: <b>v{version}</b>ㅤ",
+        "latest_version": "Latest version: <b>v{version}</b>",
+        "latest_version_padded": "ㅤLatest version: <b>v{version}</b>ㅤ",
+        "new_version_available": "A new version is available!",
+        "download": "Download",
+        "latest_version_installed": "ㅤYou already have the latest version.ㅤ",
+        "update_url_missing": "Update URL not found.",
+        "update_info_unavailable": "Failed to get update information.",
+        "updates_check_failed": "Failed to check for updates.",
+        "processing_install": "Installing bypass...\nㅤPlease wait.ㅤ",
+        "processing_update": "Updating bypass...\nㅤPlease wait.ㅤ",
+        "processing_uninstall": "Removing bypass...\nㅤPlease wait.ㅤ",
+        "install_success": "The hosts file was installed successfully!\nㅤYou may need to restart your browser.ㅤ",
+        "update_success": "The hosts file was updated successfully!\nㅤYou may need to restart your browser.ㅤ",
+        "uninstall_success": "The hosts file was restored successfully!\nㅤYou may need to restart your browser.ㅤ",
+        "admin_hint_windows": "Run the app as Administrator.",
+        "admin_hint_unix": "Enter the root password when prompted.",
+        "install_error": "Failed to install the hosts file.\nㅤ{hint}ㅤ",
+        "update_error": "Failed to update the hosts file.\nㅤ{hint}ㅤ",
+        "uninstall_error": "Failed to restore the hosts file.\nㅤ{hint}ㅤ",
+        "donate_title": "Support the author",
+        "copy_card": "Copy card number",
+        "copied": "Copied",
+        "repository": "Repository",
+        "hosts_status_not_installed": "Not installed",
+        "hosts_status_up_to_date": "Up to date",
+        "hosts_status_outdated": "Outdated",
+        "hosts_version_status": "Hosts version - <span style='color:{color}; font-weight:bold;'>{status}</span>",
+        "hosts_update_date": "Hosts update date: {date}",
+        "hosts_update_date_unknown": "Hosts update date: unknown",
+    },
+}
+
+_MONTH_NAME_ALIASES = {
+    "январь": 0,
+    "января": 0,
+    "january": 0,
+    "февраль": 1,
+    "февраля": 1,
+    "february": 1,
+    "март": 2,
+    "марта": 2,
+    "march": 2,
+    "апрель": 3,
+    "апреля": 3,
+    "april": 3,
+    "май": 4,
+    "мая": 4,
+    "may": 4,
+    "июнь": 5,
+    "июня": 5,
+    "june": 5,
+    "июль": 6,
+    "июля": 6,
+    "july": 6,
+    "август": 7,
+    "августа": 7,
+    "august": 7,
+    "сентябрь": 8,
+    "сентября": 8,
+    "september": 8,
+    "октябрь": 9,
+    "октября": 9,
+    "october": 9,
+    "ноябрь": 10,
+    "ноября": 10,
+    "november": 10,
+    "декабрь": 11,
+    "декабря": 11,
+    "december": 11,
+}
+
+_MONTH_NAME_OUTPUTS = {
+    "ru": [
+        "января",
+        "февраля",
+        "марта",
+        "апреля",
+        "мая",
+        "июня",
+        "июля",
+        "августа",
+        "сентября",
+        "октября",
+        "ноября",
+        "декабря",
+    ],
+    "en": [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ],
+}
+
+_MONTH_NAME_RE = _re.compile(
+    r"\b(" + "|".join(sorted((_re.escape(name) for name in _MONTH_NAME_ALIASES), key=len, reverse=True)) + r")\b",
+    _re.IGNORECASE,
+)
+
+
+def normalize_language(language: str | None) -> str:
+    if not language:
+        return "ru"
+    normalized = language.lower().replace("-", "_")
+    if normalized.startswith("ru"):
+        return "ru"
+    if normalized.startswith("en"):
+        return "en"
+    return "en"
+
+
+def detect_system_language() -> str:
+    try:
+        return normalize_language(QLocale.system().name())
+    except Exception:
+        return "ru"
+
+
+def set_current_language(language: str | None) -> str:
+    global CURRENT_LANGUAGE
+    CURRENT_LANGUAGE = normalize_language(language)
+    return CURRENT_LANGUAGE
+
+
+def tr(key: str, *, language: str | None = None, **kwargs) -> str:
+    lang = normalize_language(language or CURRENT_LANGUAGE)
+    bundle = TRANSLATIONS.get(lang, TRANSLATIONS["ru"])
+    template = bundle.get(key, TRANSLATIONS["ru"].get(key, key))
+    return template.format(**kwargs)
+
+
+def localize_update_date(date_text: str, language: str | None = None) -> str:
+    target_language = normalize_language(language or CURRENT_LANGUAGE)
+    month_names = _MONTH_NAME_OUTPUTS.get(target_language, _MONTH_NAME_OUTPUTS["en"])
+
+    def replace_month(match):
+        month_index = _MONTH_NAME_ALIASES.get(match.group(0).lower())
+        if month_index is None:
+            return match.group(0)
+        return month_names[month_index]
+
+    return _MONTH_NAME_RE.sub(replace_month, date_text)
+
+
+set_current_language(detect_system_language())
 
 def _safe_remove(path: str, retries: int = 3, delay: float = 0.3):
     for _ in range(retries):
@@ -417,15 +653,18 @@ def is_system_dark_theme():
 
 _STYLESHEET_CACHE = {}
 
-def get_stylesheet(dark):
-    cache_key = f"dark_{dark}"
+def get_stylesheet(dark, language: str | None = None):
+    lang = normalize_language(language or CURRENT_LANGUAGE)
+    cache_key = f"{lang}_dark_{dark}"
     if cache_key in _STYLESHEET_CACHE:
         return _STYLESHEET_CACHE[cache_key]
-    result = _build_stylesheet(dark)
+    result = _build_stylesheet(dark, lang)
     _STYLESHEET_CACHE[cache_key] = result
     return result
 
-def _build_stylesheet(dark):
+def _build_stylesheet(dark, language: str):
+    author_color = "#888" if dark else "#666666"
+    link_color = "#2d7dff" if dark else "#0078d4"
     if dark:
         return {
             "main": """
@@ -452,8 +691,8 @@ def _build_stylesheet(dark):
             "theme_center_small": "QPushButton { background: #e6e8ec; color: #222; border: 1.5px solid #cfd4db; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 500; min-width: 140px; text-align: center; }",
             "about_title_style": "font-size:25px; margin-bottom:4px;",
             "about_title_html": f"<b style='color:#f3f6fd;'>Goida AI Unlocker</b> <span style='font-size:15px; color:#bfc9db;'>(v{APP_VERSION})</span>",
-            "about_info_html": "<span style='font-size:11px; color:#888;'>Автор: AvenCores</span>",
-            "about_link_html": "<a href='#' style='color:#2d7dff; text-decoration:none; font-size:13px;'>⟵ В меню</a>",
+            "about_info_html": f"<span style='font-size:11px; color:{author_color};'>{tr('author_label', language=language)}</span>",
+            "about_link_html": f"<a href='#' style='color:{link_color}; text-decoration:none; font-size:13px;'>⟵ {tr('back_to_menu', language=language)}</a>",
         }
     else:
         return {
@@ -481,8 +720,8 @@ def _build_stylesheet(dark):
             "theme_center_small": "QPushButton { background: #f3f4f7; color: #1a1a1a; border: 1.5px solid #cfd4db; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 500; min-width: 140px; text-align: center; }",
             "about_title_style": "font-size:25px; margin-bottom:4px;",
             "about_title_html": f"<b style='color:#1a1a1a;'>Goida AI Unlocker</b> <span style='font-size:15px; color:#555555;'>(v{APP_VERSION})</span>",
-            "about_info_html": "<span style='font-size:11px; color:#666666;'>Автор: AvenCores</span>",
-            "about_link_html": "<a href='#' style='color:#0078d4; text-decoration:none; font-size:13px;'>⟵ В меню</a>",
+            "about_info_html": f"<span style='font-size:11px; color:{author_color};'>{tr('author_label', language=language)}</span>",
+            "about_link_html": f"<a href='#' style='color:{link_color}; text-decoration:none; font-size:13px;'>⟵ {tr('back_to_menu', language=language)}</a>",
         }
 
 class DraggableTitleBar(QWidget):
@@ -539,9 +778,10 @@ def _extract_update_line(content: bytes) -> tuple[str, str]:
         lines = content.decode("utf-8", errors="ignore").splitlines()
         if len(lines) > 1:
             line = lines[1].strip()
-            if "Последнее обновление:" in line:
-                date_part = line.split("Последнее обновление:", 1)[1].strip()
-                return line, date_part
+            for prefix in ("Последнее обновление:", "Last updated:"):
+                if prefix in line:
+                    date_part = line.split(prefix, 1)[1].strip()
+                    return line, date_part
         return "", ""
     except Exception:
         return "", ""
@@ -582,7 +822,7 @@ def get_hosts_version_status() -> tuple[str, str, str]:
         return ver
 
     if not (os.path.exists(HOSTS_PATH) and check_installation()):
-        return "Не установлен", "#e06c75", ""
+        return "not_installed", "#e06c75", ""
     
     try:
         with open(HOSTS_PATH, "rb") as lf:
@@ -618,11 +858,11 @@ def get_hosts_version_status() -> tuple[str, str, str]:
         add_match = (local_add_ver == remote_add_ver) if remote_add_ver else (local_add_ver == "")
         
         if main_match and add_match:
-            return "Актуально", "#43b581", remote_date
+            return "up_to_date", "#43b581", remote_date
         else:
-            return "Устарело", "#e06c75", remote_date
+            return "outdated", "#e06c75", remote_date
     except Exception:
-        return "Устарело", "#e06c75", ""
+        return "outdated", "#e06c75", ""
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
@@ -714,11 +954,12 @@ if __name__ == "__main__":
 
     main_window = CustomWindow()
     main_window.stacked_widget = QStackedWidget()
+    main_window.language = CURRENT_LANGUAGE
     main_window.setWindowTitle("Goida AI Unlocker")
     main_window.setWindowFlags(Qt.WindowType.FramelessWindowHint)
     main_window.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
     main_window.dark_theme = is_system_dark_theme()
-    main_window.styles = get_stylesheet(main_window.dark_theme)
+    main_window.styles = get_stylesheet(main_window.dark_theme, main_window.language)
     main_window.setStyleSheet(main_window.styles["main"])
     main_window.setWindowIcon(QIcon(icon_path))
 
@@ -762,6 +1003,10 @@ if __name__ == "__main__":
     layout.setContentsMargins(20, 20, 20, 20)
     outer_layout.addLayout(layout)
     outer_layout.addStretch()
+    footer_layout = QHBoxLayout()
+    footer_layout.setContentsMargins(20, 0, 20, 20)
+    footer_layout.setSpacing(0)
+    outer_layout.addLayout(footer_layout)
 
     def fix_widget_size(w):
         w.setMinimumSize(main_window.width(), main_window.height() - title_bar.height())
@@ -789,19 +1034,20 @@ if __name__ == "__main__":
     app_title_label.setStyleSheet(main_window.styles["about_title_style"])
     layout.addWidget(app_title_label)
 
-    status = "Установлен" if check_installation() else "Не установлен"
-    color = "#43b581" if status == "Установлен" else "#e06c75"
-    textinformer = QLabel(f"ㅤОбход блокировок - <span style='color:{color}; font-weight:bold;'>{status}</span>ㅤ")
+    installed = check_installation()
+    color = "#43b581" if installed else "#e06c75"
+    status_key = "status_installed" if installed else "status_not_installed"
+    textinformer = QLabel(tr("unlock_status", status=tr(status_key), color=color))
     textinformer.setTextFormat(Qt.TextFormat.RichText)
     textinformer.setAlignment(Qt.AlignmentFlag.AlignCenter)
     textinformer.setStyleSheet(main_window.styles["label"])
 
-    version_label = QLabel("Проверка версии…")
+    version_label = QLabel(tr("version_checking"))
     version_label.setTextFormat(Qt.TextFormat.RichText)
     version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     version_label.setStyleSheet(main_window.styles["label"])
 
-    update_date_label = QLabel("Дата обновления: проверка...")
+    update_date_label = QLabel(tr("update_date_checking"))
     update_date_label.setTextFormat(Qt.TextFormat.RichText)
     update_date_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     text_color = "#ffffff" if main_window.dark_theme else "#1a1a1a"
@@ -822,56 +1068,77 @@ if __name__ == "__main__":
     status_container.setStyleSheet(_dark_block if main_window.dark_theme else _light_block)
     layout.addWidget(status_container)
 
-    button = QPushButton(" Установить обход блокировок")
+    button = QPushButton(tr("install_button_install"))
     button.setIcon(get_icon("settings.svg", 18, force_white=True))
     button.setIconSize(QSize(18, 18))
     button.setProperty("icon_name", "settings.svg")
     button.setProperty("icon_force_white", True)
+    button.setProperty("style_role", "button1")
+    button.setProperty("install_mode", "install")
     button.setStyleSheet(main_window.styles["button1"])
-    button2 = QPushButton(" Удалить обход блокировок")
+    button2 = QPushButton(tr("uninstall_button"))
     button2.setIcon(get_icon("trash.svg", 18, force_white=True))
     button2.setIconSize(QSize(18, 18))
     button2.setProperty("icon_name", "trash.svg")
     button2.setProperty("icon_force_white", True)
+    button2.setProperty("style_role", "button2")
     button2.setStyleSheet(main_window.styles["button2"])
-    theme_button = QPushButton(" Сменить тему")
+    theme_button = QPushButton(tr("theme_button"))
     theme_button.setIcon(get_icon("sun.svg", 18, force_dark=True))
     theme_button.setIconSize(QSize(18, 18))
     theme_button.setProperty("icon_name", "sun.svg")
     theme_button.setProperty("icon_force_dark", True)
+    theme_button.setProperty("style_role", "theme")
     theme_button.setStyleSheet(main_window.styles["theme"])
-    donate_button = QPushButton(" Донат")
+    language_button = QPushButton()
+    language_button.setIcon(get_icon("language.svg", 20, force_dark=True))
+    language_button.setIconSize(QSize(20, 20))
+    language_button.setProperty("icon_name", "language.svg")
+    language_button.setProperty("icon_force_dark", True)
+    language_button.setProperty("style_role", "theme")
+    language_button.setStyleSheet(
+        main_window.styles["theme"] +
+        "\nQPushButton { padding: 0; min-width: 44px; max-width: 44px; min-height: 44px; max-height: 44px; }"
+    )
+    language_button.setFixedSize(44, 44)
+    language_button.setCursor(Qt.CursorShape.PointingHandCursor)
+    donate_button = QPushButton(tr("donate_button"))
     donate_button.setIcon(get_icon("heart.svg", 18, force_dark=True))
     donate_button.setIconSize(QSize(18, 18))
     donate_button.setProperty("icon_name", "heart.svg")
     donate_button.setProperty("icon_force_dark", True)
+    donate_button.setProperty("style_role", "theme")
     donate_button.setStyleSheet(main_window.styles["theme"])
-    about_button = QPushButton(" О программе")
+    about_button = QPushButton(tr("about_button"))
     about_button.setIcon(get_icon("info.svg", 18, force_dark=True))
     about_button.setIconSize(QSize(18, 18))
     about_button.setProperty("icon_name", "info.svg")
     about_button.setProperty("icon_force_dark", True)
+    about_button.setProperty("style_role", "theme")
     about_button.setStyleSheet(main_window.styles["theme"])
 
-    update_button = QPushButton(" Проверить обновления")
+    update_button = QPushButton(tr("update_button"))
     update_button.setIcon(get_icon("refresh.svg", 18, force_dark=True))
     update_button.setIconSize(QSize(18, 18))
     update_button.setProperty("icon_name", "refresh.svg")
     update_button.setProperty("icon_force_dark", True)
+    update_button.setProperty("style_role", "theme")
     update_button.setStyleSheet(main_window.styles["theme"])
     update_button.clicked.connect(lambda: check_for_updates())
-    open_hosts_button = QPushButton(" \u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0444\u0430\u0439\u043b hosts")
+    open_hosts_button = QPushButton(tr("open_hosts_button"))
     open_hosts_button.setIcon(get_icon("book-open.svg", 18, force_dark=True))
     open_hosts_button.setIconSize(QSize(18, 18))
     open_hosts_button.setProperty("icon_name", "book-open.svg")
     open_hosts_button.setProperty("icon_force_dark", True)
+    open_hosts_button.setProperty("style_role", "theme")
     open_hosts_button.setStyleSheet(main_window.styles["theme"])
     open_hosts_button.clicked.connect(open_hosts_file)
-    backup_hosts_button = QPushButton(" Бэкапы hosts")
+    backup_hosts_button = QPushButton(tr("backup_hosts_button"))
     backup_hosts_button.setIcon(get_icon("clock.svg", 18, force_dark=True))
     backup_hosts_button.setIconSize(QSize(18, 18))
     backup_hosts_button.setProperty("icon_name", "clock.svg")
     backup_hosts_button.setProperty("icon_force_dark", True)
+    backup_hosts_button.setProperty("style_role", "theme")
     backup_hosts_button.setStyleSheet(main_window.styles["theme"])
 
     def show_hosts_backup_menu():
@@ -888,8 +1155,8 @@ if __name__ == "__main__":
                 "QMenu::item { padding:6px 16px; border-radius:8px; margin:2px 0; }"
                 "QMenu::item:selected { background:#0078d4; color:#ffffff; border-radius:8px; }"
             )
-        open_file_action = menu.addAction("Открыть последний backup-файл")
-        open_folder_action = menu.addAction("Открыть папку backup")
+        open_file_action = menu.addAction(tr("backup_menu_open_file"))
+        open_folder_action = menu.addAction(tr("backup_menu_open_folder"))
         selected_action = menu.exec(backup_hosts_button.mapToGlobal(backup_hosts_button.rect().bottomLeft()))
         if selected_action == open_file_action:
             open_latest_hosts_backup_file()
@@ -897,6 +1164,102 @@ if __name__ == "__main__":
             open_hosts_backup_folder()
 
     backup_hosts_button.clicked.connect(show_hosts_backup_menu)
+
+    def refresh_status_container_style():
+        _light_block = "background:#f3f4f7; border:1.5px solid #cfd4db; border-radius:12px;"
+        _dark_block = "background:#2d333b; border:1.5px solid #3c434d; border-radius:12px;"
+        status_container.setStyleSheet(_dark_block if main_window.dark_theme else _light_block)
+
+    def set_install_button_mode(mode: str):
+        mode = "update" if mode == "update" else "install"
+        button.setProperty("install_mode", mode)
+        button.setText(tr("install_button_update" if mode == "update" else "install_button_install"))
+
+    def update_installation_status_label():
+        is_installed = check_installation()
+        current_color = "#43b581" if is_installed else "#e06c75"
+        current_status_key = "status_installed" if is_installed else "status_not_installed"
+        textinformer.setText(tr("unlock_status", status=tr(current_status_key), color=current_color))
+
+    def apply_hosts_version_status(status_key: str | None = None, color: str | None = None, update_date: str | None = None):
+        if status_key is not None:
+            version_label.setProperty("status_key", status_key)
+        else:
+            status_key = version_label.property("status_key") or "not_installed"
+
+        if color is not None:
+            version_label.setProperty("status_color", color)
+        else:
+            color = version_label.property("status_color") or "#e06c75"
+
+        if update_date is not None:
+            update_date_label.setProperty("update_date_value", update_date)
+        else:
+            update_date = update_date_label.property("update_date_value") or ""
+
+        version_label.setText(
+            tr(
+                "hosts_version_status",
+                color=color,
+                status=tr(f"hosts_status_{status_key}"),
+            )
+        )
+        if update_date:
+            update_date_label.setText(tr("hosts_update_date", date=localize_update_date(update_date)))
+        else:
+            update_date_label.setText(tr("hosts_update_date_unknown"))
+        set_install_button_mode("update" if status_key == "outdated" else "install")
+
+    def apply_main_texts():
+        title_label.setText("Goida AI Unlocker")
+        app_title_label.setText(main_window.styles["about_title_html"])
+        update_installation_status_label()
+
+        stored_status_key = version_label.property("status_key")
+        if stored_status_key:
+            apply_hosts_version_status()
+        else:
+            version_label.setText(tr("version_checking"))
+            update_date_label.setText(tr("update_date_checking"))
+            set_install_button_mode(button.property("install_mode") or "install")
+
+        button2.setText(tr("uninstall_button"))
+        theme_button.setText(tr("theme_button"))
+        language_button.setText("")
+        language_button.setToolTip(tr("language_button"))
+        language_button.setStatusTip(tr("language_button"))
+        language_button.setAccessibleName(tr("language_button"))
+        donate_button.setText(tr("donate_button"))
+        about_button.setText(tr("about_button"))
+        update_button.setText(tr("update_button"))
+        open_hosts_button.setText(tr("open_hosts_button"))
+        backup_hosts_button.setText(tr("backup_hosts_button"))
+
+    def apply_theme_styles():
+        main_window.styles = get_stylesheet(main_window.dark_theme, main_window.language)
+        main_window.setStyleSheet(main_window.styles["main"])
+        textinformer.setStyleSheet(main_window.styles["label"])
+        app_title_label.setStyleSheet(main_window.styles["about_title_style"])
+        version_label.setStyleSheet(main_window.styles["label"])
+        text_color = "#ffffff" if main_window.dark_theme else "#1a1a1a"
+        update_date_label.setStyleSheet(
+            f"font-size: 14px; color: {text_color}; border-radius: 8px; padding: 4px 8px; margin: 2px;"
+        )
+        button.setStyleSheet(main_window.styles["button1"])
+        button2.setStyleSheet(main_window.styles["button2"])
+        theme_button.setStyleSheet(main_window.styles["theme"])
+        language_button.setStyleSheet(
+            main_window.styles["theme"] +
+            "\nQPushButton { padding: 0; min-width: 44px; max-width: 44px; min-height: 44px; max-height: 44px; }"
+        )
+        donate_button.setStyleSheet(main_window.styles["theme"])
+        open_hosts_button.setStyleSheet(main_window.styles["theme"])
+        backup_hosts_button.setStyleSheet(main_window.styles["theme"])
+        update_button.setStyleSheet(main_window.styles["theme"])
+        about_button.setStyleSheet(main_window.styles["theme"])
+        refresh_status_container_style()
+        update_subwindow_styles()
+        refresh_icons()
 
     def restore_original_hosts():
         temp_path: str | None = None
@@ -1067,14 +1430,12 @@ try {{ ipconfig /flushdns }} catch {{}}
             if w is central_widget: continue
             w.setStyleSheet(main_window.styles["main"])
             for child in w.findChildren(QPushButton):
-                text = child.text().lower()
-                if any(keyword in text for keyword in ["донат", "о программе", "github", "вернуться", "меню", "telegram", "youtube", "rutube", "дзен", "dzen", "vk"]):
-                    buttons_to_update.append((child, main_window.styles["theme"]))
-                elif "копировать" in text or "окей" in text:
-                    buttons_to_update.append((child, main_window.styles["button1"]))
-                elif "удалить" in text:
+                role = child.property("style_role")
+                if role == "button2":
                     buttons_to_update.append((child, main_window.styles["button2"]))
-                else: 
+                elif role == "theme":
+                    buttons_to_update.append((child, main_window.styles["theme"]))
+                else:
                     buttons_to_update.append((child, main_window.styles["button1"]))
             for child in w.findChildren(QLabel):
                 obj_name = child.objectName()
@@ -1123,7 +1484,8 @@ try {{ ipconfig /flushdns }} catch {{}}
             lbl.setWordWrap(False)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             card_layout.addWidget(lbl)
-        ok_btn = QPushButton("Окей")
+        ok_btn = QPushButton(tr("ok"))
+        ok_btn.setProperty("style_role", "button1")
         card_layout.addWidget(ok_btn)
         vbox.addWidget(card_container)
         if main_window.stacked_widget: main_window.stacked_widget.addWidget(message_widget)
@@ -1160,21 +1522,23 @@ try {{ ipconfig /flushdns }} catch {{}}
         emoji_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         emoji_label.setFixedHeight(48)
         card_layout.addWidget(emoji_label)
-        installed_lbl = QLabel(f"ㅤУстановленная версия: <b>v{local_version}</b>ㅤ")
+        installed_lbl = QLabel(tr("installed_version", version=local_version))
         installed_lbl.setTextFormat(Qt.TextFormat.RichText)
         installed_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(installed_lbl)
-        latest_lbl = QLabel(f"Последняя версия: <b>v{latest_version}</b>")
+        latest_lbl = QLabel(tr("latest_version", version=latest_version))
         latest_lbl.setTextFormat(Qt.TextFormat.RichText)
         latest_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(latest_lbl)
-        label = QLabel("Доступна новая версия!")
+        label = QLabel(tr("new_version_available"))
         label.setWordWrap(True)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(label)
-        download_btn = QPushButton("Скачать")
+        download_btn = QPushButton(tr("download"))
+        download_btn.setProperty("style_role", "button1")
         card_layout.addWidget(download_btn)
-        ok_btn2 = QPushButton("Окей")
+        ok_btn2 = QPushButton(tr("ok"))
+        ok_btn2.setProperty("style_role", "button1")
         card_layout.addWidget(ok_btn2)
         vbox.addWidget(card_container)
         if main_window.stacked_widget: main_window.stacked_widget.addWidget(update_widget)
@@ -1214,19 +1578,20 @@ try {{ ipconfig /flushdns }} catch {{}}
         emoji_label.setObjectName("message_emoji")
         emoji_label.setStyleSheet("font-size: 48px;")
         card_layout.addWidget(emoji_label)
-        installed_lbl = QLabel(f"ㅤУстановленная версия: <b>v{local_version}</b>ㅤ")
+        installed_lbl = QLabel(tr("installed_version", version=local_version))
         installed_lbl.setTextFormat(Qt.TextFormat.RichText)
         installed_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(installed_lbl)
-        latest_lbl = QLabel(f"ㅤПоследняя версия: <b>v{latest_version}</b>ㅤ")
+        latest_lbl = QLabel(tr("latest_version_padded", version=latest_version))
         latest_lbl.setTextFormat(Qt.TextFormat.RichText)
         latest_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(latest_lbl)
-        info_label = QLabel("ㅤУ вас установлена последняя версия.ㅤ")
+        info_label = QLabel(tr("latest_version_installed"))
         info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         info_label.setWordWrap(False)
         card_layout.addWidget(info_label)
-        ok_btn = QPushButton("Окей")
+        ok_btn = QPushButton(tr("ok"))
+        ok_btn.setProperty("style_role", "button1")
         card_layout.addWidget(ok_btn)
         vbox.addWidget(card_container)
         if main_window.stacked_widget: main_window.stacked_widget.addWidget(done_widget)
@@ -1249,9 +1614,9 @@ try {{ ipconfig /flushdns }} catch {{}}
                     _local = _json.load(_f)
                 local_ver = _local.get("version", "0.0.0")
                 remote_url = _local.get("update_info_url")
-                if not remote_url: raise RuntimeError("URL обновления не найден.")
+                if not remote_url: raise RuntimeError(tr("update_url_missing"))
                 remote_content = _fetch_url_cached(remote_url)
-                if not remote_content: raise RuntimeError("Не удалось получить информацию об обновлении.")
+                if not remote_content: raise RuntimeError(tr("update_info_unavailable"))
                 remote_data = _json.loads(remote_content)
                 remote_ver = remote_data.get("version", "0.0.0")
                 download_url = remote_data.get("download_url", "https://github.com/AvenCores/Goida-AI-Unlocker")
@@ -1260,7 +1625,7 @@ try {{ ipconfig /flushdns }} catch {{}}
                 if newer: QTimer.singleShot(0, main_window, lambda lv=local_ver, rv=remote_ver, u=download_url: show_update_available(lv, rv, u))
                 else: QTimer.singleShot(0, main_window, lambda lv=local_ver, rv=remote_ver: show_no_update_needed(lv, rv))
             except Exception as e:
-                err = f"Не удалось проверить обновления.\n{e}"
+                err = f"{tr('updates_check_failed')}\n{e}"
                 QTimer.singleShot(0, main_window, lambda m=err: show_message_and_return(m, success=False, animate=True))
             finally: setattr(check_for_updates, "_running", False)
         threading.Thread(target=worker, daemon=True).start()
@@ -1286,9 +1651,12 @@ try {{ ipconfig /flushdns }} catch {{}}
         card_container.setStyleSheet(dark_style if main_window.dark_theme else light_style)
         emoji_label = create_icon_label("clock.svg", size=48)
         card_layout.addWidget(emoji_label)
-        if action == "install": msg_text = "Установка обхода...\nㅤПожалуйста, подождите.ㅤ"
-        elif action == "update": msg_text = "Обновление обхода...\nㅤПожалуйста, подождите.ㅤ"
-        else: msg_text = "Удаление обхода...\nㅤПожалуйста, подождите.ㅤ"
+        if action == "install":
+            msg_text = tr("processing_install")
+        elif action == "update":
+            msg_text = tr("processing_update")
+        else:
+            msg_text = tr("processing_uninstall")
         for line in msg_text.split("\n"):
             if not line.strip(): continue
             lbl = QLabel(line)
@@ -1300,21 +1668,25 @@ try {{ ipconfig /flushdns }} catch {{}}
         update_subwindow_styles()
         animate_widget_switch(processing_widget)
         def update_status_label():
-            current_status = "Установлен" if check_installation() else "Не установлен"
-            current_color = "#43b581" if current_status == "Установлен" else "#e06c75"
-            textinformer.setText(f"ㅤОбход блокировок - <span style='color:{current_color}; font-weight:bold;'>{current_status}</span>ㅤ")
+            update_installation_status_label()
             update_version_label()
         def finish(ok_result):
             if ok_result:
-                if action == "install": success_msg = "Файл hosts успешно установлен!\nㅤВозможно потребуется перезапустить браузер.ㅤ"
-                elif action == "update": success_msg = "Файл hosts успешно обновлён!\nㅤВозможно потребуется перезапустить браузер.ㅤ"
-                else: success_msg = "Файл hosts успешно восстановлен!\nㅤВозможно потребуется перезапустить браузер.ㅤ"
+                if action == "install":
+                    success_msg = tr("install_success")
+                elif action == "update":
+                    success_msg = tr("update_success")
+                else:
+                    success_msg = tr("uninstall_success")
                 show_message_and_return(success_msg, success=True, animate=True)
             else:
-                admin_hint = "Запустите программу от имени Администратора." if sys.platform == 'win32' else "Введите пароль root при запросе."
-                if action == "install": error_msg = f"Не удалось установить файл hosts.\nㅤ{admin_hint}ㅤ"
-                elif action == "update": error_msg = f"Не удалось обновить файл hosts.\nㅤ{admin_hint}ㅤ"
-                else: error_msg = f"Не удалось восстановить файл hosts.\nㅤ{admin_hint}ㅤ"
+                admin_hint = tr("admin_hint_windows") if sys.platform == 'win32' else tr("admin_hint_unix")
+                if action == "install":
+                    error_msg = tr("install_error", hint=admin_hint)
+                elif action == "update":
+                    error_msg = tr("update_error", hint=admin_hint)
+                else:
+                    error_msg = tr("uninstall_error", hint=admin_hint)
                 show_message_and_return(error_msg, success=False, animate=True)
             def remove_processing():
                 if main_window.stacked_widget and processing_widget in [main_window.stacked_widget.widget(i) for i in range(main_window.stacked_widget.count())]:
@@ -1329,8 +1701,7 @@ try {{ ipconfig /flushdns }} catch {{}}
         threading.Thread(target=worker, daemon=True).start()
 
     def on_install_click():
-        if "Обновить" in button.text(): start_installation("update")
-        else: start_installation("install")
+        start_installation(button.property("install_mode") or "install")
     def on_uninstall_click(): start_installation("uninstall")
     button.clicked.connect(on_install_click)
     button2.clicked.connect(on_uninstall_click)
@@ -1347,27 +1718,8 @@ try {{ ipconfig /flushdns }} catch {{}}
                 main_window.setWindowOpacity(0)
                 main_window.setUpdatesEnabled(False)
                 main_window.dark_theme = not main_window.dark_theme
-                main_window.styles = get_stylesheet(main_window.dark_theme)
-                main_window.setStyleSheet(main_window.styles["main"])
-                textinformer.setStyleSheet(main_window.styles["label"])
-                app_title_label.setText(main_window.styles["about_title_html"])
-                app_title_label.setStyleSheet(main_window.styles["about_title_style"])
-                version_label.setStyleSheet(main_window.styles["label"])
-                text_color = "#ffffff" if main_window.dark_theme else "#1a1a1a"
-                update_date_label.setStyleSheet(f"font-size: 14px; color: {text_color}; border-radius: 8px; padding: 4px 8px; margin: 2px;")
-                button.setStyleSheet(main_window.styles["button1"])
-                button2.setStyleSheet(main_window.styles["button2"])
-                theme_button.setStyleSheet(main_window.styles["theme"])
-                donate_button.setStyleSheet(main_window.styles["theme"])
-                open_hosts_button.setStyleSheet(main_window.styles["theme"])
-                backup_hosts_button.setStyleSheet(main_window.styles["theme"])
-                update_button.setStyleSheet(main_window.styles["theme"])
-                about_button.setStyleSheet(main_window.styles["theme"])
-                _light_block = "background:#f3f4f7; border:1.5px solid #cfd4db; border-radius:12px;"
-                _dark_block = "background:#2d333b; border:1.5px solid #3c434d; border-radius:12px;"
-                status_container.setStyleSheet(_dark_block if main_window.dark_theme else _light_block)
-                update_subwindow_styles()
-                refresh_icons()
+                apply_theme_styles()
+                apply_main_texts()
                 main_window.setUpdatesEnabled(True)
                 fade_in()
         def fade_in(step=0.0):
@@ -1379,6 +1731,14 @@ try {{ ipconfig /flushdns }} catch {{}}
                 main_window.is_animating = False
         fade_out()
     theme_button.clicked.connect(switch_theme)
+
+    def switch_language():
+        next_language = "en" if main_window.language == "ru" else "ru"
+        main_window.language = set_current_language(next_language)
+        apply_theme_styles()
+        apply_main_texts()
+
+    language_button.clicked.connect(switch_language)
 
     def show_donate_window():
         donate_widget = QWidget()
@@ -1395,7 +1755,7 @@ try {{ ipconfig /flushdns }} catch {{}}
         card_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.setSpacing(16)
         card_layout.setContentsMargins(32, 24, 32, 24)
-        title_lbl = QLabel("Поддержать автора")
+        title_lbl = QLabel(tr("donate_title"))
         title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_lbl.setStyleSheet("font-size:22px; font-weight:600;")
         card_layout.addWidget(title_lbl)
@@ -1404,14 +1764,16 @@ try {{ ipconfig /flushdns }} catch {{}}
         card_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_lbl.setStyleSheet("font-size:16px;")
         card_layout.addWidget(card_lbl)
-        copy_btn = QPushButton("Скопировать номер карты")
+        copy_btn = QPushButton(tr("copy_card"))
+        copy_btn.setProperty("style_role", "button1")
         card_layout.addWidget(copy_btn)
         light_style = "background:#f3f4f7; border:2.5px solid #cfd4db; border-radius:12px;"
         dark_style = "background:#2d333b; border:2.5px solid #3c434d; border-radius:12px;"
         card_container.setStyleSheet(dark_style if main_window.dark_theme else light_style)
         donate_layout.addWidget(card_container)
-        back_button = QPushButton("  В меню  ")
+        back_button = QPushButton(f"  {tr('back_to_menu')}  ")
         back_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        back_button.setProperty("style_role", "theme")
         back_button.setStyleSheet(main_window.styles["theme"])
         donate_layout.addWidget(back_button, alignment=Qt.AlignmentFlag.AlignCenter)
         copy_btn.setStyleSheet(main_window.styles["button1"])
@@ -1419,8 +1781,8 @@ try {{ ipconfig /flushdns }} catch {{}}
             QApplication.clipboard().setText(card)
             if getattr(copy_btn, "_animating", False): return
             setattr(copy_btn, "_animating", True)
-            original_text = "Скопировать номер карты"
-            success_text = "Скопировано"
+            original_text = tr("copy_card")
+            success_text = tr("copied")
             def fade_out_then_change():
                 effect = QGraphicsOpacityEffect(copy_btn)
                 copy_btn.setGraphicsEffect(effect)
@@ -1475,14 +1837,16 @@ try {{ ipconfig /flushdns }} catch {{}}
     layout.addWidget(button2)
     layout.addWidget(open_hosts_button)
     layout.addWidget(backup_hosts_button)
-    theme_donate_hbox = QHBoxLayout()
-    theme_donate_hbox.setSpacing(12)
-    theme_donate_hbox.addWidget(theme_button)
-    theme_donate_hbox.addWidget(donate_button)
-    layout.addLayout(theme_donate_hbox)
+    controls_hbox = QHBoxLayout()
+    controls_hbox.setSpacing(12)
+    controls_hbox.addWidget(theme_button)
+    controls_hbox.addWidget(donate_button)
+    layout.addLayout(controls_hbox)
     layout.addStretch()
     layout.addWidget(update_button)
     layout.addWidget(about_button)
+    footer_layout.addWidget(language_button, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)
+    footer_layout.addStretch()
 
     def show_about_window():
         about_widget = QWidget()
@@ -1511,7 +1875,7 @@ try {{ ipconfig /flushdns }} catch {{}}
         github_btn.setProperty("icon_force_dark", True)
         github_btn.clicked.connect(lambda: open_target("https://github.com/AvenCores"))
         repo_btn = QToolButton()
-        repo_btn.setText("Репозиторий")
+        repo_btn.setText(tr("repository"))
         repo_btn.setIcon(get_icon("github.svg", 24, force_dark=True))
         repo_btn.setIconSize(QSize(24, 24))
         repo_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
@@ -1562,8 +1926,9 @@ try {{ ipconfig /flushdns }} catch {{}}
                 return base + 24
             ref_w = max(max(b.sizeHint().width(), _req_w(b)) for b in about_buttons)
             for b in about_buttons: b.setFixedWidth(ref_w)
-        back_button = QPushButton("  В меню  ")
+        back_button = QPushButton(f"  {tr('back_to_menu')}  ")
         back_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        back_button.setProperty("style_role", "theme")
         back_button.setStyleSheet(main_window.styles["theme"])
         def return_to_main():
             def do_remove_about_widget():
@@ -1585,18 +1950,14 @@ try {{ ipconfig /flushdns }} catch {{}}
         setattr(update_version_label, "_running", True)
         setattr(update_version_label, "_last_run", now_ts)
         def worker():
-            word, clr, update_date = get_hosts_version_status()
+            status_key, clr, update_date = get_hosts_version_status()
             def apply():
-                version_label.setText(f"Версия hosts - <span style='color:{clr}; font-weight:bold;'>{word}</span>")
-                if update_date: date_text = f"Дата обновления hosts: {update_date}"
-                else: date_text = "Дата обновления hosts: неизвестно"
-                update_date_label.setText(date_text)
-                if word == "Устарело": button.setText(" Обновить обход блокировок")
-                else: button.setText(" Установить обход блокировок")
+                apply_hosts_version_status(status_key, clr, update_date)
             QTimer.singleShot(0, main_window, apply)
             setattr(update_version_label, "_running", False)
         threading.Thread(target=worker, daemon=True).start()
 
+    apply_main_texts()
     update_version_label()
     main_window.show()
     on_main_window_resize()
