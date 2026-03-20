@@ -28,15 +28,141 @@ def open_target(path: str):
 
 # --------------------------------
 
-def open_hosts_file():
+def _show_open_hosts_error(detail: str, _inline_callback=None):
+    lang = str(globals().get("CURRENT_LANGUAGE", "ru")).lower().replace("-", "_")
+    if lang.startswith("ru"):
+        message = f"Не удалось открыть файл hosts с правами администратора.\n{detail}"
+    else:
+        message = f"Failed to open the hosts file with administrator privileges.\n{detail}"
+
+    if _inline_callback is not None:
+        try:
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(0, lambda: _inline_callback(message, False))
+        except Exception:
+            print(message)
+    else:
+        try:
+            from PySide6.QtWidgets import QApplication, QMessageBox
+            app = QApplication.instance()
+            parent = app.activeWindow() if app else None
+            title = "Ошибка открытия hosts" if lang.startswith("ru") else "Hosts Open Error"
+            QMessageBox.critical(parent, title, message)
+        except Exception:
+            print(message)
+
+
+def _open_hosts_file_windows_as_admin() -> tuple[bool, str | None]:
+    try:
+        import ctypes
+        result = ctypes.windll.shell32.ShellExecuteW(
+            None,
+            "runas",
+            "notepad.exe",
+            HOSTS_PATH,
+            None,
+            1,
+        )
+        if result > 32:
+            return True, None
+        return False, "admin_hint_windows"
+    except Exception as e:
+        print(f"Open error {HOSTS_PATH}: {e}")
+        return False, str(e)
+
+
+def _open_hosts_file_linux_as_admin() -> tuple[bool, str | None]:
+    editor_candidates = (
+        "gnome-text-editor",
+        "gedit",
+        "xed",
+        "pluma",
+        "mousepad",
+        "geany",
+        "kate",
+        "kwrite",
+        "featherpad",
+        "leafpad",
+    )
+    display_env = []
+    for key in ("DISPLAY", "XAUTHORITY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS"):
+        value = os.environ.get(key)
+        if value:
+            display_env.append(f"{key}={value}")
+
+    if os.geteuid() == 0:
+        for editor in editor_candidates:
+            editor_path = shutil.which(editor)
+            if not editor_path:
+                continue
+            try:
+                subprocess.Popen([editor_path, HOSTS_PATH], start_new_session=True)
+                return True, None
+            except Exception:
+                continue
+        try:
+            open_target(HOSTS_PATH)
+            return True, None
+        except Exception as e:
+            print(f"Open error {HOSTS_PATH}: {e}")
+            return False, str(e)
+
+    launchers = []
+    if shutil.which("pkexec"):
+        launchers.append("pkexec")
+    for su_tool in ("gksudo", "kdesudo"):
+        if shutil.which(su_tool):
+            launchers.append(su_tool)
+
+    for editor in editor_candidates:
+        editor_path = shutil.which(editor)
+        if not editor_path:
+            continue
+        for launcher in launchers:
+            try:
+                if launcher == "pkexec":
+                    command = ["pkexec"]
+                    if display_env:
+                        command.extend(["env", *display_env])
+                    command.extend([editor_path, HOSTS_PATH])
+                else:
+                    command = [launcher, editor_path, HOSTS_PATH]
+                subprocess.Popen(command, start_new_session=True)
+                return True, None
+            except Exception:
+                continue
+
+    return False, "linux_admin_open_unavailable"
+
+
+def open_hosts_file(_inline_callback=None):
     """Open hosts with a sensible default editor."""
     try:
         if sys.platform == 'win32':
-            subprocess.Popen(["notepad.exe", HOSTS_PATH])
+            opened, error_key = _open_hosts_file_windows_as_admin()
+        elif sys.platform.startswith('linux'):
+            opened, error_key = _open_hosts_file_linux_as_admin()
         else:
             open_target(HOSTS_PATH)
+            return
+
+        if opened:
+            return
+
+        if error_key == "admin_hint_windows":
+            detail = tr("admin_hint_windows")
+        elif error_key == "linux_admin_open_unavailable":
+            if normalize_language(CURRENT_LANGUAGE) == "ru":
+                detail = "Установите pkexec и графический текстовый редактор или запустите приложение от имени root."
+            else:
+                detail = "Install pkexec and a graphical text editor, or run the app as root."
+        else:
+            detail = error_key or tr("admin_hint_unix")
+
+        _show_open_hosts_error(detail, _inline_callback=_inline_callback)
     except Exception as e:
         print(f"Open error {HOSTS_PATH}: {e}")
+        _show_open_hosts_error(str(e), _inline_callback=_inline_callback)
 
 def get_hosts_backup_dir() -> str:
     return HOSTS_BACKUP_DIR
@@ -97,82 +223,89 @@ def open_hosts_backup_folder():
     os.makedirs(backup_dir, exist_ok=True)
     open_target(backup_dir)
 
+def _show_backup_missing_dialog():
+    """Called only after Qt is fully initialised (from __main__ block)."""
+    from PySide6.QtWidgets import QApplication, QMessageBox, QLabel
+    from PySide6.QtCore import Qt
+    app = QApplication.instance()
+    parent = app.activeWindow() if app else None
+    dialog = QMessageBox(parent)
+    dialog.setWindowTitle(tr("backup_missing_title"))
+    dialog.setIcon(QMessageBox.Icon.NoIcon)
+    dialog.setText(f"<b style='font-size:15px;'>{tr('backup_missing_title')}</b>")
+    dialog.setInformativeText(tr("backup_missing_info"))
+    dialog.setTextFormat(Qt.TextFormat.RichText)
+    dialog.setStandardButtons(
+        QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Cancel
+    )
+    dialog.setDefaultButton(QMessageBox.StandardButton.Open)
+    dialog.setEscapeButton(QMessageBox.StandardButton.Cancel)
+
+    open_button = dialog.button(QMessageBox.StandardButton.Open)
+    cancel_button = dialog.button(QMessageBox.StandardButton.Cancel)
+    if open_button:
+        open_button.setText(tr("open_folder"))
+        open_button.setObjectName("backupOpenButton")
+    if cancel_button:
+        cancel_button.setText(tr("cancel"))
+        cancel_button.setObjectName("backupCancelButton")
+    for label in dialog.findChildren(QLabel):
+        if label.text().strip():
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    dark_theme = bool(getattr(parent, "dark_theme", False))
+    if dark_theme:
+        dialog.setStyleSheet("""
+            QMessageBox { background-color: #1f242d; }
+            QMessageBox QLabel {
+                color: #f3f6fd;
+                font-size: 13px;
+                max-width: 250px;
+                background: transparent;
+                border: none;
+            }
+            QPushButton#backupOpenButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #2d7dff, stop:1 #2962d9);
+                color: white; border: none; border-radius: 8px; padding: 7px 12px; min-width: 112px; font-weight: 600;
+            }
+            QPushButton#backupOpenButton:hover { background: #246cf0; }
+            QPushButton#backupCancelButton {
+                background: #e6e8ec; color: #222; border: 1px solid #cfd4db; border-radius: 8px; padding: 7px 12px; min-width: 96px;
+            }
+            QPushButton#backupCancelButton:hover { background: #d1d4d8; }
+        """)
+    else:
+        dialog.setStyleSheet("""
+            QMessageBox { background-color: #ffffff; }
+            QMessageBox QLabel {
+                color: #1a1a1a;
+                font-size: 13px;
+                max-width: 250px;
+                background: transparent;
+                border: none;
+            }
+            QPushButton#backupOpenButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #0078d4, stop:1 #0063b1);
+                color: white; border: none; border-radius: 8px; padding: 7px 12px; min-width: 112px; font-weight: 600;
+            }
+            QPushButton#backupOpenButton:hover { background: #006cbd; }
+            QPushButton#backupCancelButton {
+                background: #f3f4f7; color: #1a1a1a; border: 1px solid #cfd4db; border-radius: 8px; padding: 7px 12px; min-width: 96px;
+            }
+            QPushButton#backupCancelButton:hover { background: #e6e8ec; }
+        """)
+
+    result = dialog.exec()
+    if result == QMessageBox.StandardButton.Open:
+        open_hosts_backup_folder()
+
+
 def open_latest_hosts_backup_file():
     latest_backup = get_latest_hosts_backup_file()
     if latest_backup and os.path.exists(latest_backup):
         open_target(latest_backup)
     else:
-        app = QApplication.instance()
-        parent = app.activeWindow() if app else None
-        dialog = QMessageBox(parent)
-        dialog.setWindowTitle(tr("backup_missing_title"))
-        dialog.setIcon(QMessageBox.Icon.NoIcon)
-        dialog.setText(f"<b style='font-size:15px;'>{tr('backup_missing_title')}</b>")
-        dialog.setInformativeText(tr("backup_missing_info"))
-        dialog.setTextFormat(Qt.TextFormat.RichText)
-        dialog.setStandardButtons(
-            QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Cancel
-        )
-        dialog.setDefaultButton(QMessageBox.StandardButton.Open)
-        dialog.setEscapeButton(QMessageBox.StandardButton.Cancel)
-
-        open_button = dialog.button(QMessageBox.StandardButton.Open)
-        cancel_button = dialog.button(QMessageBox.StandardButton.Cancel)
-        if open_button:
-            open_button.setText(tr("open_folder"))
-            open_button.setObjectName("backupOpenButton")
-        if cancel_button:
-            cancel_button.setText(tr("cancel"))
-            cancel_button.setObjectName("backupCancelButton")
-        for label in dialog.findChildren(QLabel):
-            if label.text().strip():
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        dark_theme = bool(getattr(parent, "dark_theme", False))
-        if dark_theme:
-            dialog.setStyleSheet("""
-                QMessageBox { background-color: #1f242d; }
-                QMessageBox QLabel {
-                    color: #f3f6fd;
-                    font-size: 13px;
-                    max-width: 250px;
-                    background: transparent;
-                    border: none;
-                }
-                QPushButton#backupOpenButton {
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #2d7dff, stop:1 #2962d9);
-                    color: white; border: none; border-radius: 8px; padding: 7px 12px; min-width: 112px; font-weight: 600;
-                }
-                QPushButton#backupOpenButton:hover { background: #246cf0; }
-                QPushButton#backupCancelButton {
-                    background: #e6e8ec; color: #222; border: 1px solid #cfd4db; border-radius: 8px; padding: 7px 12px; min-width: 96px;
-                }
-                QPushButton#backupCancelButton:hover { background: #d1d4d8; }
-            """)
-        else:
-            dialog.setStyleSheet("""
-                QMessageBox { background-color: #ffffff; }
-                QMessageBox QLabel {
-                    color: #1a1a1a;
-                    font-size: 13px;
-                    max-width: 250px;
-                    background: transparent;
-                    border: none;
-                }
-                QPushButton#backupOpenButton {
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #0078d4, stop:1 #0063b1);
-                    color: white; border: none; border-radius: 8px; padding: 7px 12px; min-width: 112px; font-weight: 600;
-                }
-                QPushButton#backupOpenButton:hover { background: #006cbd; }
-                QPushButton#backupCancelButton {
-                    background: #f3f4f7; color: #1a1a1a; border: 1px solid #cfd4db; border-radius: 8px; padding: 7px 12px; min-width: 96px;
-                }
-                QPushButton#backupCancelButton:hover { background: #e6e8ec; }
-            """)
-
-        result = dialog.exec()
-        if result == QMessageBox.StandardButton.Open:
-            open_hosts_backup_folder()
+        _show_backup_missing_dialog()
 
 _ADDITIONAL_HOSTS_VERSION_RE = _re.compile(r'# additional_hosts_version\s+(\S+)')
 _HOSTS_VERSION_BLOCK_RE = _re.compile(r'version_add\s*=\s*["\']([^"\']+)["\']')
@@ -480,18 +613,23 @@ def _get_remote_add_version() -> str:
     ver, _ = _fetch_remote_additional()
     return ver
 
-_URL_CACHE = {}
-_URL_CACHE_TTL = 300
+_URL_CACHE: dict = {}
+_URL_CACHE_TTL: float = 300.0
+_REMOTE_CACHE_TTL: float = 60.0
+_remote_main_line_cache: tuple | None = None
+_remote_add_ver_cache: tuple | None = None
 
 def _fetch_url_cached(url: str, timeout: int = 10, add_timestamp: bool = True) -> str:
-    cache_key = url
+    # Include add_timestamp flag in the cache key so that callers with
+    # different bypass-cache intentions do not share a single entry.
+    cache_key = (url, add_timestamp)
     now = _time.time()
-    
+
     if cache_key in _URL_CACHE:
         cached_time, cached_content = _URL_CACHE[cache_key]
         if now - cached_time < _URL_CACHE_TTL:
             return cached_content
-    
+
     try:
         full_url = f"{url}?t={int(now)}" if add_timestamp else url
         content = urllib.request.urlopen(full_url, timeout=timeout).read().decode("utf-8", errors="ignore")
@@ -500,42 +638,38 @@ def _fetch_url_cached(url: str, timeout: int = 10, add_timestamp: bool = True) -
     except Exception:
         return ""
 
-def update_hosts_as_admin(action: str = "install"):
-    url = "https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts"
+def _apply_hosts_file(content: str) -> bool:
+    """Write *content* to the system hosts file with privilege elevation.
+
+    Returns True on success, False on failure.
+    Temporary files are cleaned up in all cases.
+    """
     temp_path: str | None = None
     ps_script_path: str | None = None
-    
-    try:
-        if not create_hosts_backup(action):
-            return False
 
+    try:
         temp_fd, temp_path = tempfile.mkstemp()
         os.close(temp_fd)
-        content = _fetch_url_cached(url)
-
-        add_ver, add_hosts_remote = _fetch_remote_additional()
-        if add_hosts_remote:
-            extra_block = f"\n# additional_hosts_version {add_ver}\n{add_hosts_remote.strip()}\n"
-            content += extra_block
-
         with open(temp_path, 'w', encoding='utf-8') as f:
             f.write(content)
 
         if sys.platform == 'win32':
-            # Windows Logic
-            ps_content = f'''
-$source = "{temp_path}"
-$dest = "{HOSTS_PATH}"
-Copy-Item -Path $source -Destination $dest -Force
+            # Escape single-quotes that could appear in Windows temp paths.
+            safe_src = temp_path.replace("'", "''")
+            safe_dst = HOSTS_PATH.replace("'", "''")
+            ps_content = f"""
+$source = '{safe_src}'
+$dest = '{safe_dst}'
+Copy-Item -LiteralPath $source -Destination $dest -Force
 try {{ Clear-DnsClientCache }} catch {{}}
 try {{ ipconfig /flushdns }} catch {{}}
-'''
+"""
             with tempfile.NamedTemporaryFile('w', delete=False, suffix='.ps1', encoding='utf-8') as ps_file:
                 ps_file.write(ps_content)
                 ps_script_path = ps_file.name
 
-            # Сначала пробуем через Start-Process -Verb runAs (стандартный UAC-запрос)
             elevated = False
+            # Try UAC elevation first
             try:
                 command = [
                     "powershell", "-WindowStyle", "Hidden", "-NoProfile", "-ExecutionPolicy", "Bypass",
@@ -547,7 +681,7 @@ try {{ ipconfig /flushdns }} catch {{}}
             except Exception:
                 elevated = False
 
-            # Если UAC не сработал — пробуем напрямую (вдруг уже запущены от админа)
+            # Fallback: maybe already running as admin
             if not elevated:
                 try:
                     result2 = subprocess.run(
@@ -563,7 +697,6 @@ try {{ ipconfig /flushdns }} catch {{}}
                 raise PermissionError("Не удалось получить права администратора. Запустите программу от имени Администратора.")
 
         else:
-            # Linux / macOS Logic
             flush_cmd = (
                 "resolvectl flush-caches 2>/dev/null || "
                 "systemd-resolve --flush-caches 2>/dev/null || "
@@ -571,47 +704,36 @@ try {{ ipconfig /flushdns }} catch {{}}
                 "killall -HUP dnsmasq 2>/dev/null || "
                 "true"
             )
-
-            # Если уже root — просто копируем
             if os.geteuid() == 0:
                 shutil.copy(temp_path, HOSTS_PATH)
                 os.chmod(HOSTS_PATH, 0o644)
                 subprocess.run(flush_cmd, shell=True)
             else:
-                bash_cmd = f"cp '{temp_path}' '{HOSTS_PATH}' && chmod 644 '{HOSTS_PATH}' && {flush_cmd}"
+                # Escape single-quotes in paths for the shell command
+                safe_src = temp_path.replace("'", "'\\''")
+                safe_dst = HOSTS_PATH.replace("'", "'\\''")
+                bash_cmd = f"cp '{safe_src}' '{safe_dst}' && chmod 644 '{safe_dst}' && {flush_cmd}"
                 elevated = False
 
-                # 1. Пробуем pkexec (графический диалог, предпочтительно)
                 if shutil.which("pkexec"):
                     try:
-                        result = subprocess.run(
-                            ["pkexec", "bash", "-c", bash_cmd],
-                            timeout=120
-                        )
+                        result = subprocess.run(["pkexec", "bash", "-c", bash_cmd], timeout=120)
                         elevated = (result.returncode == 0)
                     except Exception:
                         elevated = False
 
-                # 2. Fallback: sudo (терминальный ввод пароля)
                 if not elevated and shutil.which("sudo"):
                     try:
-                        result = subprocess.run(
-                            ["sudo", "bash", "-c", bash_cmd],
-                            timeout=120
-                        )
+                        result = subprocess.run(["sudo", "bash", "-c", bash_cmd], timeout=120)
                         elevated = (result.returncode == 0)
                     except Exception:
                         elevated = False
 
-                # 3. Fallback: gksudo / kdesudo (устаревшие графические обёртки)
                 if not elevated:
                     for su_tool in ("gksudo", "kdesudo"):
                         if shutil.which(su_tool):
                             try:
-                                result = subprocess.run(
-                                    [su_tool, "bash", "-c", bash_cmd],
-                                    timeout=120
-                                )
+                                result = subprocess.run([su_tool, "bash", "-c", bash_cmd], timeout=120)
                                 elevated = (result.returncode == 0)
                                 if elevated:
                                     break
@@ -621,14 +743,29 @@ try {{ ipconfig /flushdns }} catch {{}}
                 if not elevated:
                     raise PermissionError("Не удалось получить права root. Введите пароль при запросе или запустите программу от имени root.")
 
-        _time.sleep(1)
+        # Brief pause to let the OS flush the file to disk before we re-read it.
+        _time.sleep(0.5)
         return True
     except Exception as e:
         print(f"Ошибка: {e}")
         return False
     finally:
-        if temp_path: _safe_remove(temp_path)
-        if ps_script_path: _safe_remove(ps_script_path)
+        if temp_path:
+            _safe_remove(temp_path)
+        if ps_script_path:
+            _safe_remove(ps_script_path)
+
+
+def update_hosts_as_admin(action: str = "install") -> bool:
+    url = "https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts"
+    if not create_hosts_backup(action):
+        return False
+    content = _fetch_url_cached(url)
+    add_ver, add_hosts_remote = _fetch_remote_additional()
+    if add_hosts_remote:
+        extra_block = f"\n# additional_hosts_version {add_ver}\n{add_hosts_remote.strip()}\n"
+        content += extra_block
+    return _apply_hosts_file(content)
 
 def is_system_dark_theme():
     if sys.platform == 'win32':
@@ -787,27 +924,7 @@ def _extract_update_line(content: bytes) -> tuple[str, str]:
         return "", ""
 
 def get_hosts_version_status() -> tuple[str, str, str]:
-    # Cache setup (same as before)
     global _REMOTE_CACHE_TTL, _remote_main_line_cache, _remote_add_ver_cache
-    try: _REMOTE_CACHE_TTL
-    except NameError: _REMOTE_CACHE_TTL = 60.0
-    try: _remote_main_line_cache
-    except NameError: _remote_main_line_cache = None
-    try: _remote_add_ver_cache
-    except NameError: _remote_add_ver_cache = None
-
-    def _get_remote_main_hosts_line_cached() -> str:
-        global _remote_main_line_cache
-        now = _time.time()
-        if (_remote_main_line_cache is not None and isinstance(_remote_main_line_cache, tuple) and now - _remote_main_line_cache[0] < _REMOTE_CACHE_TTL):
-            return _remote_main_line_cache[1]
-        remote_url = f"https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts?t={int(_time.time())}"
-        try:
-            line = _extract_update_line(urllib.request.urlopen(remote_url, timeout=10).read())
-        except Exception:
-            line = ""
-        _remote_main_line_cache = (now, line)
-        return line
 
     def _get_remote_add_version_cached() -> str:
         global _remote_add_ver_cache
@@ -823,7 +940,7 @@ def get_hosts_version_status() -> tuple[str, str, str]:
 
     if not (os.path.exists(HOSTS_PATH) and check_installation()):
         return "not_installed", "#e06c75", ""
-    
+
     try:
         with open(HOSTS_PATH, "rb") as lf:
             raw_content = lf.read()
@@ -834,29 +951,41 @@ def get_hosts_version_status() -> tuple[str, str, str]:
         remote_line_result = [None]
         remote_add_ver_result = [None]
         remote_date_result = [None]
-        
+
         def fetch_main():
-            remote_line, remote_date = _extract_update_line(urllib.request.urlopen(f"https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts?t={int(_time.time())}", timeout=10).read())
+            now = _time.time()
+            # Use the module-level cache for the main hosts line too
+            global _remote_main_line_cache
+            if (_remote_main_line_cache is not None and isinstance(_remote_main_line_cache, tuple) and now - _remote_main_line_cache[0] < _REMOTE_CACHE_TTL):
+                remote_line_result[0], remote_date_result[0] = _remote_main_line_cache[1]
+                return
+            try:
+                remote_url = f"https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts?t={int(now)}"
+                data = urllib.request.urlopen(remote_url, timeout=10).read()
+                remote_line, remote_date = _extract_update_line(data)
+            except Exception:
+                remote_line, remote_date = "", ""
+            _remote_main_line_cache = (now, (remote_line, remote_date))
             remote_line_result[0] = remote_line
             remote_date_result[0] = remote_date
-        
+
         def fetch_add():
             remote_add_ver_result[0] = _get_remote_add_version_cached()
-        
+
         t1 = threading.Thread(target=fetch_main, daemon=True)
         t2 = threading.Thread(target=fetch_add, daemon=True)
         t1.start()
         t2.start()
         t1.join(timeout=15)
         t2.join(timeout=15)
-        
+
         remote_line = remote_line_result[0] or ""
         remote_date = remote_date_result[0] or ""
         remote_add_ver = remote_add_ver_result[0] or ""
-        
+
         main_match = local_line == remote_line and local_line.startswith("#")
         add_match = (local_add_ver == remote_add_ver) if remote_add_ver else (local_add_ver == "")
-        
+
         if main_match and add_match:
             return "up_to_date", "#43b581", remote_date
         else:
@@ -1020,11 +1149,13 @@ if __name__ == "__main__":
             current = main_window.stacked_widget.currentWidget()
             if current: fix_widget_size(current)
 
-    old_resize_event = main_window.resizeEvent
-    def new_resize_event(self, event):
-        old_resize_event(event)
+    _original_resize_event = main_window.resizeEvent
+
+    def new_resize_event(event):
+        _original_resize_event(event)
         on_main_window_resize(event)
-    main_window.resizeEvent = new_resize_event.__get__(main_window, CustomWindow)
+
+    main_window.resizeEvent = new_resize_event
 
     app_title_label = QLabel()
     app_title_label.setObjectName("main_title")
@@ -1132,7 +1263,7 @@ if __name__ == "__main__":
     open_hosts_button.setProperty("icon_force_dark", True)
     open_hosts_button.setProperty("style_role", "theme")
     open_hosts_button.setStyleSheet(main_window.styles["theme"])
-    open_hosts_button.clicked.connect(open_hosts_file)
+    open_hosts_button.clicked.connect(lambda: open_hosts_file(_inline_callback=lambda msg, ok: show_message_and_return(msg, ok, word_wrap=True)))
     backup_hosts_button = QPushButton(tr("backup_hosts_button"))
     backup_hosts_button.setIcon(get_icon("clock.svg", 18, force_dark=True))
     backup_hosts_button.setIconSize(QSize(18, 18))
@@ -1171,9 +1302,10 @@ if __name__ == "__main__":
         status_container.setStyleSheet(_dark_block if main_window.dark_theme else _light_block)
 
     def set_install_button_mode(mode: str):
-        mode = "update" if mode == "update" else "install"
-        button.setProperty("install_mode", mode)
-        button.setText(tr("install_button_update" if mode == "update" else "install_button_install"))
+        """Set the install button to 'update' or 'install' mode."""
+        effective_mode = "update" if mode == "update" else "install"
+        button.setProperty("install_mode", effective_mode)
+        button.setText(tr("install_button_update" if effective_mode == "update" else "install_button_install"))
 
     def update_installation_status_label():
         is_installed = check_installation()
@@ -1261,127 +1393,27 @@ if __name__ == "__main__":
         update_subwindow_styles()
         refresh_icons()
 
-    def restore_original_hosts():
-        temp_path: str | None = None
-        ps_script_path: str | None = None
-        try:
-            if not create_hosts_backup("uninstall"):
-                return False
-
-            default_hosts = (
-                '127.0.0.1       localhost\n::1             localhost\n'
-            )
-            if sys.platform == 'win32':
-                # Default Windows Hosts
-                default_hosts = (
-                    '# Copyright (c) 1993-2009 Microsoft Corp.\n#\n'
-                    '# This is a sample HOSTS file used by Microsoft TCP/IP for Windows.\n#\n'
-                    '# This file contains the mappings of IP addresses to host names. Each\n'
-                    '# entry should be kept on an individual line. The IP address should\n'
-                    '# be placed in the first column followed by the corresponding host name.\n'
-                    '# The IP address and the host name should be separated by at least one\n# space.\n#\n'
-                    '# Additionally, comments (such as these) may be inserted on individual\n'
-                    '# lines or following the machine name denoted by a "#" symbol.\n#\n'
-                    '# For example:\n#\n#      102.54.94.97     rhino.acme.com          # source server\n'
-                    '#       38.25.63.10     x.acme.com              # x client host\n\n'
-                    '# localhost name resolution is handled within DNS itself.\n'
-                    '#   127.0.0.1       localhost\n#   ::1             localhost'
-                )
-
-            with tempfile.NamedTemporaryFile('w', delete=False, suffix='.txt', encoding='utf-8') as temp_file:
-                temp_file.write(default_hosts)
-                temp_path = temp_file.name
-
-            if sys.platform == 'win32':
-                ps_content = f'''
-$source = "{temp_path}"
-$dest = "{HOSTS_PATH}"
-Copy-Item -Path $source -Destination $dest -Force
-try {{ Clear-DnsClientCache }} catch {{}}
-try {{ ipconfig /flushdns }} catch {{}}
-'''
-                with tempfile.NamedTemporaryFile('w', delete=False, suffix='.ps1', encoding='utf-8') as ps_file:
-                    ps_file.write(ps_content)
-                    ps_script_path = ps_file.name
-
-                elevated = False
-                try:
-                    command = [
-                        "powershell", "-WindowStyle", "Hidden", "-NoProfile", "-ExecutionPolicy", "Bypass",
-                        "-Command",
-                        f'Start-Process powershell -Verb runAs -WindowStyle Hidden -ArgumentList \'-NoProfile -ExecutionPolicy Bypass -File "{ps_script_path}"\' -Wait'
-                    ]
-                    result = subprocess.run(command, creationflags=subprocess.CREATE_NO_WINDOW, timeout=120)
-                    elevated = (result.returncode == 0)
-                except Exception:
-                    elevated = False
-
-                if not elevated:
-                    try:
-                        result2 = subprocess.run(
-                            ["powershell", "-WindowStyle", "Hidden", "-NoProfile", "-ExecutionPolicy", "Bypass",
-                             "-File", ps_script_path],
-                            creationflags=subprocess.CREATE_NO_WINDOW, timeout=60
-                        )
-                        elevated = (result2.returncode == 0)
-                    except Exception:
-                        elevated = False
-
-                if not elevated:
-                    raise PermissionError("Не удалось получить права администратора. Запустите программу от имени Администратора.")
-            else:
-                # Linux / macOS logic
-                flush_cmd = (
-                    "resolvectl flush-caches 2>/dev/null || "
-                    "systemd-resolve --flush-caches 2>/dev/null || "
-                    "/etc/init.d/nscd restart 2>/dev/null || "
-                    "killall -HUP dnsmasq 2>/dev/null || "
-                    "true"
-                )
-                if os.geteuid() == 0:
-                    shutil.copy(temp_path, HOSTS_PATH)
-                    os.chmod(HOSTS_PATH, 0o644)
-                    subprocess.run(flush_cmd, shell=True)
-                else:
-                    bash_cmd = f"cp '{temp_path}' '{HOSTS_PATH}' && chmod 644 '{HOSTS_PATH}' && {flush_cmd}"
-                    elevated = False
-
-                    if shutil.which("pkexec"):
-                        try:
-                            result = subprocess.run(["pkexec", "bash", "-c", bash_cmd], timeout=120)
-                            elevated = (result.returncode == 0)
-                        except Exception:
-                            elevated = False
-
-                    if not elevated and shutil.which("sudo"):
-                        try:
-                            result = subprocess.run(["sudo", "bash", "-c", bash_cmd], timeout=120)
-                            elevated = (result.returncode == 0)
-                        except Exception:
-                            elevated = False
-
-                    if not elevated:
-                        for su_tool in ("gksudo", "kdesudo"):
-                            if shutil.which(su_tool):
-                                try:
-                                    result = subprocess.run([su_tool, "bash", "-c", bash_cmd], timeout=120)
-                                    elevated = (result.returncode == 0)
-                                    if elevated:
-                                        break
-                                except Exception:
-                                    continue
-
-                    if not elevated:
-                        raise PermissionError("Не удалось получить права root. Введите пароль при запросе или запустите программу от имени root.")
-
-            _time.sleep(1)
-            return True
-        except Exception as e:
-            print(f"Ошибка: {e}")
+    def restore_original_hosts() -> bool:
+        if not create_hosts_backup("uninstall"):
             return False
-        finally:
-            if temp_path: _safe_remove(temp_path)
-            if ps_script_path: _safe_remove(ps_script_path)
+
+        default_hosts = '127.0.0.1       localhost\n::1             localhost\n'
+        if sys.platform == 'win32':
+            default_hosts = (
+                '# Copyright (c) 1993-2009 Microsoft Corp.\n#\n'
+                '# This is a sample HOSTS file used by Microsoft TCP/IP for Windows.\n#\n'
+                '# This file contains the mappings of IP addresses to host names. Each\n'
+                '# entry should be kept on an individual line. The IP address should\n'
+                '# be placed in the first column followed by the corresponding host name.\n'
+                '# The IP address and the host name should be separated by at least one\n# space.\n#\n'
+                '# Additionally, comments (such as these) may be inserted on individual\n'
+                '# lines or following the machine name denoted by a "#" symbol.\n#\n'
+                '# For example:\n#\n#      102.54.94.97     rhino.acme.com          # source server\n'
+                '#       38.25.63.10     x.acme.com              # x client host\n\n'
+                '# localhost name resolution is handled within DNS itself.\n'
+                '#   127.0.0.1       localhost\n#   ::1             localhost'
+            )
+        return _apply_hosts_file(default_hosts)
 
     if main_window.stacked_widget: main_window.stacked_widget.addWidget(central_widget)
     main_layout.addWidget(main_window.stacked_widget)
@@ -1456,7 +1488,7 @@ try {{ ipconfig /flushdns }} catch {{}}
             w = main_window.stacked_widget.widget(i)
             if w is not central_widget: refresh_icons(w)
 
-    def show_message_and_return(msg, success=True, animate=True):
+    def show_message_and_return(msg, success=True, animate=True, word_wrap=False):
         message_widget = QWidget()
         vbox = QVBoxLayout(message_widget)
         vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1465,8 +1497,8 @@ try {{ ipconfig /flushdns }} catch {{}}
         fix_widget_size(message_widget)
         card_container = QWidget()
         card_container.setObjectName("msg_card")
-        card_container.setMinimumWidth(220)
-        card_container.setMaximumWidth(600)
+        card_container.setMinimumWidth(240)
+        card_container.setMaximumWidth(380)
         card_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         card_layout = QVBoxLayout(card_container)
         card_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1478,12 +1510,28 @@ try {{ ipconfig /flushdns }} catch {{}}
         icon_file = "check-circle.svg" if success else "x-circle.svg"
         emoji_label = create_icon_label(icon_file, size=48)
         card_layout.addWidget(emoji_label)
-        for line in msg.split("\n"):
-            if not line.strip(): continue
-            lbl = QLabel(line)
-            lbl.setWordWrap(False)
-            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            card_layout.addWidget(lbl)
+        if word_wrap:
+            lines = [l for l in msg.split("\n") if l.strip()]
+            for line in lines:
+                block = QWidget()
+                block.setStyleSheet("background:#363d46; border-radius:8px;")
+                block_layout = QVBoxLayout(block)
+                block_layout.setContentsMargins(12, 10, 12, 10)
+                block_layout.setSpacing(0)
+                lbl = QLabel(line)
+                lbl.setWordWrap(True)
+                lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+                lbl.setStyleSheet("border: none; background: transparent;")
+                block_layout.addWidget(lbl)
+                card_layout.addWidget(block)
+        else:
+            for line in msg.split("\n"):
+                if not line.strip(): continue
+                lbl = QLabel(line)
+                lbl.setWordWrap(False)
+                lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                card_layout.addWidget(lbl)
         ok_btn = QPushButton(tr("ok"))
         ok_btn.setProperty("style_role", "button1")
         card_layout.addWidget(ok_btn)
@@ -1711,30 +1759,40 @@ try {{ ipconfig /flushdns }} catch {{}}
         main_window.is_animating = True
         animation_steps, time_interval = 15, 20
         def fade_out(step=1.0):
-            if step >= 0:
-                main_window.setWindowOpacity(step)
-                QTimer.singleShot(time_interval, lambda: fade_out(step - 1.0 / animation_steps))
-            else:
-                main_window.setWindowOpacity(0)
-                main_window.setUpdatesEnabled(False)
-                main_window.dark_theme = not main_window.dark_theme
-                apply_theme_styles()
-                apply_main_texts()
-                main_window.setUpdatesEnabled(True)
-                fade_in()
+            try:
+                if step >= 0:
+                    main_window.setWindowOpacity(step)
+                    QTimer.singleShot(time_interval, lambda: fade_out(step - 1.0 / animation_steps))
+                else:
+                    main_window.setWindowOpacity(0)
+                    main_window.setUpdatesEnabled(False)
+                    main_window.dark_theme = not main_window.dark_theme
+                    apply_theme_styles()
+                    apply_main_texts()
+                    main_window.setUpdatesEnabled(True)
+                    fade_in()
+            except Exception:
+                main_window.setWindowOpacity(1.0)
+                main_window.is_animating = False
         def fade_in(step=0.0):
-            if step <= 1.0:
-                main_window.setWindowOpacity(step)
-                QTimer.singleShot(time_interval, lambda: fade_in(step + 1.0 / animation_steps))
-            else:
+            try:
+                if step <= 1.0:
+                    main_window.setWindowOpacity(step)
+                    QTimer.singleShot(time_interval, lambda: fade_in(step + 1.0 / animation_steps))
+                else:
+                    main_window.setWindowOpacity(1.0)
+                    main_window.is_animating = False
+            except Exception:
                 main_window.setWindowOpacity(1.0)
                 main_window.is_animating = False
         fade_out()
     theme_button.clicked.connect(switch_theme)
 
     def switch_language():
+        global _STYLESHEET_CACHE
         next_language = "en" if main_window.language == "ru" else "ru"
         main_window.language = set_current_language(next_language)
+        _STYLESHEET_CACHE.clear()
         apply_theme_styles()
         apply_main_texts()
 
@@ -1882,7 +1940,7 @@ try {{ ipconfig /flushdns }} catch {{}}
         repo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         repo_btn.setProperty("icon_name", "github.svg")
         repo_btn.setProperty("icon_force_dark", True)
-        repo_btn.setStyleSheet(main_window.styles["theme"] + "\nQToolButton { font-size:13px; padding:6px 12px; background:qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #e06c75, stop:1 #d64c58); color:white; border:1px solid #b94852; border-radius:8px; }\nQToolButton:pressed { background:#c94c57; }")
+        repo_btn.setStyleSheet(main_window.styles["theme"] + "\nQToolButton { font-size:13px; padding:6px 12px; }")
         repo_btn.clicked.connect(lambda: open_target("https://github.com/AvenCores/Goida-AI-Unlocker"))
         grid = QGridLayout()
         grid.setHorizontalSpacing(12)
@@ -1912,20 +1970,20 @@ try {{ ipconfig /flushdns }} catch {{}}
                 row += 1
                 col = 0
         vbox.addLayout(grid)
-        repo_btn.setStyleSheet(main_window.styles["theme"] + "\nQToolButton { font-size:13px; padding:6px 12px; }")
         vbox.addSpacing(8)
         vbox.addWidget(repo_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
         vbox.addSpacing(8)
         def _equalize_about_button_widths():
             if not about_buttons: return
-            def _req_w(b):
-                fm = b.fontMetrics() if hasattr(b, "fontMetrics") else QFontMetrics(b.font())
-                text_w = fm.horizontalAdvance(b.text())
-                icon_w = b.iconSize().width() if hasattr(b, "iconSize") else 24
-                base = max(text_w, icon_w)
-                return base + 24
-            ref_w = max(max(b.sizeHint().width(), _req_w(b)) for b in about_buttons)
-            for b in about_buttons: b.setFixedWidth(ref_w)
+            # Only use sizeHint() — it's reliable after the widget is shown.
+            # Avoid QFontMetrics on not-yet-shown widgets: that triggers
+            # "QFont::setPointSize: Point size <= 0" warnings.
+            try:
+                ref_w = max(b.sizeHint().width() for b in about_buttons if b.sizeHint().width() > 0)
+                for b in about_buttons:
+                    b.setFixedWidth(ref_w)
+            except (ValueError, Exception):
+                pass
         back_button = QPushButton(f"  {tr('back_to_menu')}  ")
         back_button.setCursor(Qt.CursorShape.PointingHandCursor)
         back_button.setProperty("style_role", "theme")
@@ -1939,7 +1997,7 @@ try {{ ipconfig /flushdns }} catch {{}}
         vbox.addWidget(back_button, alignment=Qt.AlignmentFlag.AlignCenter)
         if main_window.stacked_widget: main_window.stacked_widget.addWidget(about_widget)
         update_subwindow_styles()
-        QTimer.singleShot(0, lambda: _equalize_about_button_widths())
+        QTimer.singleShot(150, lambda: _equalize_about_button_widths())
         animate_widget_switch(about_widget)
     about_button.clicked.connect(show_about_window)
 
