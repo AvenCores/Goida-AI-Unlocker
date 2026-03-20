@@ -861,6 +861,11 @@ def _build_stylesheet(dark, language: str):
             "about_link_html": f"<a href='#' style='color:{link_color}; text-decoration:none; font-size:13px;'>⟵ {tr('back_to_menu', language=language)}</a>",
         }
 
+def get_about_toolbutton_style(styles: dict[str, str]) -> str:
+    # Keep an explicit point-sized font here: pixel-sized fonts can leave
+    # pointSize() at -1 and spam Qt warnings on QToolButton hover.
+    return styles["theme"] + "\nQToolButton { font-size: 10pt; padding: 6px 12px; }"
+
 class DraggableTitleBar(QWidget):
     def __init__(self, main_window: "CustomWindow"):
         super().__init__(main_window)
@@ -1456,6 +1461,7 @@ if __name__ == "__main__":
     def update_subwindow_styles():
         if not main_window.stacked_widget: return
         buttons_to_update = []
+        tool_buttons_to_update = []
         labels_to_update = []
         for i in range(main_window.stacked_widget.count()):
             w = main_window.stacked_widget.widget(i)
@@ -1469,6 +1475,9 @@ if __name__ == "__main__":
                     buttons_to_update.append((child, main_window.styles["theme"]))
                 else:
                     buttons_to_update.append((child, main_window.styles["button1"]))
+            for child in w.findChildren(QToolButton):
+                if child.property("style_role") == "about_tool":
+                    tool_buttons_to_update.append((child, get_about_toolbutton_style(main_window.styles)))
             for child in w.findChildren(QLabel):
                 obj_name = child.objectName()
                 if obj_name == "about_title": labels_to_update.append((child, "title", main_window.styles))
@@ -1477,6 +1486,7 @@ if __name__ == "__main__":
                 elif obj_name == "message_emoji": continue
                 else: labels_to_update.append((child, "label", main_window.styles))
         for btn, style in buttons_to_update: btn.setStyleSheet(style)
+        for btn, style in tool_buttons_to_update: btn.setStyleSheet(style)
         for lbl, label_type, styles in labels_to_update:
             if label_type == "title":
                 lbl.setText(styles["about_title_html"])
@@ -1928,7 +1938,8 @@ if __name__ == "__main__":
         github_btn.setIconSize(QSize(24, 24))
         github_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         github_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        github_btn.setStyleSheet(main_window.styles["theme"] + "\nQToolButton { font-size:13px; padding:6px 12px; }")
+        github_btn.setProperty("style_role", "about_tool")
+        github_btn.setStyleSheet(get_about_toolbutton_style(main_window.styles))
         github_btn.setProperty("icon_name", "github.svg")
         github_btn.setProperty("icon_force_dark", True)
         github_btn.clicked.connect(lambda: open_target("https://github.com/AvenCores"))
@@ -1938,9 +1949,10 @@ if __name__ == "__main__":
         repo_btn.setIconSize(QSize(24, 24))
         repo_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         repo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        repo_btn.setProperty("style_role", "about_tool")
         repo_btn.setProperty("icon_name", "github.svg")
         repo_btn.setProperty("icon_force_dark", True)
-        repo_btn.setStyleSheet(main_window.styles["theme"] + "\nQToolButton { font-size:13px; padding:6px 12px; }")
+        repo_btn.setStyleSheet(get_about_toolbutton_style(main_window.styles))
         repo_btn.clicked.connect(lambda: open_target("https://github.com/AvenCores/Goida-AI-Unlocker"))
         grid = QGridLayout()
         grid.setHorizontalSpacing(12)
@@ -1958,10 +1970,11 @@ if __name__ == "__main__":
             btn.setIcon(get_icon(icon_file, 24, force_dark=True))
             btn.setIconSize(QSize(24, 24))
             btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+            btn.setProperty("style_role", "about_tool")
             btn.setProperty("icon_name", icon_file)
             btn.setProperty("icon_force_dark", True)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setStyleSheet(main_window.styles["theme"] + "\nQToolButton { font-size:13px; padding:6px 12px; }")
+            btn.setStyleSheet(get_about_toolbutton_style(main_window.styles))
             btn.clicked.connect(lambda checked=False, u=url: open_target(u))
             grid.addWidget(btn, row, col, alignment=Qt.AlignmentFlag.AlignHCenter)
             about_buttons.append(btn)
