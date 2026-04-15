@@ -34,7 +34,7 @@
 
 # 🎦 Видео гайд по установке и использованию 
 
-<img width="1280" height="720" alt="maxresdefault" src="https://github.com/user-attachments/assets/dab3d1db-8aed-42ee-a44f-76c1234788be" />
+<img alt="maxresdefault" src="https://github.com/user-attachments/assets/dab3d1db-8aed-42ee-a44f-76c1234788be" />
 
 <div align="center">
 
