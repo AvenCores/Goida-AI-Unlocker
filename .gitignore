@@ -1,6 +1,7 @@
 .venv/
+.env/
 linux-venv/
 build/
 dist/
 __pycache__/
-Goida AI Unlocker.spec
+Goida_AI_Unlocker_Windows.spec

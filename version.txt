@@ -1,0 +1,27 @@
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(1, 2, 4, 0),
+    prodvers=(1, 2, 4, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable(
+        '040904B0',
+        [StringStruct('CompanyName', 'avencores'),
+         StringStruct('FileDescription', 'Goida AI Unlocker'),
+         StringStruct('FileVersion', '1.2.4'),
+         StringStruct('InternalName', 'Goida_AI_Unlocker'),
+         StringStruct('LegalCopyright', '© 2026'),
+         StringStruct('OriginalFilename', 'Goida_AI_Unlocker_Windows.exe'),
+         StringStruct('ProductName', 'Goida AI Unlocker'),
+         StringStruct('ProductVersion', '1.2.4')])
+      ]),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)
