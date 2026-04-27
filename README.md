@@ -18,6 +18,8 @@
   Мини-утилита для Windows, позволяющая <b>в один клик разблокировать популярные сервисы</b> путём обновления файла <code>hosts</code>. Под капотом — современный PySide-интерфейс с поддержкой светлой и тёмной темы.
 </p>
 
+> **Важно:** модуль не обходит прямые блокировки РКН на сетевом уровне. Если конкретный сервис заблокирован РКН по IP / SNI / TLS или иным способом, без дополнительных средств (VPN, прокси, zapret, byebyedpi и т.п.) он работать не будет.
+
 <p align="center">
   <a href="https://github.com/AvenCores/Goida-AI-Unlocker/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/AvenCores/Goida-AI-Unlocker?style=flat-square" alt="License"/>
