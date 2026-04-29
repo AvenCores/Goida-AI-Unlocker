@@ -54,7 +54,7 @@
 
 ## 📸 Скриншот интерфейса
 <div align="center">
-  <img alt="Goida_AI_Unlocker_MRE6ut72zG" src="https://i127.fastpic.org/big/2026/0315/8c/92c9939b1b7a4da39dcd7339df6a1a8c.png" />
+  <img alt="Goida_AI_Unlocker" src="https://github.com/user-attachments/assets/112a727d-0c99-4759-9953-a2d7fe49da4b" />
 </div>
 
 ---
