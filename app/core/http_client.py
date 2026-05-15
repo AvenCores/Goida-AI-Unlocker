@@ -1,9 +1,10 @@
 import threading
 import time as _time
 import urllib.request
+import json
 from typing import Optional
 from app.core.logger import logger
-from app.core.constants import ADDITIONAL_HOSTS_URL, _HOSTS_VERSION_BLOCK_RE, _HOSTS_CONTENT_RE
+from app.core.constants import ADDITIONAL_HOSTS_URL
 from app.utils.helpers import extract_update_line
 import textwrap as _tw
 
@@ -43,14 +44,17 @@ class HttpClient:
         raw = cls.fetch(ADDITIONAL_HOSTS_URL, bypass_cache=True)
         if not raw:
             return "", ""
-        ver_match = _HOSTS_VERSION_BLOCK_RE.search(raw)
-        hosts_match = _HOSTS_CONTENT_RE.search(raw)
-        version = ver_match.group(1) if ver_match else ""
-        hosts_block = hosts_match.group(1).strip() if hosts_match else ""
-        hosts_block = _tw.dedent(hosts_block)
-        if not hosts_block:
-            version = ""
-        return version, hosts_block
+        try:
+            data = json.loads(raw)
+            version = data.get("version", "")
+            hosts_block = data.get("hosts", "").strip()
+            hosts_block = _tw.dedent(hosts_block)
+            if not hosts_block:
+                version = ""
+            return version, hosts_block
+        except Exception as e:
+            logger.error("Failed to parse additional hosts JSON: %s", e)
+            return "", ""
 
     @classmethod
     def get_remote_main_line_cached(cls) -> tuple[str, str]:

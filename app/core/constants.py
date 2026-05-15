@@ -15,7 +15,7 @@ HOSTS_PATH = Path(r"C:\Windows\System32\drivers\etc\hosts") if sys.platform == "
 HOSTS_BACKUP_DIR = Path.home() / ".goida-ai-unlocker" / "hosts-backups"
 HOSTS_BACKUP_PREFIX = "hosts_backup_"
 
-ADDITIONAL_HOSTS_URL = "https://raw.githubusercontent.com/AvenCores/Goida-AI-Unlocker/refs/heads/main/additional_hosts.py"
+ADDITIONAL_HOSTS_URL = "https://raw.githubusercontent.com/AvenCores/Goida-AI-Unlocker/refs/heads/main/additional_hosts.json"
 
 APP_VERSION = "0.0.0"
 try:
@@ -29,8 +29,6 @@ _LAYOUT_FILLER = "\u3164"
 
 # Regex
 _ADDITIONAL_HOSTS_VERSION_RE = _re.compile(r"# additional_hosts_version\s+(\S+)")
-_HOSTS_VERSION_BLOCK_RE = _re.compile(r'version_add\s*=\s*["\']([^"\']+)["\']')
-_HOSTS_CONTENT_RE = _re.compile(r'hosts_add\s*=\s*"""(.*?)"""', _re.S)
 
 _MONTH_NAME_ALIASES = {
     "январь": 0, "января": 0, "january": 0,
