@@ -6,7 +6,7 @@ import time as _time
 from pathlib import Path
 from typing import Optional
 from app.core.logger import logger
-from app.core.constants import _ADDITIONAL_HOSTS_VERSION_RE, resource_path
+from app.core.constants import _ADDITIONAL_HOSTS_VERSION_RE
 
 def open_target(path: str):
     try:

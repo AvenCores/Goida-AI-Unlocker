@@ -1,12 +1,11 @@
 import sys
 import json
-import os
 from PySide6.QtWidgets import QApplication, QStackedWidget, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QMenu
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
 
 from app.core.logger import logger
-from app.core.constants import APP_VERSION, resource_path
+from app.core.constants import resource_path
 from app.gui.localization import tr, CURRENT_LANGUAGE, detect_system_language, set_current_language
 from app.gui.styles import is_system_dark_theme, get_stylesheet
 from app.gui.icons import get_icon
@@ -26,7 +25,6 @@ def main():
 
     main_window = MainWindow()
     main_window.stacked_widget = QStackedWidget()
-    from app.gui.localization import CURRENT_LANGUAGE
     main_window.language = CURRENT_LANGUAGE
     main_window.setWindowTitle("Goida AI Unlocker")
     main_window.setWindowFlags(Qt.WindowType.FramelessWindowHint)

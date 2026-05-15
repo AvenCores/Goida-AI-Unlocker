@@ -1,4 +1,3 @@
-import threading
 from functools import lru_cache
 from PySide6.QtCore import QLocale
 from app.core.constants import _LAYOUT_FILLER, _MONTH_NAME_OUTPUTS, _MONTH_NAME_ALIASES, _MONTH_NAME_RE

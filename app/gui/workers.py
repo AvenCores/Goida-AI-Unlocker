@@ -1,6 +1,6 @@
 import json
 from typing import Callable
-from PySide6.QtCore import QObject, Signal, QRunnable, Slot
+from PySide6.QtCore import QObject, Signal, QRunnable
 from app.core.logger import logger
 from app.core.hosts_manager import HostsManager
 from app.core.http_client import HttpClient
