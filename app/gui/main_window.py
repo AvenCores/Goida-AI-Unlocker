@@ -459,7 +459,6 @@ class MainWindow(QMainWindow):
         card.setMaximumWidth(max_width)
         card.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         card_layout = QVBoxLayout(card)
-        card_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.setSpacing(16)
         card_layout.setContentsMargins(32, 24, 32, 24)
         card.setStyleSheet(self.styles["message_card"])
@@ -531,16 +530,22 @@ class MainWindow(QMainWindow):
 
     def show_update_available(self, local_ver: str, latest_ver: str, dl_url: str):
         widget, card_layout, card = self._build_card("alert.svg", max_width=600)
+        card.setMinimumWidth(500)
 
         for text in (
             tr("installed_version", version=local_ver),
             tr("latest_version", version=latest_ver),
             tr("new_version_available")
         ):
-            lbl = QLabel(text)
+            line = clean_message_line(text)
+            if not line:
+                continue
+            lbl = QLabel(line)
+            lbl.setObjectName("message_block_label")
             lbl.setTextFormat(Qt.TextFormat.RichText)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl.setWordWrap(True)
+            lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
             card_layout.addWidget(lbl)
 
         dl_btn = QPushButton(tr("download"))
@@ -557,17 +562,23 @@ class MainWindow(QMainWindow):
 
     def show_no_update(self, local_ver: str, latest_ver: str):
         widget, card_layout, card = self._build_card("check-circle.svg", max_width=600)
+        card.setMinimumWidth(500)
 
         for text in (
             tr("installed_version", version=local_ver),
             tr("latest_version_padded", version=latest_ver),
             tr("latest_version_installed")
         ):
-            lbl = QLabel(text)
+            line = clean_message_line(text)
+            if not line:
+                continue
+            lbl = QLabel(line)
+            lbl.setObjectName("message_block_label")
             if "version" in text:
                 lbl.setTextFormat(Qt.TextFormat.RichText)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl.setWordWrap(True)
+            lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
             card_layout.addWidget(lbl)
 
         ok_btn = QPushButton(tr("ok"))
