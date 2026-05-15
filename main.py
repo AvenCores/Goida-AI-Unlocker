@@ -6,8 +6,7 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
 
 from app.core.logger import logger
-from app.core.constants import APP_VERSION
-from app.utils.helpers import resource_path
+from app.core.constants import APP_VERSION, resource_path
 from app.gui.localization import tr, CURRENT_LANGUAGE, detect_system_language, set_current_language
 from app.gui.styles import is_system_dark_theme, get_stylesheet
 from app.gui.icons import get_icon
@@ -18,19 +17,12 @@ def main():
     app = QApplication(sys.argv)
     app.setStyleSheet("QPushButton:focus { outline: none; }")
 
-    # Load app version
-    global_app_version = APP_VERSION
-    try:
-        with open(resource_path("app_info.json"), "r", encoding="utf-8") as vf:
-            global_app_version = json.load(vf).get("version", global_app_version)
-    except Exception:
-        pass
-
-    icon_path = resource_path("icon.ico")
-    app.setWindowIcon(QIcon(icon_path))
-
     # Detect language
     set_current_language(detect_system_language())
+
+    # Path for icon
+    icon_path = resource_path("icon.ico")
+    app.setWindowIcon(QIcon(icon_path))
 
     main_window = MainWindow()
     main_window.stacked_widget = QStackedWidget()

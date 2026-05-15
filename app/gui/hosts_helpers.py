@@ -6,9 +6,9 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication, QMessageBox, QLabel, QPushButton
 from PySide6.QtCore import Qt, QTimer
 from app.core.logger import logger
-from app.core.constants import HOSTS_PATH, HOSTS_BACKUP_DIR
+from app.core.constants import HOSTS_PATH, HOSTS_BACKUP_DIR, resource_path
 from app.core.hosts_manager import HostsManager
-from app.utils.helpers import open_target, resource_path
+from app.utils.helpers import open_target
 from app.gui.localization import tr, normalize_language, CURRENT_LANGUAGE
 
 def _show_open_hosts_error(detail: str, _inline_callback=None):

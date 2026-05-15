@@ -6,14 +6,7 @@ import time as _time
 from pathlib import Path
 from typing import Optional
 from app.core.logger import logger
-from app.core.constants import _ADDITIONAL_HOSTS_VERSION_RE
-
-def resource_path(relative_path: str) -> str:
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+from app.core.constants import _ADDITIONAL_HOSTS_VERSION_RE, resource_path
 
 def open_target(path: str):
     try:

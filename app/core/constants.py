@@ -1,13 +1,29 @@
 import sys
+import os
+import json
 import re as _re
 from pathlib import Path
+
+def resource_path(relative_path: str) -> str:
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 HOSTS_PATH = Path(r"C:\Windows\System32\drivers\etc\hosts") if sys.platform == "win32" else Path("/etc/hosts")
 HOSTS_BACKUP_DIR = Path.home() / ".goida-ai-unlocker" / "hosts-backups"
 HOSTS_BACKUP_PREFIX = "hosts_backup_"
 
 ADDITIONAL_HOSTS_URL = "https://raw.githubusercontent.com/AvenCores/Goida-AI-Unlocker/refs/heads/main/additional_hosts.py"
+
 APP_VERSION = "0.0.0"
+try:
+    with open(resource_path("app_info.json"), "r", encoding="utf-8") as _vf:
+        APP_VERSION = json.load(_vf).get("version", APP_VERSION)
+except Exception:
+    pass
+
 SUPPORTED_LANGUAGES = ("ru", "en")
 _LAYOUT_FILLER = "\u3164"
 
