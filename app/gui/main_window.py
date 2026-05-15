@@ -1,19 +1,21 @@
 from typing import Optional, Callable
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QLabel, QStackedWidget,
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QStackedWidget,
     QSizePolicy, QPushButton, QToolButton, QGridLayout, QApplication,
-    QGraphicsOpacityEffect
+    QGraphicsOpacityEffect, QMenu
 )
 from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QSize, Slot, QThreadPool
-from PySide6.QtGui import QClipboard
+from PySide6.QtGui import QClipboard, QIcon
 
 from app.core.logger import logger
+from app.core.constants import resource_path, APP_VERSION
 from app.core.hosts_manager import HostsManager, HostsStatusResult
 from app.utils.helpers import open_target
 from app.gui.localization import tr, set_current_language, localize_update_date, clean_message_line
-from app.gui.styles import get_stylesheet, get_about_toolbutton_style, clear_stylesheet_cache
+from app.gui.styles import get_stylesheet, get_about_toolbutton_style, clear_stylesheet_cache, is_system_dark_theme
 from app.gui.icons import get_icon, create_icon_label, refresh_icons
 from app.gui.workers import HostsWorker, VersionWorker, AppUpdateWorker
+from app.gui.hosts_helpers import open_hosts_file, open_latest_hosts_backup_file, open_hosts_backup_folder
 
 class DraggableTitleBar(QWidget):
     def __init__(self, main_window: "MainWindow"):
@@ -48,18 +50,304 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.is_animating = False
-        self.stacked_widget: Optional[QStackedWidget] = None
+        self.stacked_widget = QStackedWidget()
         self._current_animation: Optional[QPropertyAnimation] = None
-        self.dark_theme = False
-        self.styles: dict[str, str] = {}
-        self.title_bar: Optional[QWidget] = None
+        
+        # Window settings
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setWindowIcon(QIcon(resource_path("icon.ico")))
+        self.setWindowTitle("Goida AI Unlocker")
+        
+        self.dark_theme = is_system_dark_theme()
         from app.gui.localization import CURRENT_LANGUAGE
         self.language = CURRENT_LANGUAGE
+        self.styles = get_stylesheet(self.dark_theme, self.language)
+        self.setStyleSheet(self.styles["main"])
+        
         self.hosts_manager = HostsManager()
         self._check_updates_running = False
         self.home_page: Optional[QWidget] = None
-        self.resource_path: Callable[[str], str] = lambda x: x
+        self.resource_path = resource_path
         self._processing_widget: Optional[QWidget] = None
+        
+        # UI components
+        self.title_bar: Optional[QWidget] = None
+        self.title_label: Optional[QLabel] = None
+        self.app_title_label: Optional[QLabel] = None
+        self.textinformer: Optional[QLabel] = None
+        self.version_label: Optional[QLabel] = None
+        self.update_date_label: Optional[QLabel] = None
+        self.status_container: Optional[QWidget] = None
+        self.install_button: Optional[QPushButton] = None
+        self.uninstall_button: Optional[QPushButton] = None
+        self.theme_button: Optional[QPushButton] = None
+        self.language_button: Optional[QPushButton] = None
+        self.donate_button: Optional[QPushButton] = None
+        self.about_button: Optional[QPushButton] = None
+        self.update_button: Optional[QPushButton] = None
+        self.open_hosts_button: Optional[QPushButton] = None
+        self.backup_hosts_button: Optional[QPushButton] = None
+
+        self.setup_ui()
+        self.apply_main_texts()
+        self.check_version_status()
+
+    def setup_ui(self):
+        main_container = QWidget()
+        main_layout = QVBoxLayout(main_container)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        title_bar = DraggableTitleBar(self)
+        title_bar.setObjectName("titleBar")
+        title_bar.setFixedHeight(32)
+        self.title_bar = title_bar
+        title_bar_layout = QHBoxLayout(title_bar)
+        title_bar_layout.setContentsMargins(12, 0, 8, 0)
+        title_bar_layout.setSpacing(0)
+
+        title_label = QLabel("Goida AI Unlocker")
+        title_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        title_label.setStyleSheet("QLabel { color: #666666; font-size: 13px; font-weight: bold; background: transparent; }")
+        title_bar_layout.addWidget(title_label)
+        title_bar_layout.addStretch()
+
+        minimize_button = QPushButton("─")
+        minimize_button.setFixedSize(26, 26)
+        minimize_button.clicked.connect(self.showMinimized)
+        minimize_button.setStyleSheet(
+            "QPushButton { background: transparent; color: #666666; border: none; font-size: 14px; font-weight: bold; } "
+            "QPushButton:hover { color: #2d7dff; }"
+        )
+        close_button = QPushButton("×")
+        close_button.setFixedSize(26, 26)
+        close_button.clicked.connect(QApplication.instance().quit)
+        close_button.setStyleSheet(
+            "QPushButton { background: transparent; color: #666666; border: none; font-size: 18px; font-weight: bold; } "
+            "QPushButton:hover { color: #e06c75; }"
+        )
+        title_bar_layout.addWidget(minimize_button)
+        title_bar_layout.addWidget(close_button)
+        main_layout.addWidget(title_bar)
+
+        central_widget = QWidget()
+        outer_layout = QVBoxLayout(central_widget)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+        outer_layout.addStretch()
+
+        layout = QVBoxLayout()
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.setSpacing(24)
+        layout.setContentsMargins(20, 20, 20, 20)
+        outer_layout.addLayout(layout)
+        outer_layout.addStretch()
+
+        footer_layout = QHBoxLayout()
+        footer_layout.setContentsMargins(20, 0, 20, 20)
+        footer_layout.setSpacing(0)
+        outer_layout.addLayout(footer_layout)
+
+        self.resize(640, 640)
+
+        app_title_label = QLabel()
+        app_title_label.setObjectName("main_title")
+        app_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        app_title_label.setTextFormat(Qt.TextFormat.RichText)
+        app_title_label.setText(self.styles["about_title_html"])
+        app_title_label.setStyleSheet(self.styles["about_title_style"])
+        layout.addWidget(app_title_label)
+        self.app_title_label = app_title_label
+
+        installed = self.hosts_manager.is_installed()
+        color = "#43b581" if installed else "#e06c75"
+        status_key = "status_installed" if installed else "status_not_installed"
+        textinformer = QLabel(tr("unlock_status", status=tr(status_key), color=color))
+        textinformer.setTextFormat(Qt.TextFormat.RichText)
+        textinformer.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        textinformer.setStyleSheet(self.styles["label"])
+        self.textinformer = textinformer
+
+        version_label = QLabel(tr("version_checking"))
+        version_label.setTextFormat(Qt.TextFormat.RichText)
+        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        version_label.setStyleSheet(self.styles["label"])
+        self.version_label = version_label
+
+        update_date_label = QLabel(tr("update_date_checking"))
+        update_date_label.setTextFormat(Qt.TextFormat.RichText)
+        update_date_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        text_color = "#ffffff" if self.dark_theme else "#1a1a1a"
+        update_date_label.setStyleSheet(
+            f"font-size: 14px; color: {text_color}; border-radius: 8px; padding: 4px 8px; margin: 2px;"
+        )
+        self.update_date_label = update_date_label
+
+        status_container = QWidget()
+        status_vbox = QVBoxLayout(status_container)
+        status_vbox.setContentsMargins(16, 12, 16, 12)
+        status_vbox.setSpacing(4)
+        status_vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        status_vbox.addWidget(textinformer)
+        status_vbox.addWidget(version_label)
+        status_vbox.addWidget(update_date_label)
+
+        self.status_container = status_container
+        self.refresh_status_container_style()
+        layout.addWidget(status_container)
+
+        install_button = QPushButton(tr("install_button_install"))
+        install_button.setIcon(get_icon("settings.svg", 18, dark_theme=self.dark_theme, force_white=True))
+        install_button.setIconSize(QSize(18, 18))
+        install_button.setProperty("icon_name", "settings.svg")
+        install_button.setProperty("icon_force_white", True)
+        install_button.setProperty("style_role", "button1")
+        install_button.setProperty("install_mode", "install")
+        install_button.setStyleSheet(self.styles["button1"])
+        self.install_button = install_button
+
+        uninstall_button = QPushButton(tr("uninstall_button"))
+        uninstall_button.setIcon(get_icon("trash.svg", 18, dark_theme=self.dark_theme, force_white=True))
+        uninstall_button.setIconSize(QSize(18, 18))
+        uninstall_button.setProperty("icon_name", "trash.svg")
+        uninstall_button.setProperty("icon_force_white", True)
+        uninstall_button.setProperty("style_role", "button2")
+        uninstall_button.setStyleSheet(self.styles["button2"])
+        self.uninstall_button = uninstall_button
+
+        theme_button = QPushButton(tr("theme_button"))
+        theme_button.setIcon(get_icon("sun.svg", 18, dark_theme=self.dark_theme, force_dark=True))
+        theme_button.setIconSize(QSize(18, 18))
+        theme_button.setProperty("icon_name", "sun.svg")
+        theme_button.setProperty("icon_force_dark", True)
+        theme_button.setProperty("style_role", "theme")
+        theme_button.setStyleSheet(self.styles["theme"])
+        self.theme_button = theme_button
+
+        language_button = QPushButton()
+        language_button.setIcon(get_icon("language.svg", 20, dark_theme=self.dark_theme, force_dark=True))
+        language_button.setIconSize(QSize(20, 20))
+        language_button.setProperty("icon_name", "language.svg")
+        language_button.setProperty("icon_force_dark", True)
+        language_button.setProperty("style_role", "theme")
+        language_button.setStyleSheet(
+            self.styles["theme"] +
+            "\nQPushButton { padding: 0; min-width: 44px; max-width: 44px; min-height: 44px; max-height: 44px; }"
+        )
+        language_button.setFixedSize(44, 44)
+        language_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.language_button = language_button
+
+        donate_button = QPushButton(tr("donate_button"))
+        donate_button.setIcon(get_icon("heart.svg", 18, dark_theme=self.dark_theme, force_dark=True))
+        donate_button.setIconSize(QSize(18, 18))
+        donate_button.setProperty("icon_name", "heart.svg")
+        donate_button.setProperty("icon_force_dark", True)
+        donate_button.setProperty("style_role", "theme")
+        donate_button.setStyleSheet(self.styles["theme"])
+        self.donate_button = donate_button
+
+        about_button = QPushButton(tr("about_button"))
+        about_button.setIcon(get_icon("info.svg", 18, dark_theme=self.dark_theme, force_dark=True))
+        about_button.setIconSize(QSize(18, 18))
+        about_button.setProperty("icon_name", "info.svg")
+        about_button.setProperty("icon_force_dark", True)
+        about_button.setProperty("style_role", "theme")
+        about_button.setStyleSheet(self.styles["theme"])
+        self.about_button = about_button
+
+        update_button = QPushButton(tr("update_button"))
+        update_button.setIcon(get_icon("refresh.svg", 18, dark_theme=self.dark_theme, force_dark=True))
+        update_button.setIconSize(QSize(18, 18))
+        update_button.setProperty("icon_name", "refresh.svg")
+        update_button.setProperty("icon_force_dark", True)
+        update_button.setProperty("style_role", "theme")
+        update_button.setStyleSheet(self.styles["theme"])
+        self.update_button = update_button
+
+        open_hosts_button = QPushButton(tr("open_hosts_button"))
+        open_hosts_button.setIcon(get_icon("book-open.svg", 18, dark_theme=self.dark_theme, force_dark=True))
+        open_hosts_button.setIconSize(QSize(18, 18))
+        open_hosts_button.setProperty("icon_name", "book-open.svg")
+        open_hosts_button.setProperty("icon_force_dark", True)
+        open_hosts_button.setProperty("style_role", "theme")
+        open_hosts_button.setStyleSheet(self.styles["theme"])
+        self.open_hosts_button = open_hosts_button
+
+        backup_hosts_button = QPushButton(tr("backup_hosts_button"))
+        backup_hosts_button.setIcon(get_icon("clock.svg", 18, dark_theme=self.dark_theme, force_dark=True))
+        backup_hosts_button.setIconSize(QSize(18, 18))
+        backup_hosts_button.setProperty("icon_name", "clock.svg")
+        backup_hosts_button.setProperty("icon_force_dark", True)
+        backup_hosts_button.setProperty("style_role", "theme")
+        backup_hosts_button.setStyleSheet(self.styles["theme"])
+        self.backup_hosts_button = backup_hosts_button
+
+        install_button.clicked.connect(lambda: self.start_installation(install_button.property("install_mode") or "install"))
+        uninstall_button.clicked.connect(lambda: self.start_installation("uninstall"))
+        theme_button.clicked.connect(self.switch_theme)
+        language_button.clicked.connect(self.switch_language)
+        donate_button.clicked.connect(self.show_donate)
+        about_button.clicked.connect(self.show_about)
+        update_button.clicked.connect(self.check_for_updates)
+        open_hosts_button.clicked.connect(
+            lambda: open_hosts_file(_inline_callback=lambda msg, ok: self.show_message(msg, success=ok, word_wrap=True))
+        )
+        backup_hosts_button.clicked.connect(self.show_backup_menu)
+
+        layout.addWidget(install_button)
+        layout.addWidget(uninstall_button)
+        layout.addWidget(open_hosts_button)
+        layout.addWidget(backup_hosts_button)
+
+        controls_hbox = QHBoxLayout()
+        controls_hbox.setSpacing(12)
+        controls_hbox.addWidget(theme_button)
+        controls_hbox.addWidget(donate_button)
+        layout.addLayout(controls_hbox)
+        layout.addStretch()
+        layout.addWidget(update_button)
+        layout.addWidget(about_button)
+
+        footer_layout.addWidget(language_button, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)
+        footer_layout.addStretch()
+
+        self.home_page = central_widget
+        self.title_label = title_label
+        self.stacked_widget.addWidget(central_widget)
+        main_layout.addWidget(self.stacked_widget)
+        self.setCentralWidget(main_container)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.fix_widget_size(self.home_page)
+        if self.stacked_widget:
+            cur = self.stacked_widget.currentWidget()
+            if cur:
+                self.fix_widget_size(cur)
+
+    def show_backup_menu(self):
+        menu = QMenu(self)
+        if self.dark_theme:
+            menu.setStyleSheet(
+                "QMenu { background:#2d333b; color:#f3f6fd; border:1px solid #3c434d; border-radius:10px; padding:6px; }"
+                "QMenu::item { padding:6px 16px; border-radius:8px; margin:2px 0; }"
+                "QMenu::item:selected { background:#246cf0; color:#ffffff; border-radius:8px; }"
+            )
+        else:
+            menu.setStyleSheet(
+                "QMenu { background:#ffffff; color:#1a1a1a; border:1px solid #cfd4db; border-radius:10px; padding:6px; }"
+                "QMenu::item { padding:6px 16px; border-radius:8px; margin:2px 0; }"
+                "QMenu::item:selected { background:#0078d4; color:#ffffff; border-radius:8px; }"
+            )
+        act1 = menu.addAction(tr("backup_menu_open_file"))
+        act2 = menu.addAction(tr("backup_menu_open_folder"))
+        sel = menu.exec(self.backup_hosts_button.mapToGlobal(self.backup_hosts_button.rect().bottomLeft()))
+        if sel == act1:
+            open_latest_hosts_backup_file()
+        elif sel == act2:
+            open_hosts_backup_folder()
 
     def start_system_move(self) -> bool:
         handle = self.windowHandle()
