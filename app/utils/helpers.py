@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import shutil
 import atexit
 import time as _time
 from pathlib import Path
@@ -13,9 +14,27 @@ def open_target(path: str):
         if sys.platform == "win32":
             os.startfile(path)
         elif sys.platform == "darwin":
-            subprocess.call(["open", path])
+            subprocess.Popen(["open", path], start_new_session=True)
         else:
-            subprocess.call(["xdg-open", path])
+            # Linux fallbacks
+            env = os.environ.copy()
+            # If running as root, xdg-open might need help or fail
+            # We try to use Popen to not block the main thread
+            
+            success = False
+            for cmd in [["xdg-open", path], ["gio", "open", path], ["kde-open", path], ["gnome-open", path]]:
+                try:
+                    # Check if command exists
+                    if shutil.which(cmd[0]):
+                        subprocess.Popen(cmd, env=env, start_new_session=True, 
+                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        success = True
+                        break
+                except Exception:
+                    continue
+            
+            if not success:
+                logger.error("All open commands failed for %s", path)
     except Exception as e:
         logger.error("Open error for %s: %s", path, e)
 
