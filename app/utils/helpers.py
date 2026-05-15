@@ -18,23 +18,40 @@ def open_target(path: str):
         else:
             # Linux fallbacks
             env = os.environ.copy()
-            # If running as root, xdg-open might need help or fail
-            # We try to use Popen to not block the main thread
             
+            # PyInstaller fix: restore original environment variables
+            # PyInstaller sets LD_LIBRARY_PATH which can break system tools like xdg-open
+            if getattr(sys, 'frozen', False):
+                for var in ['LD_LIBRARY_PATH', 'PATH', 'PYTHONPATH']:
+                    orig_var = var + '_ORIG'
+                    if orig_var in env:
+                        env[var] = env[orig_var]
+                    elif var == 'LD_LIBRARY_PATH':
+                        # If no original LD_LIBRARY_PATH, it's safer to remove it
+                        env.pop(var, None)
+
             success = False
-            for cmd in [["xdg-open", path], ["gio", "open", path], ["kde-open", path], ["gnome-open", path]]:
+            for cmd_name in ["xdg-open", "gio", "kde-open", "gnome-open"]:
                 try:
-                    # Check if command exists
-                    if shutil.which(cmd[0]):
-                        subprocess.Popen(cmd, env=env, start_new_session=True, 
-                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    executable = shutil.which(cmd_name)
+                    if executable:
+                        # Use list for command to avoid shell injection and handle spaces
+                        cmd = [cmd_name, str(path)]
+                        subprocess.Popen(
+                            cmd, 
+                            env=env, 
+                            start_new_session=True, 
+                            stdout=subprocess.DEVNULL, 
+                            stderr=subprocess.DEVNULL
+                        )
                         success = True
                         break
-                except Exception:
+                except Exception as e:
+                    logger.debug("Failed to use %s: %s", cmd_name, e)
                     continue
             
             if not success:
-                logger.error("All open commands failed for %s", path)
+                logger.error("All open commands failed for %s. Try installing xdg-utils.", path)
     except Exception as e:
         logger.error("Open error for %s: %s", path, e)
 
