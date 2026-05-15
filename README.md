@@ -15,7 +15,7 @@
 
 <h1 align="center">Goida AI Unlocker</h1>
 <p align="center">
-  Мини-утилита для Windows, позволяющая <b>в один клик разблокировать популярные сервисы</b> путём обновления файла <code>hosts</code>. Под капотом — современный PySide-интерфейс с поддержкой светлой и тёмной темы.
+  Мини-утилита для Windows и Linux, позволяющая <b>в один клик разблокировать популярные сервисы</b> путём обновления файла <code>hosts</code>. Под капотом — современная модульная архитектура на Python и PySide-интерфейс с поддержкой светлой и тёмной темы.
 </p>
 
 > **Важно:** модуль не обходит прямые блокировки РКН на сетевом уровне. Если конкретный сервис заблокирован РКН по IP / SNI / TLS или иным способом, без дополнительных средств (VPN, прокси, zapret, byebyedpi и т.п.) он работать не будет.
@@ -105,9 +105,9 @@ python main.py
 
 Для создания портативного одного файла используется [PyInstaller](https://pyinstaller.org/):
 
-**Windows:** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --clean --strip --name="Goida_AI_Unlocker_Windows" --noupx --clean --version-file=version.txt --add-data "icon.ico;." --add-data "app_info.json;." --add-data "icons;icons"```
+**Windows:** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --clean --strip --name="Goida_AI_Unlocker_Windows" --noupx --clean --version-file=version.txt --add-data "icon.ico;." --add-data "app_info.json;." --add-data "icons;icons" --add-data "app;app"```
 
-**Linux:** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --clean --strip --name="Goida_AI_Unlocker_Linux" --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons"```
+**Linux:** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --clean --strip --name="Goida_AI_Unlocker_Linux" --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"```
 
 
 Скомпилированный файл появится в директории <code>dist/</code>.
