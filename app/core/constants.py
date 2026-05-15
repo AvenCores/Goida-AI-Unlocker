@@ -11,8 +11,17 @@ def resource_path(relative_path: str) -> str:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
+def _get_backup_dir() -> Path:
+    try:
+        # Try to use the user's home directory
+        return Path.home() / ".goida-ai-unlocker" / "hosts-backups"
+    except Exception:
+        # Fallback to a temporary directory if home is not accessible
+        import tempfile
+        return Path(tempfile.gettempdir()) / "goida-ai-unlocker" / "hosts-backups"
+
 HOSTS_PATH = Path(r"C:\Windows\System32\drivers\etc\hosts") if sys.platform == "win32" else Path("/etc/hosts")
-HOSTS_BACKUP_DIR = Path.home() / ".goida-ai-unlocker" / "hosts-backups"
+HOSTS_BACKUP_DIR = _get_backup_dir()
 HOSTS_BACKUP_PREFIX = "hosts_backup_"
 
 ADDITIONAL_HOSTS_URL = "https://raw.githubusercontent.com/AvenCores/Goida-AI-Unlocker/refs/heads/main/additional_hosts.json"

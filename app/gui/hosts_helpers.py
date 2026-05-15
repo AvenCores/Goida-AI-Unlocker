@@ -125,7 +125,10 @@ def open_hosts_file(_inline_callback=None):
         _show_open_hosts_error(str(e), _inline_callback=_inline_callback)
 
 def open_hosts_backup_folder():
-    HOSTS_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        HOSTS_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        logger.error("Failed to create backup directory: %s", e)
     open_target(str(HOSTS_BACKUP_DIR))
 
 def open_latest_hosts_backup_file():

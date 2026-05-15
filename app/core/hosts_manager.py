@@ -76,36 +76,69 @@ class HostsManager:
         except Exception as e:
             logger.error("Backup read error: %s", e)
             return None
+
+        # Try multiple locations for backup if primary fails
+        dirs_to_try = [HOSTS_BACKUP_DIR]
         try:
-            HOSTS_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-            tag = sanitize_backup_action(action)
-            ts = _time.strftime("%Y%m%d_%H%M%S")
-            ns = _time.time_ns() % 1_000_000
-            name = f"{HOSTS_BACKUP_PREFIX}{tag}_{ts}_{ns:06d}.txt"
-            path = HOSTS_BACKUP_DIR / name
-            created = _time.strftime("%Y-%m-%d %H:%M:%S")
-            header = (
-                f"# Goida AI Unlocker hosts backup\n"
-                f"# action {tag}\n"
-                f"# created_at {created}\n"
-                f"# source {HOSTS_PATH}\n\n"
-            ).encode("utf-8")
-            path.write_bytes(header + data)
-            return path
-        except Exception as e:
-            logger.error("Backup write error: %s", e)
-            return None
+            temp_fallback = Path(tempfile.gettempdir()) / "goida-ai-unlocker-backups"
+            if temp_fallback != HOSTS_BACKUP_DIR:
+                dirs_to_try.append(temp_fallback)
+        except Exception:
+            pass
+
+        last_error = None
+        for backup_dir in dirs_to_try:
+            try:
+                backup_dir.mkdir(parents=True, exist_ok=True)
+                tag = sanitize_backup_action(action)
+                ts = _time.strftime("%Y%m%d_%H%M%S")
+                # Fallback for time_ns if not available (Python < 3.7)
+                try:
+                    ns = _time.time_ns() % 1_000_000
+                except (AttributeError, NotImplementedError):
+                    ns = int((_time.time() * 1_000_000) % 1_000_000)
+
+                name = f"{HOSTS_BACKUP_PREFIX}{tag}_{ts}_{ns:06d}.txt"
+                path = backup_dir / name
+                created = _time.strftime("%Y-%m-%d %H:%M:%S")
+                header = (
+                    f"# Goida AI Unlocker hosts backup\n"
+                    f"# action {tag}\n"
+                    f"# created_at {created}\n"
+                    f"# source {HOSTS_PATH}\n\n"
+                ).encode("utf-8")
+                path.write_bytes(header + data)
+                return path
+            except Exception as e:
+                logger.error("Backup attempt failed for %s: %s", backup_dir, e)
+                last_error = e
+
+        if last_error:
+            logger.error("All backup attempts failed: %s", last_error)
+        return None
 
     def get_latest_backup(self) -> Optional[Path]:
-        if not HOSTS_BACKUP_DIR.is_dir():
-            return None
-        files = [
-            f for f in HOSTS_BACKUP_DIR.iterdir()
-            if f.is_file()
-            and f.name.lower().startswith(HOSTS_BACKUP_PREFIX)
-            and f.name.lower().endswith(".txt")
-        ]
-        return max(files, key=lambda p: p.stat().st_mtime) if files else None
+        # Try primary backup dir and fallback
+        dirs_to_check = [HOSTS_BACKUP_DIR]
+        try:
+            temp_fallback = Path(tempfile.gettempdir()) / "goida-ai-unlocker-backups"
+            if temp_fallback != HOSTS_BACKUP_DIR:
+                dirs_to_check.append(temp_fallback)
+        except Exception:
+            pass
+
+        all_files = []
+        for backup_dir in dirs_to_check:
+            if backup_dir.is_dir():
+                files = [
+                    f for f in backup_dir.iterdir()
+                    if f.is_file()
+                    and f.name.lower().startswith(HOSTS_BACKUP_PREFIX)
+                    and f.name.lower().endswith(".txt")
+                ]
+                all_files.extend(files)
+
+        return max(all_files, key=lambda p: p.stat().st_mtime) if all_files else None
 
     @staticmethod
     def _normalize_hosts_content(text: str) -> str:
