@@ -459,6 +459,7 @@ class MainWindow(QMainWindow):
         card.setMaximumWidth(max_width)
         card.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         card_layout = QVBoxLayout(card)
+        card_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.setSpacing(16)
         card_layout.setContentsMargins(32, 24, 32, 24)
         card.setStyleSheet(self.styles["message_card"])
@@ -530,7 +531,7 @@ class MainWindow(QMainWindow):
 
     def show_update_available(self, local_ver: str, latest_ver: str, dl_url: str):
         widget, card_layout, card = self._build_card("alert.svg", max_width=600)
-        card.setMinimumWidth(500)
+        card.setMinimumWidth(420)
 
         for text in (
             tr("installed_version", version=local_ver),
@@ -544,8 +545,7 @@ class MainWindow(QMainWindow):
             lbl.setObjectName("message_block_label")
             lbl.setTextFormat(Qt.TextFormat.RichText)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl.setWordWrap(True)
-            lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+            lbl.setWordWrap(False)
             card_layout.addWidget(lbl)
 
         dl_btn = QPushButton(tr("download"))
@@ -562,7 +562,7 @@ class MainWindow(QMainWindow):
 
     def show_no_update(self, local_ver: str, latest_ver: str):
         widget, card_layout, card = self._build_card("check-circle.svg", max_width=600)
-        card.setMinimumWidth(500)
+        card.setMinimumWidth(420)
 
         for text in (
             tr("installed_version", version=local_ver),
@@ -577,8 +577,7 @@ class MainWindow(QMainWindow):
             if "version" in text:
                 lbl.setTextFormat(Qt.TextFormat.RichText)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl.setWordWrap(True)
-            lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+            lbl.setWordWrap(False)
             card_layout.addWidget(lbl)
 
         ok_btn = QPushButton(tr("ok"))
