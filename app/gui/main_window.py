@@ -692,7 +692,7 @@ class MainWindow(QMainWindow):
         worker.signals.status_ready.connect(self.apply_hosts_version_status, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(worker)
 
-    def switch_theme(self):
+    def _animate_transition(self, update_func: Callable):
         if self.is_animating:
             return
         self.is_animating = True
@@ -706,11 +706,7 @@ class MainWindow(QMainWindow):
                 else:
                     self.setWindowOpacity(0)
                     self.setUpdatesEnabled(False)
-                    self.dark_theme = not self.dark_theme
-                    self.styles = get_stylesheet(self.dark_theme, self.language)
-                    self.setStyleSheet(self.styles["main"])
-                    self.apply_main_texts()
-                    self.apply_theme_styles()
+                    update_func()
                     self.setUpdatesEnabled(True)
                     fade_in()
             except Exception:
@@ -731,12 +727,23 @@ class MainWindow(QMainWindow):
 
         fade_out()
 
+    def switch_theme(self):
+        def update():
+            self.dark_theme = not self.dark_theme
+            self.styles = get_stylesheet(self.dark_theme, self.language)
+            self.setStyleSheet(self.styles["main"])
+            self.apply_main_texts()
+            self.apply_theme_styles()
+        self._animate_transition(update)
+
     def switch_language(self):
-        next_lang = "en" if self.language == "ru" else "ru"
-        self.language = set_current_language(next_lang)
-        clear_stylesheet_cache()
-        self.apply_theme_styles()
-        self.apply_main_texts()
+        def update():
+            next_lang = "en" if self.language == "ru" else "ru"
+            self.language = set_current_language(next_lang)
+            clear_stylesheet_cache()
+            self.apply_theme_styles()
+            self.apply_main_texts()
+        self._animate_transition(update)
 
     def apply_theme_styles(self):
         self.styles = get_stylesheet(self.dark_theme, self.language)
