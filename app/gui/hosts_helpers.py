@@ -12,9 +12,8 @@ from app.utils.helpers import open_target
 from app.gui.localization import tr, normalize_language, CURRENT_LANGUAGE
 
 def _show_open_hosts_error(detail: str, _inline_callback=None):
-    import sys
     hint = tr("admin_hint_windows") if sys.platform == "win32" else tr("admin_hint_unix")
-    message = tr("open_hosts_error", hint=hint)
+    message = tr("open_hosts_error", hint=detail or hint)
 
     if _inline_callback is not None:
         try:
