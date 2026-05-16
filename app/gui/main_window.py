@@ -730,10 +730,8 @@ class MainWindow(QMainWindow):
     def switch_theme(self):
         def update():
             self.dark_theme = not self.dark_theme
-            self.styles = get_stylesheet(self.dark_theme, self.language)
-            self.setStyleSheet(self.styles["main"])
-            self.apply_main_texts()
             self.apply_theme_styles()
+            self.apply_main_texts()
         self._animate_transition(update)
 
     def switch_language(self):
