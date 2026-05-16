@@ -160,10 +160,10 @@ class MainWindow(QMainWindow):
         layout.addWidget(app_title_label)
         self.app_title_label = app_title_label
 
-        installed = self.hosts_manager.is_installed()
-        color = "#43b581" if installed else "#e06c75"
-        status_key = "status_installed" if installed else "status_not_installed"
-        textinformer = QLabel(tr("unlock_status", status=tr(status_key), color=color))
+        # installed = self.hosts_manager.is_installed()
+        # color = "#43b581" if installed else "#e06c75"
+        # status_key = "status_installed" if installed else "status_not_installed"
+        textinformer = QLabel(tr("unlock_status", status=tr("version_checking"), color="#666666"))
         textinformer.setTextFormat(Qt.TextFormat.RichText)
         textinformer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         textinformer.setStyleSheet(self.styles["label"])

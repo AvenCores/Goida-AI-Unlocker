@@ -1,8 +1,10 @@
 import sys
 import subprocess
+from functools import lru_cache
 from app.core.constants import APP_VERSION
 from app.gui.localization import normalize_language, tr, CURRENT_LANGUAGE
 
+@lru_cache(maxsize=1)
 def is_system_dark_theme():
     if sys.platform == "win32":
         try:
@@ -22,6 +24,7 @@ def is_system_dark_theme():
             return "dark" in out.lower()
         except Exception:
             return False
+
 
 _STYLESHEET_CACHE: dict[str, dict] = {}
 

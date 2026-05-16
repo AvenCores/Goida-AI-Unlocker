@@ -20,6 +20,9 @@ from app.utils.helpers import (
 )
 from app.gui.localization import tr
 
+# Pre-compile regex for performance
+_IP_RE = _re.compile(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$")
+
 @dataclass(frozen=True)
 class HostsStatusResult:
     key: str
@@ -34,11 +37,12 @@ class HostsManager:
     def read(self) -> str:
         if not HOSTS_PATH.exists():
             return ""
-        mtime = HOSTS_PATH.stat().st_mtime
-        with self._lock:
-            if self._cache and self._cache[0] == mtime:
-                return self._cache[1]
         try:
+            mtime = HOSTS_PATH.stat().st_mtime
+            with self._lock:
+                if self._cache and self._cache[0] == mtime:
+                    return self._cache[1]
+            
             content = HOSTS_PATH.read_text(encoding="utf-8", errors="ignore")
             with self._lock:
                 self._cache = (mtime, content)
@@ -59,16 +63,16 @@ class HostsManager:
 
     @staticmethod
     def validate_content(content: str) -> bool:
-        lines = content.strip().splitlines()
-        valid = 0
-        for line in lines:
+        if "localhost" in content:
+            return True
+        for line in content.splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
             parts = line.split()
-            if len(parts) >= 2 and _re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", parts[0]):
-                valid += 1
-        return valid > 0 or "localhost" in content
+            if len(parts) >= 2 and _IP_RE.match(parts[0]):
+                return True
+        return False
 
     def backup(self, action: str) -> Optional[Path]:
         try:
@@ -165,17 +169,28 @@ class HostsManager:
             os.close(fd)
             Path(temp_path).write_text(content, encoding="utf-8")
 
+            # Try direct copy if we have permissions (major performance boost)
+            try:
+                shutil.copy(temp_path, HOSTS_PATH)
+                if sys.platform == "win32":
+                    subprocess.run(["ipconfig", "/flushdns"], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
+                else:
+                    self._flush_dns_unix()
+                self.invalidate_cache()
+                if self._verify_applied_content(content):
+                    return True
+            except (PermissionError, OSError):
+                pass # Fallback to elevated copy
+
             if sys.platform == "win32":
                 safe_src = temp_path.replace("'", "''")
                 safe_dst = str(HOSTS_PATH).replace("'", "''")
-                safe_script = ""
                 ps = (
                     "$ErrorActionPreference = 'Stop'\n"
                     f"$source = '{safe_src}'\n"
                     f"$dest = '{safe_dst}'\n"
                     "try {\n"
                     "    Copy-Item -LiteralPath $source -Destination $dest -Force\n"
-                    "    try { Clear-DnsClientCache | Out-Null } catch {}\n"
                     "    try { ipconfig /flushdns | Out-Null } catch {}\n"
                     "    exit 0\n"
                     "} catch {\n"
@@ -221,53 +236,14 @@ class HostsManager:
                 if not elevated:
                     raise PermissionError(tr("admin_hint_windows"))
             else:
-                flush = (
-                    "resolvectl flush-caches 2>/dev/null || "
-                    "systemd-resolve --flush-caches 2>/dev/null || "
-                    "/etc/init.d/nscd restart 2>/dev/null || "
-                    "killall -HUP dnsmasq 2>/dev/null || true"
-                )
-                if os.geteuid() == 0:
-                    shutil.copy(temp_path, HOSTS_PATH)
-                    os.chmod(HOSTS_PATH, 0o644)
-                    subprocess.run(flush, shell=True)
-                else:
-                    s_src = temp_path.replace("'", "'\\''")
-                    s_dst = str(HOSTS_PATH).replace("'", "'\\''")
-                    bash_cmd = f"cp '{s_src}' '{s_dst}' && chmod 644 '{s_dst}' && {flush}"
-                    elevated = False
-
-                    for launcher, args in (
-                        ("pkexec", ["pkexec", "bash", "-c", bash_cmd]),
-                        ("sudo", ["sudo", "bash", "-c", bash_cmd]),
-                    ):
-                        if shutil.which(launcher):
-                            try:
-                                r = subprocess.run(args, timeout=120)
-                                elevated = r.returncode == 0
-                                if elevated:
-                                    break
-                            except Exception:
-                                continue
-
-                    if not elevated:
-                        for su_tool in ("gksudo", "kdesudo"):
-                            if shutil.which(su_tool):
-                                try:
-                                    r = subprocess.run([su_tool, "bash", "-c", bash_cmd], timeout=120)
-                                    elevated = r.returncode == 0
-                                    if elevated:
-                                        break
-                                except Exception:
-                                    continue
-
-                    if not elevated:
-                        raise PermissionError(tr("admin_hint_unix"))
+                elevated = self._apply_unix_elevated(temp_path)
+                if not elevated:
+                    raise PermissionError(tr("admin_hint_unix"))
 
             _time.sleep(0.5)
             self.invalidate_cache()
             if not self._verify_applied_content(content):
-                logger.error("Hosts apply verification failed: target file content does not match expected content")
+                logger.error("Hosts apply verification failed")
                 return False
             return True
         except Exception as e:
@@ -278,6 +254,49 @@ class HostsManager:
                 safe_remove(temp_path)
             if ps_script_path:
                 safe_remove(ps_script_path)
+
+    def _flush_dns_unix(self):
+        flush = (
+            "resolvectl flush-caches 2>/dev/null || "
+            "systemd-resolve --flush-caches 2>/dev/null || "
+            "/etc/init.d/nscd restart 2>/dev/null || "
+            "killall -HUP dnsmasq 2>/dev/null || true"
+        )
+        subprocess.run(flush, shell=True)
+
+    def _apply_unix_elevated(self, temp_path: str) -> bool:
+        flush = (
+            "resolvectl flush-caches 2>/dev/null || "
+            "systemd-resolve --flush-caches 2>/dev/null || "
+            "/etc/init.d/nscd restart 2>/dev/null || "
+            "killall -HUP dnsmasq 2>/dev/null || true"
+        )
+        s_src = temp_path.replace("'", "'\\''")
+        s_dst = str(HOSTS_PATH).replace("'", "'\\''")
+        bash_cmd = f"cp '{s_src}' '{s_dst}' && chmod 644 '{s_dst}' && {flush}"
+        
+        for launcher, args in (
+            ("pkexec", ["pkexec", "bash", "-c", bash_cmd]),
+            ("sudo", ["sudo", "bash", "-c", bash_cmd]),
+        ):
+            if shutil.which(launcher):
+                try:
+                    r = subprocess.run(args, timeout=120)
+                    if r.returncode == 0:
+                        return True
+                except Exception:
+                    continue
+
+        for su_tool in ("gksudo", "kdesudo"):
+            if shutil.which(su_tool):
+                try:
+                    r = subprocess.run([su_tool, "bash", "-c", bash_cmd], timeout=120)
+                    if r.returncode == 0:
+                        return True
+                except Exception:
+                    continue
+        return False
+
 
     def update(self) -> bool:
         url = "https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts"

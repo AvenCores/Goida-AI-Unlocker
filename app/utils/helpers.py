@@ -55,6 +55,9 @@ def open_target(path: str):
     except Exception as e:
         logger.error("Open error for %s: %s", path, e)
 
+from functools import lru_cache
+
+@lru_cache(maxsize=1)
 def is_windows_admin() -> bool:
     if sys.platform != "win32":
         return False
@@ -88,9 +91,17 @@ def sanitize_backup_action(action: str) -> str:
 
 def extract_update_line(content: bytes) -> tuple[str, str]:
     try:
-        lines = content.decode("utf-8", errors="ignore").splitlines()
-        if len(lines) > 1:
-            line = lines[1].strip()
+        # Optimization: only read first few lines instead of splitting entire content
+        lines = []
+        count = 0
+        for line_bytes in content.splitlines():
+            lines.append(line_bytes.decode("utf-8", errors="ignore").strip())
+            count += 1
+            if count >= 2:
+                break
+        
+        if len(lines) >= 2:
+            line = lines[1]
             for prefix in ("Последнее обновление:", "Last updated:"):
                 if prefix in line:
                     date_part = line.split(prefix, 1)[1].strip()
@@ -98,6 +109,7 @@ def extract_update_line(content: bytes) -> tuple[str, str]:
         return "", ""
     except Exception:
         return "", ""
+
 
 def extract_additional_version(text: str) -> str:
     match = _ADDITIONAL_HOSTS_VERSION_RE.search(text)
