@@ -960,7 +960,7 @@ class MainWindow(QMainWindow):
             ("YouTube", "https://youtube.com/@avencores", "play.svg"),
             ("RuTube", "https://rutube.ru/channel/34072414", "video.svg"),
             ("Dzen", "https://dzen.ru/avencores", "book-open.svg"),
-            ("VK", "https://vk.com/avencoresvk", "users.svg"),
+            ("VK", "https://vk.com/avencoresreuploads", "users.svg"),
         ]
         buttons = [github_btn, repo_btn]
         col_count = 3

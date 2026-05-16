@@ -12,11 +12,9 @@ from app.utils.helpers import open_target
 from app.gui.localization import tr, normalize_language, CURRENT_LANGUAGE
 
 def _show_open_hosts_error(detail: str, _inline_callback=None):
-    lang = CURRENT_LANGUAGE
-    if lang.startswith("ru"):
-        message = f"Не удалось открыть файл hosts с правами администратора.\n{detail}"
-    else:
-        message = f"Failed to open the hosts file with administrator privileges.\n{detail}"
+    import sys
+    hint = tr("admin_hint_windows") if sys.platform == "win32" else tr("admin_hint_unix")
+    message = tr("open_hosts_error", hint=hint)
 
     if _inline_callback is not None:
         try:
@@ -27,7 +25,7 @@ def _show_open_hosts_error(detail: str, _inline_callback=None):
         try:
             app = QApplication.instance()
             parent = app.activeWindow() if app else None
-            title = "Ошибка открытия hosts" if lang.startswith("ru") else "Hosts Open Error"
+            title = tr("open_hosts_error_title")
             QMessageBox.critical(parent, title, message)
         except Exception:
             print(message)
@@ -38,7 +36,9 @@ def _open_hosts_file_windows_as_admin() -> tuple[bool, str | None]:
         result = ctypes.windll.shell32.ShellExecuteW(
             None, "runas", "notepad.exe", str(HOSTS_PATH), None, 1
         )
-        return result > 32, None
+        if result <= 32:
+            return False, "admin_hint_windows"
+        return True, None
     except Exception as e:
         logger.error("Open hosts error: %s", e)
         return False, str(e)
