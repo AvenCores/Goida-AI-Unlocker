@@ -33,7 +33,6 @@ try:
 except Exception:
     pass
 
-SUPPORTED_LANGUAGES = ("ru", "en")
 _LAYOUT_FILLER = "\u3164"
 
 # Regex

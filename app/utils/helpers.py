@@ -5,7 +5,6 @@ import shutil
 import atexit
 import time as _time
 from pathlib import Path
-from typing import Optional
 from app.core.logger import logger
 from app.core.constants import _ADDITIONAL_HOSTS_VERSION_RE
 

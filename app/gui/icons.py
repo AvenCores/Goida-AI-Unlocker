@@ -2,7 +2,7 @@ import os
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QLabel, QAbstractButton
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt
 from app.core.constants import resource_path
 
 ICON_CACHE: dict = {}

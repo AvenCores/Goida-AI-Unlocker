@@ -5,10 +5,10 @@ from PySide6.QtWidgets import (
     QGraphicsOpacityEffect, QMenu
 )
 from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QSize, Slot, QThreadPool
-from PySide6.QtGui import QClipboard, QIcon
+from PySide6.QtGui import QIcon
 
 from app.core.logger import logger
-from app.core.constants import resource_path, APP_VERSION
+from app.core.constants import resource_path
 from app.core.hosts_manager import HostsManager, HostsStatusResult
 from app.utils.helpers import open_target
 from app.gui.localization import tr, set_current_language, localize_update_date, clean_message_line
