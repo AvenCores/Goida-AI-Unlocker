@@ -291,9 +291,7 @@ class MainWindow(QMainWindow):
         donate_button.clicked.connect(self.show_donate)
         about_button.clicked.connect(self.show_about)
         update_button.clicked.connect(self.check_for_updates)
-        open_hosts_button.clicked.connect(
-            lambda: open_hosts_file(_inline_callback=lambda msg, ok: self.show_message(msg, success=ok, word_wrap=True))
-        )
+        open_hosts_button.clicked.connect(lambda: self.start_installation("open"))
         backup_hosts_button.clicked.connect(self.show_backup_menu)
 
         layout.addWidget(install_button)
@@ -510,6 +508,8 @@ class MainWindow(QMainWindow):
             msg = tr("processing_install")
         elif action == "update":
             msg = tr("processing_update")
+        elif action == "open":
+            msg = tr("processing_open")
         else:
             msg = tr("processing_uninstall")
 
@@ -630,7 +630,11 @@ class MainWindow(QMainWindow):
 
     @Slot(str, bool, str)
     def on_hosts_finished(self, action: str, ok: bool, error: str):
-        if ok:
+        if action == "open":
+            if not ok:
+                self.show_message(tr("open_hosts_error", hint=error), success=False, word_wrap=True)
+            # if ok: it will just return to main below
+        elif ok:
             if action == "install":
                 msg = tr("install_success")
             elif action == "update":

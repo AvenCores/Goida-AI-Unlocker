@@ -24,8 +24,15 @@ class HostsWorker(QRunnable):
         try:
             if self.action in ("install", "update"):
                 result = self.manager.update()
-            else:
+            elif self.action == "uninstall":
                 result = self.manager.restore()
+            elif self.action == "open":
+                from app.gui.hosts_helpers import open_hosts_file_sync
+                result, error = open_hosts_file_sync()
+                self.signals.finished.emit(self.action, result, error or "")
+                return
+            else:
+                result = False
             self.signals.finished.emit(self.action, result, "")
         except Exception as e:
             logger.exception("Hosts operation failed")

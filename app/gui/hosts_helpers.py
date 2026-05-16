@@ -42,7 +42,7 @@ def _open_hosts_file_windows_as_admin() -> tuple[bool, str | None]:
         logger.error("Open hosts error: %s", e)
         return False, str(e)
 
-def _open_hosts_file_linux_as_admin() -> tuple[bool, str | None]:
+def _open_hosts_file_linux_as_admin(wait=False) -> tuple[bool, str | None]:
     editors = (
         "gnome-text-editor", "gedit", "xed", "pluma", "mousepad",
         "geany", "kate", "kwrite", "featherpad", "leafpad",
@@ -57,7 +57,10 @@ def _open_hosts_file_linux_as_admin() -> tuple[bool, str | None]:
             ep = shutil.which(editor)
             if ep:
                 try:
-                    subprocess.Popen([ep, str(HOSTS_PATH)], start_new_session=True)
+                    if wait:
+                        subprocess.run([ep, str(HOSTS_PATH)], check=True)
+                    else:
+                        subprocess.Popen([ep, str(HOSTS_PATH)], start_new_session=True)
                     return True, None
                 except Exception:
                     continue
@@ -88,24 +91,31 @@ def _open_hosts_file_linux_as_admin() -> tuple[bool, str | None]:
                     cmd.extend([ep, str(HOSTS_PATH)])
                 else:
                     cmd = [launcher, ep, str(HOSTS_PATH)]
-                subprocess.Popen(cmd, start_new_session=True)
+                
+                if wait:
+                    res = subprocess.run(cmd, capture_output=True, text=True)
+                    if res.returncode != 0:
+                        logger.error("Admin open failed: %s", res.stderr)
+                        return False, res.stderr or "Admin open failed"
+                else:
+                    subprocess.Popen(cmd, start_new_session=True)
                 return True, None
             except Exception:
                 continue
     return False, "linux_admin_open_unavailable"
 
-def open_hosts_file(_inline_callback=None):
+def open_hosts_file_sync() -> tuple[bool, str | None]:
     try:
         if sys.platform == "win32":
             opened, error_key = _open_hosts_file_windows_as_admin()
         elif sys.platform.startswith("linux"):
-            opened, error_key = _open_hosts_file_linux_as_admin()
+            opened, error_key = _open_hosts_file_linux_as_admin(wait=True)
         else:
             open_target(str(HOSTS_PATH))
-            return
+            return True, None
 
         if opened:
-            return
+            return True, None
 
         if error_key == "admin_hint_windows":
             detail = tr("admin_hint_windows")
@@ -117,8 +127,19 @@ def open_hosts_file(_inline_callback=None):
             )
         else:
             detail = error_key or tr("admin_hint_unix")
+        
+        return False, detail
+    except Exception as e:
+        logger.error("Open hosts sync error: %s", e)
+        return False, str(e)
 
-        _show_open_hosts_error(detail, _inline_callback=_inline_callback)
+def open_hosts_file(_inline_callback=None):
+    # This remains for backward compatibility or direct UI usage if needed, 
+    # but MainWindow will now use Workers.
+    try:
+        opened, detail = open_hosts_file_sync()
+        if not opened:
+            _show_open_hosts_error(detail, _inline_callback=_inline_callback)
     except Exception as e:
         logger.error("Open hosts error: %s", e)
         _show_open_hosts_error(str(e), _inline_callback=_inline_callback)
