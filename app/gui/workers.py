@@ -13,12 +13,15 @@ class WorkerSignals(QObject):
     no_update = Signal(str, str)
     message = Signal(str, bool, bool)
 
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
 class HostsWorker(QRunnable):
-    def __init__(self, action: str, manager: HostsManager):
+    def __init__(self, action: str, manager: HostsManager, parent=None):
         super().__init__()
         self.action = action
         self.manager = manager
-        self.signals = WorkerSignals()
+        self.signals = WorkerSignals(parent)
 
     def run(self):
         try:
@@ -39,20 +42,20 @@ class HostsWorker(QRunnable):
             self.signals.finished.emit(self.action, False, str(e))
 
 class VersionWorker(QRunnable):
-    def __init__(self, manager: HostsManager):
+    def __init__(self, manager: HostsManager, parent=None):
         super().__init__()
         self.manager = manager
-        self.signals = WorkerSignals()
+        self.signals = WorkerSignals(parent)
 
     def run(self):
         status = self.manager.check_status()
         self.signals.status_ready.emit(status)
 
 class AppUpdateWorker(QRunnable):
-    def __init__(self, resource_path_func: Callable[[str], str]):
+    def __init__(self, resource_path_func: Callable[[str], str], parent=None):
         super().__init__()
         self.resource_path = resource_path_func
-        self.signals = WorkerSignals()
+        self.signals = WorkerSignals(parent)
 
     def run(self):
         try:
@@ -62,7 +65,7 @@ class AppUpdateWorker(QRunnable):
             remote_url = local.get("update_info_url")
             if not remote_url:
                 raise RuntimeError(tr("update_url_missing"))
-            remote_content = HttpClient.fetch(remote_url)
+            remote_content = HttpClient.fetch(remote_url, bypass_cache=True)
             if not remote_content:
                 raise RuntimeError(tr("update_info_unavailable"))
             remote_data = json.loads(remote_content)

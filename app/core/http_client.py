@@ -64,7 +64,12 @@ class HttpClient:
                 return cls._remote_main_line_cache[1]
         try:
             url = f"https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts?t={int(now)}"
-            data = urllib.request.urlopen(url, timeout=10).read()
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "GoidaUnlocker/1.0", "Range": "bytes=0-1024"}
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = resp.read()
             remote_line, remote_date = extract_update_line(data)
         except Exception:
             remote_line, remote_date = "", ""

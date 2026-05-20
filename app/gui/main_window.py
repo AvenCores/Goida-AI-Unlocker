@@ -663,7 +663,7 @@ class MainWindow(QMainWindow):
 
     def start_installation(self, action: str):
         self._processing_widget = self.show_processing(action)
-        worker = HostsWorker(action, self.hosts_manager)
+        worker = HostsWorker(action, self.hosts_manager, self)
         worker.signals.finished.connect(self.on_hosts_finished, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(worker)
 
@@ -692,7 +692,7 @@ class MainWindow(QMainWindow):
         self.install_button.setText(tr("install_button_update" if mode == "update" else "install_button_install"))
 
     def check_version_status(self):
-        worker = VersionWorker(self.hosts_manager)
+        worker = VersionWorker(self.hosts_manager, self)
         worker.signals.status_ready.connect(self.apply_hosts_version_status, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(worker)
 
@@ -1020,7 +1020,7 @@ class MainWindow(QMainWindow):
             return
         self._check_updates_running = True
 
-        worker = AppUpdateWorker(self.resource_path)
+        worker = AppUpdateWorker(self.resource_path, self)
         worker.signals.update_ready.connect(self.on_app_update_ready, Qt.ConnectionType.QueuedConnection)
         worker.signals.no_update.connect(self.on_app_up_to_date, Qt.ConnectionType.QueuedConnection)
         worker.signals.message.connect(self.on_app_update_message, Qt.ConnectionType.QueuedConnection)

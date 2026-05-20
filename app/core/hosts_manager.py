@@ -65,13 +65,8 @@ class HostsManager:
     def validate_content(content: str) -> bool:
         if "localhost" in content:
             return True
-        for line in content.splitlines():
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            parts = line.split()
-            if len(parts) >= 2 and _IP_RE.match(parts[0]):
-                return True
+        if _re.search(r"^\s*\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+\S+", content, _re.MULTILINE):
+            return True
         return False
 
     def backup(self, action: str) -> Optional[Path]:
@@ -302,7 +297,7 @@ class HostsManager:
         url = "https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts"
         if not self.backup("install"):
             return False
-        content = HttpClient.fetch(url)
+        content = HttpClient.fetch(url, bypass_cache=True)
         if not content:
             return False
         add_ver, add_hosts = HttpClient.fetch_additional_hosts()
@@ -332,13 +327,15 @@ class HostsManager:
         return self.apply(default_hosts)
 
     def check_status(self) -> HostsStatusResult:
-        if not HOSTS_PATH.exists() or not self.is_installed():
+        if not HOSTS_PATH.exists():
             return HostsStatusResult("not_installed", "#e06c75", "")
 
         try:
-            raw = HOSTS_PATH.read_bytes()
-            text = raw.decode("utf-8", errors="ignore")
-            local_line, local_date = extract_update_line(raw)
+            text = self.read()
+            if "dns.malw.link" not in text:
+                return HostsStatusResult("not_installed", "#e06c75", "")
+
+            local_line, local_date = extract_update_line(text)
             local_add_ver = extract_additional_version(text)
 
             remote_line, remote_date = "", ""

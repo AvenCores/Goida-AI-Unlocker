@@ -88,16 +88,28 @@ def sanitize_backup_action(action: str) -> str:
     cleaned = "".join(ch if ch.isalnum() or ch in ("_", "-") else "_" for ch in action.strip().lower())
     return cleaned or "manual"
 
-def extract_update_line(content: bytes) -> tuple[str, str]:
+def extract_update_line(content: bytes | str) -> tuple[str, str]:
     try:
-        # Optimization: only read first few lines instead of splitting entire content
-        lines = []
-        count = 0
-        for line_bytes in content.splitlines():
-            lines.append(line_bytes.decode("utf-8", errors="ignore").strip())
-            count += 1
-            if count >= 2:
-                break
+        if isinstance(content, bytes):
+            lines = []
+            pos = 0
+            for _ in range(2):
+                idx = content.find(b"\n", pos)
+                if idx == -1:
+                    lines.append(content[pos:].decode("utf-8", errors="ignore").strip())
+                    break
+                lines.append(content[pos:idx].decode("utf-8", errors="ignore").strip())
+                pos = idx + 1
+        else:
+            lines = []
+            pos = 0
+            for _ in range(2):
+                idx = content.find("\n", pos)
+                if idx == -1:
+                    lines.append(content[pos:].strip())
+                    break
+                lines.append(content[pos:idx].strip())
+                pos = idx + 1
         
         if len(lines) >= 2:
             line = lines[1]
