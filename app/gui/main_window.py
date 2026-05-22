@@ -216,13 +216,18 @@ class MainWindow(QMainWindow):
         uninstall_button.setStyleSheet(self.styles["button2"])
         self.uninstall_button = uninstall_button
 
-        theme_button = QPushButton(tr("theme_button"))
-        theme_button.setIcon(get_icon("sun.svg", 18, dark_theme=self.dark_theme, force_dark=True))
-        theme_button.setIconSize(QSize(18, 18))
+        theme_button = QPushButton()
+        theme_button.setIcon(get_icon("sun.svg", 20, dark_theme=self.dark_theme, force_dark=True))
+        theme_button.setIconSize(QSize(20, 20))
         theme_button.setProperty("icon_name", "sun.svg")
         theme_button.setProperty("icon_force_dark", True)
         theme_button.setProperty("style_role", "theme")
-        theme_button.setStyleSheet(self.styles["theme"])
+        theme_button.setStyleSheet(
+            self.styles["theme"] +
+            "\nQPushButton { padding: 0; min-width: 44px; max-width: 44px; min-height: 44px; max-height: 44px; }"
+        )
+        theme_button.setFixedSize(44, 44)
+        theme_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.theme_button = theme_button
 
         language_button = QPushButton()
@@ -301,7 +306,6 @@ class MainWindow(QMainWindow):
 
         controls_hbox = QHBoxLayout()
         controls_hbox.setSpacing(12)
-        controls_hbox.addWidget(theme_button)
         controls_hbox.addWidget(donate_button)
         layout.addLayout(controls_hbox)
         layout.addStretch()
@@ -310,6 +314,7 @@ class MainWindow(QMainWindow):
 
         footer_layout.addWidget(language_button, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)
         footer_layout.addStretch()
+        footer_layout.addWidget(theme_button, alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom)
 
         self.home_page = central_widget
         self.title_label = title_label
@@ -759,7 +764,10 @@ class MainWindow(QMainWindow):
         )
         self.install_button.setStyleSheet(self.styles["button1"])
         self.uninstall_button.setStyleSheet(self.styles["button2"])
-        self.theme_button.setStyleSheet(self.styles["theme"])
+        self.theme_button.setStyleSheet(
+            self.styles["theme"] +
+            "\nQPushButton { padding: 0; min-width: 44px; max-width: 44px; min-height: 44px; max-height: 44px; }"
+        )
         self.language_button.setStyleSheet(
             self.styles["theme"] +
             "\nQPushButton { padding: 0; min-width: 44px; max-width: 44px; min-height: 44px; max-height: 44px; }"
@@ -797,11 +805,14 @@ class MainWindow(QMainWindow):
             self.install_button.setProperty("install_mode", self.install_button.property("install_mode") or "install")
 
         self.uninstall_button.setText(tr("uninstall_button"))
-        self.theme_button.setText(tr("theme_button"))
+        self.theme_button.setText("")
+        self.theme_button.setToolTip(tr("theme_button").strip())
+        self.theme_button.setStatusTip(tr("theme_button").strip())
+        self.theme_button.setAccessibleName(tr("theme_button").strip())
         self.language_button.setText("")
-        self.language_button.setToolTip(tr("language_button"))
-        self.language_button.setStatusTip(tr("language_button"))
-        self.language_button.setAccessibleName(tr("language_button"))
+        self.language_button.setToolTip(tr("language_button").strip())
+        self.language_button.setStatusTip(tr("language_button").strip())
+        self.language_button.setAccessibleName(tr("language_button").strip())
         self.donate_button.setText(tr("donate_button"))
         self.about_button.setText(tr("about_button"))
         self.update_button.setText(tr("update_button"))
