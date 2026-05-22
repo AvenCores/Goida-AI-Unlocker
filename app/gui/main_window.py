@@ -217,9 +217,10 @@ class MainWindow(QMainWindow):
         self.uninstall_button = uninstall_button
 
         theme_button = QPushButton()
-        theme_button.setIcon(get_icon("sun.svg", 20, dark_theme=self.dark_theme, force_dark=True))
+        initial_theme_icon = "sun.svg" if self.dark_theme else "moon.svg"
+        theme_button.setIcon(get_icon(initial_theme_icon, 20, dark_theme=self.dark_theme, force_dark=True))
         theme_button.setIconSize(QSize(20, 20))
-        theme_button.setProperty("icon_name", "sun.svg")
+        theme_button.setProperty("icon_name", initial_theme_icon)
         theme_button.setProperty("icon_force_dark", True)
         theme_button.setProperty("style_role", "theme")
         theme_button.setStyleSheet(
@@ -768,6 +769,7 @@ class MainWindow(QMainWindow):
             self.styles["theme"] +
             "\nQPushButton { padding: 0; min-width: 44px; max-width: 44px; min-height: 44px; max-height: 44px; }"
         )
+        self.theme_button.setProperty("icon_name", "sun.svg" if self.dark_theme else "moon.svg")
         self.language_button.setStyleSheet(
             self.styles["theme"] +
             "\nQPushButton { padding: 0; min-width: 44px; max-width: 44px; min-height: 44px; max-height: 44px; }"
