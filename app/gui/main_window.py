@@ -7,7 +7,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QSize, Slot, QThreadPool
 from PySide6.QtGui import QIcon
 
-from app.core.logger import logger
 from app.core.constants import resource_path
 from app.core.hosts_manager import HostsManager, HostsStatusResult
 from app.utils.helpers import open_target
@@ -15,7 +14,7 @@ from app.gui.localization import tr, set_current_language, localize_update_date,
 from app.gui.styles import get_stylesheet, get_about_toolbutton_style, clear_stylesheet_cache, is_system_dark_theme
 from app.gui.icons import get_icon, create_icon_label, refresh_icons
 from app.gui.workers import HostsWorker, VersionWorker, AppUpdateWorker
-from app.gui.hosts_helpers import open_hosts_file, open_latest_hosts_backup_file, open_hosts_backup_folder
+from app.gui.hosts_helpers import open_latest_hosts_backup_file, open_hosts_backup_folder
 
 class DraggableTitleBar(QWidget):
     def __init__(self, main_window: "MainWindow"):

@@ -2,8 +2,7 @@ import os
 import sys
 import shutil
 import subprocess
-from pathlib import Path
-from PySide6.QtWidgets import QApplication, QMessageBox, QLabel, QPushButton
+from PySide6.QtWidgets import QApplication, QMessageBox, QLabel
 from PySide6.QtCore import Qt, QTimer
 from app.core.logger import logger
 from app.core.constants import HOSTS_PATH, HOSTS_BACKUP_DIR
