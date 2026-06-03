@@ -78,7 +78,7 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
                     border: 1.5px solid #3c434d;
                     border-radius: 8px;
                     padding: 6px 12px;
-                    font-size: 15px;
+                    font-size: 11pt;
                     font-weight: 500;
                     min-width: 200px;
                 }
@@ -140,7 +140,7 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
                     border: 1.5px solid #cfd4db;
                     border-radius: 8px;
                     padding: 6px 12px;
-                    font-size: 15px;
+                    font-size: 11pt;
                     font-weight: 500;
                     min-width: 200px;
                 }
