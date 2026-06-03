@@ -63,6 +63,8 @@ TRANSLATIONS = {
         "hosts_version_status": "Версия hosts - <span style='color:{color}; font-weight:bold;'>{status}</span>",
         "hosts_update_date": "Дата обновления hosts: {date}",
         "hosts_update_date_unknown": "Дата обновления hosts: неизвестно",
+        "provider_malw": "dns.malw.link (Основной)",
+        "provider_geohide": "GeoHideDNS (Резервный)",
     },
     "en": {
         "backup_missing_title": "Backup not found",
@@ -122,6 +124,8 @@ TRANSLATIONS = {
         "hosts_version_status": "Hosts version - <span style='color:{color}; font-weight:bold;'>{status}</span>",
         "hosts_update_date": "Hosts update date: {date}",
         "hosts_update_date_unknown": "Hosts update date: unknown",
+        "provider_malw": "dns.malw.link (Primary)",
+        "provider_geohide": "GeoHideDNS (Backup)",
     },
 }
 

@@ -186,8 +186,8 @@ class MainWindow(QMainWindow):
         self.update_date_label = update_date_label
 
         provider_combo = QComboBox()
-        provider_combo.addItem("dns.malw.link", "dns.malw.link")
-        provider_combo.addItem("GeoHideDNS", "geohide")
+        provider_combo.addItem(tr("provider_malw"), "dns.malw.link")
+        provider_combo.addItem(tr("provider_geohide"), "geohide")
         provider_combo.setStyleSheet(self.styles["combo"])
         provider_combo.setCursor(Qt.CursorShape.PointingHandCursor)
         self.provider_combo = provider_combo
@@ -822,6 +822,12 @@ class MainWindow(QMainWindow):
         self.title_label.setText("Goida AI Unlocker")
         self.app_title_label.setText(self.styles["about_title_html"])
         self.update_installation_status_label()
+
+        if self.provider_combo:
+            self.provider_combo.blockSignals(True)
+            self.provider_combo.setItemText(0, tr("provider_malw"))
+            self.provider_combo.setItemText(1, tr("provider_geohide"))
+            self.provider_combo.blockSignals(False)
 
         stored_key = self.version_label.property("status_key")
         if stored_key:
