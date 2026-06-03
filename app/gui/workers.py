@@ -17,16 +17,17 @@ class WorkerSignals(QObject):
         super().__init__(parent)
 
 class HostsWorker(QRunnable):
-    def __init__(self, action: str, manager: HostsManager, parent=None):
+    def __init__(self, action: str, manager: HostsManager, provider: str = "dns.malw.link", parent=None):
         super().__init__()
         self.action = action
         self.manager = manager
+        self.provider = provider
         self.signals = WorkerSignals(parent)
 
     def run(self):
         try:
             if self.action in ("install", "update"):
-                result = self.manager.update()
+                result = self.manager.update(self.provider)
             elif self.action == "uninstall":
                 result = self.manager.restore()
             elif self.action == "open":
@@ -42,13 +43,14 @@ class HostsWorker(QRunnable):
             self.signals.finished.emit(self.action, False, str(e))
 
 class VersionWorker(QRunnable):
-    def __init__(self, manager: HostsManager, parent=None):
+    def __init__(self, manager: HostsManager, provider: str = "dns.malw.link", parent=None):
         super().__init__()
         self.manager = manager
+        self.provider = provider
         self.signals = WorkerSignals(parent)
 
     def run(self):
-        status = self.manager.check_status()
+        status = self.manager.check_status(self.provider)
         self.signals.status_ready.emit(status)
 
 class AppUpdateWorker(QRunnable):

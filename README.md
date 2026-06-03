@@ -115,7 +115,7 @@ python main.py
 ---
 
 ## 🧩 Как это работает
-Приложение скачивает свежий файл <code>hosts</code> из репозитория <a href="https://github.com/ImMALWARE/dns.malw.link">dns.malw.link</a> и заменяет системный <code>C:\Windows\System32\drivers\etc\hosts</code>. При необходимости предыдущая версия автоматически сохраняется и может быть восстановлена кнопкой «Удалить обход блокировок».
+Приложение скачивает свежий файл <code>hosts</code> из репозитория <a href="https://github.com/ImMALWARE/dns.malw.link">dns.malw.link</a> или <a href="https://github.com/Internet-Helper/GeoHideDNS">GeoHideDNS</a> и заменяет системный <code>C:\Windows\System32\drivers\etc\hosts</code>. При необходимости предыдущая версия автоматически сохраняется и может быть восстановлена кнопкой «Удалить обход блокировок».
 
 > ⚠️ Изменение <code>hosts</code> может повлиять на работу некоторых корпоративных VPN/прокси. Если возникнут проблемы — воспользуйтесь кнопкой «Удалить обход блокировок» или вручную верните оригинальный файл.
 

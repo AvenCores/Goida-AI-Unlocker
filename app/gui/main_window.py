@@ -2,7 +2,7 @@ from typing import Optional, Callable
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QStackedWidget,
     QSizePolicy, QPushButton, QToolButton, QGridLayout, QApplication,
-    QGraphicsOpacityEffect, QMenu
+    QGraphicsOpacityEffect, QMenu, QComboBox
 )
 from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QSize, Slot, QThreadPool
 from PySide6.QtGui import QIcon
@@ -65,6 +65,8 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(self.styles["main"])
         
         self.hosts_manager = HostsManager()
+        self.current_provider = self.detect_installed_provider()
+        self.provider_combo: Optional[QComboBox] = None
         self._check_updates_running = False
         self.home_page: Optional[QWidget] = None
         self.resource_path = resource_path
@@ -183,11 +185,19 @@ class MainWindow(QMainWindow):
         )
         self.update_date_label = update_date_label
 
+        provider_combo = QComboBox()
+        provider_combo.addItem("dns.malw.link", "dns.malw.link")
+        provider_combo.addItem("GeoHideDNS", "geohide")
+        provider_combo.setStyleSheet(self.styles["combo"])
+        provider_combo.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.provider_combo = provider_combo
+
         status_container = QWidget()
         status_vbox = QVBoxLayout(status_container)
         status_vbox.setContentsMargins(16, 12, 16, 12)
-        status_vbox.setSpacing(4)
+        status_vbox.setSpacing(8)
         status_vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        status_vbox.addWidget(provider_combo)
         status_vbox.addWidget(textinformer)
         status_vbox.addWidget(version_label)
         status_vbox.addWidget(update_date_label)
@@ -195,6 +205,10 @@ class MainWindow(QMainWindow):
         self.status_container = status_container
         self.refresh_status_container_style()
         layout.addWidget(status_container)
+
+        initial_idx = 1 if self.current_provider == "geohide" else 0
+        provider_combo.setCurrentIndex(initial_idx)
+        provider_combo.currentIndexChanged.connect(self.on_provider_changed)
 
         install_button = QPushButton(tr("install_button_install"))
         install_button.setIcon(get_icon("settings.svg", 18, dark_theme=self.dark_theme, force_white=True))
@@ -608,6 +622,8 @@ class MainWindow(QMainWindow):
                     child.setStyleSheet(self.styles["theme"])
                 else:
                     child.setStyleSheet(self.styles["button1"])
+            for child in w.findChildren(QComboBox):
+                child.setStyleSheet(self.styles["combo"])
             for child in w.findChildren(QToolButton):
                 if child.property("style_role") == "about_tool":
                     child.setStyleSheet(get_about_toolbutton_style(self.styles))
@@ -668,12 +684,12 @@ class MainWindow(QMainWindow):
 
     def start_installation(self, action: str):
         self._processing_widget = self.show_processing(action)
-        worker = HostsWorker(action, self.hosts_manager, self)
+        worker = HostsWorker(action, self.hosts_manager, self.current_provider, self)
         worker.signals.finished.connect(self.on_hosts_finished, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(worker)
 
     def update_installation_status_label(self):
-        installed = self.hosts_manager.is_installed()
+        installed = self.hosts_manager.is_installed(self.current_provider)
         color = "#43b581" if installed else "#e06c75"
         key = "status_installed" if installed else "status_not_installed"
         self.textinformer.setText(tr("unlock_status", status=tr(key), color=color))
@@ -696,8 +712,21 @@ class MainWindow(QMainWindow):
         self.install_button.setProperty("install_mode", mode)
         self.install_button.setText(tr("install_button_update" if mode == "update" else "install_button_install"))
 
+    def detect_installed_provider(self) -> str:
+        content = self.hosts_manager.read()
+        if "dns.geohide.ru" in content:
+            return "geohide"
+        return "dns.malw.link"
+
+    def on_provider_changed(self):
+        selected_provider = self.provider_combo.currentData()
+        if selected_provider:
+            self.current_provider = selected_provider
+            self.update_installation_status_label()
+            self.check_version_status()
+
     def check_version_status(self):
-        worker = VersionWorker(self.hosts_manager, self)
+        worker = VersionWorker(self.hosts_manager, self.current_provider, self)
         worker.signals.status_ready.connect(self.apply_hosts_version_status, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(worker)
 
@@ -764,6 +793,8 @@ class MainWindow(QMainWindow):
         )
         self.install_button.setStyleSheet(self.styles["button1"])
         self.uninstall_button.setStyleSheet(self.styles["button2"])
+        if self.provider_combo:
+            self.provider_combo.setStyleSheet(self.styles["combo"])
         self.theme_button.setStyleSheet(
             self.styles["theme"] +
             "\nQPushButton { padding: 0; min-width: 44px; max-width: 44px; min-height: 44px; max-height: 44px; }"

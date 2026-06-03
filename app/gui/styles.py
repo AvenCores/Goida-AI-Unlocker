@@ -71,6 +71,36 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
             "about_title_html": f"<b style='color:#f3f6fd;'>Goida AI Unlocker</b> <span style='font-size:15px; color:#bfc9db;'>(v{APP_VERSION})</span>",
             "about_info_html": f"<span style='font-size:11px; color:{author_color};'>{tr('author_label', language=language)}</span>",
             "about_link_html": f"<a href='#' style='color:{link_color}; text-decoration:none; font-size:13px;'>⟵ {tr('back_to_menu', language=language)}</a>",
+            "combo": """
+                QComboBox {
+                    background: #2d333b;
+                    color: #f3f6fd;
+                    border: 1.5px solid #3c434d;
+                    border-radius: 8px;
+                    padding: 6px 12px;
+                    font-size: 15px;
+                    font-weight: 500;
+                    min-width: 200px;
+                }
+                QComboBox:hover {
+                    background: #363d46;
+                }
+                QComboBox::drop-down {
+                    subcontrol-origin: padding;
+                    subcontrol-position: top right;
+                    width: 25px;
+                    border-left-width: 0px;
+                    border-top-right-radius: 8px;
+                    border-bottom-right-radius: 8px;
+                }
+                QComboBox QAbstractItemView {
+                    background: #2d333b;
+                    color: #f3f6fd;
+                    border: 1.5px solid #3c434d;
+                    selection-background-color: #246cf0;
+                    selection-color: #ffffff;
+                }
+            """,
         }
     else:
         return {
@@ -103,6 +133,36 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
             "about_title_html": f"<b style='color:#1a1a1a;'>Goida AI Unlocker</b> <span style='font-size:15px; color:#555555;'>(v{APP_VERSION})</span>",
             "about_info_html": f"<span style='font-size:11px; color:{author_color};'>{tr('author_label', language=language)}</span>",
             "about_link_html": f"<a href='#' style='color:{link_color}; text-decoration:none; font-size:13px;'>⟵ {tr('back_to_menu', language=language)}</a>",
+            "combo": """
+                QComboBox {
+                    background: #f3f4f7;
+                    color: #1a1a1a;
+                    border: 1.5px solid #cfd4db;
+                    border-radius: 8px;
+                    padding: 6px 12px;
+                    font-size: 15px;
+                    font-weight: 500;
+                    min-width: 200px;
+                }
+                QComboBox:hover {
+                    background: #e6e8ec;
+                }
+                QComboBox::drop-down {
+                    subcontrol-origin: padding;
+                    subcontrol-position: top right;
+                    width: 25px;
+                    border-left-width: 0px;
+                    border-top-right-radius: 8px;
+                    border-bottom-right-radius: 8px;
+                }
+                QComboBox QAbstractItemView {
+                    background: #ffffff;
+                    color: #1a1a1a;
+                    border: 1.5px solid #cfd4db;
+                    selection-background-color: #0078d4;
+                    selection-color: #ffffff;
+                }
+            """,
         }
 
 def get_about_toolbutton_style(styles: dict[str, str]) -> str:

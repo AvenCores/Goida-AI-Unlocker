@@ -55,8 +55,14 @@ class HostsManager:
         with self._lock:
             self._cache = None
 
-    def is_installed(self) -> bool:
-        return "dns.malw.link" in self.read()
+    def is_installed(self, provider: str = "") -> bool:
+        content = self.read()
+        if provider == "geohide":
+            return "dns.geohide.ru" in content
+        elif provider == "dns.malw.link":
+            return "dns.malw.link" in content and "dns.geohide.ru" not in content
+        else:
+            return "dns.malw.link" in content or "dns.geohide.ru" in content
 
     def get_local_add_version(self) -> str:
         return extract_additional_version(self.read())
@@ -293,8 +299,11 @@ class HostsManager:
         return False
 
 
-    def update(self) -> bool:
-        url = "https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts"
+    def update(self, provider: str = "dns.malw.link") -> bool:
+        if provider == "geohide":
+            url = "https://github.com/Internet-Helper/GeoHideDNS/raw/refs/heads/main/hosts/hosts"
+        else:
+            url = "https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts"
         if not self.backup("install"):
             return False
         content = HttpClient.fetch(url, bypass_cache=True)
@@ -326,13 +335,13 @@ class HostsManager:
             )
         return self.apply(default_hosts)
 
-    def check_status(self) -> HostsStatusResult:
+    def check_status(self, provider: str = "dns.malw.link") -> HostsStatusResult:
         if not HOSTS_PATH.exists():
             return HostsStatusResult("not_installed", "#e06c75", "")
 
         try:
             text = self.read()
-            if "dns.malw.link" not in text:
+            if not self.is_installed(provider):
                 return HostsStatusResult("not_installed", "#e06c75", "")
 
             local_line, local_date = extract_update_line(text)
@@ -343,7 +352,7 @@ class HostsManager:
 
             def fetch_main():
                 nonlocal remote_line, remote_date
-                remote_line, remote_date = HttpClient.get_remote_main_line_cached()
+                remote_line, remote_date = HttpClient.get_remote_main_line_cached(provider)
 
             def fetch_add():
                 nonlocal remote_add_ver

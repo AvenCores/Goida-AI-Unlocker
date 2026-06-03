@@ -13,7 +13,7 @@ class HttpClient:
     _cache: dict[str, tuple[float, str]] = {}
     CACHE_TTL = 300.0
     REMOTE_CACHE_TTL = 60.0
-    _remote_main_line_cache: Optional[tuple[float, tuple[str, str]]] = None
+    _remote_main_line_cache: dict[str, tuple[float, tuple[str, str]]] = {}
     _remote_add_ver_cache: Optional[tuple[float, str]] = None
 
     @classmethod
@@ -57,13 +57,18 @@ class HttpClient:
             return "", ""
 
     @classmethod
-    def get_remote_main_line_cached(cls) -> tuple[str, str]:
+    def get_remote_main_line_cached(cls, provider: str = "dns.malw.link") -> tuple[str, str]:
         now = _time.time()
         with cls._lock:
-            if cls._remote_main_line_cache and now - cls._remote_main_line_cache[0] < cls.REMOTE_CACHE_TTL:
-                return cls._remote_main_line_cache[1]
+            if provider in cls._remote_main_line_cache:
+                ts, val = cls._remote_main_line_cache[provider]
+                if now - ts < cls.REMOTE_CACHE_TTL:
+                    return val
         try:
-            url = f"https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts?t={int(now)}"
+            if provider == "geohide":
+                url = f"https://github.com/Internet-Helper/GeoHideDNS/raw/refs/heads/main/hosts/hosts?t={int(now)}"
+            else:
+                url = f"https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts?t={int(now)}"
             req = urllib.request.Request(
                 url,
                 headers={"User-Agent": "GoidaUnlocker/1.0", "Range": "bytes=0-1024"}
@@ -74,7 +79,7 @@ class HttpClient:
         except Exception:
             remote_line, remote_date = "", ""
         with cls._lock:
-            cls._remote_main_line_cache = (now, (remote_line, remote_date))
+            cls._remote_main_line_cache[provider] = (now, (remote_line, remote_date))
         return remote_line, remote_date
 
     @classmethod
