@@ -20,9 +20,17 @@ def _get_backup_dir() -> Path:
         import tempfile
         return Path(tempfile.gettempdir()) / "goida-ai-unlocker" / "hosts-backups"
 
+def _get_settings_path() -> Path:
+    try:
+        return Path.home() / ".goida-ai-unlocker" / "settings.json"
+    except Exception:
+        import tempfile
+        return Path(tempfile.gettempdir()) / "goida-ai-unlocker" / "settings.json"
+
 HOSTS_PATH = Path(r"C:\Windows\System32\drivers\etc\hosts") if sys.platform == "win32" else Path("/etc/hosts")
 HOSTS_BACKUP_DIR = _get_backup_dir()
 HOSTS_BACKUP_PREFIX = "hosts_backup_"
+SETTINGS_PATH = _get_settings_path()
 
 ADDITIONAL_HOSTS_URL = "https://raw.githubusercontent.com/AvenCores/Goida-AI-Unlocker/refs/heads/main/additional_hosts.json"
 
@@ -61,6 +69,30 @@ _MONTH_NAME_OUTPUTS = {
     "en": [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December",
+    ],
+    "de": [
+        "Januar", "Februar", "März", "April", "Mai", "Juni",
+        "Juli", "August", "September", "Oktober", "November", "Dezember",
+    ],
+    "uk": [
+        "січня", "лютого", "березня", "квітня", "травня", "червня",
+        "липня", "серпня", "вересня", "жовтня", "листопада", "грудня",
+    ],
+    "be": [
+        "студзеня", "лютага", "сакавіка", "красавіка", "траўня", "чэрвеня",
+        "ліпеня", "жніўня", "верасня", "кастрычніка", "лістапада", "снежня",
+    ],
+    "kk": [
+        "қаңтар", "ақпан", "наурыз", "сәуір", "мамыр", "маусым",
+        "шілде", "тамыз", "қыркүйек", "қазан", "қараша", "желтоқсан",
+    ],
+    "fr": [
+        "janvier", "février", "mars", "avril", "mai", "juin",
+        "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+    ],
+    "pl": [
+        "stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca",
+        "lipca", "sierpnia", "września", "października", "listopada", "grudnia",
     ],
 }
 

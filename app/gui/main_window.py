@@ -58,7 +58,16 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon(resource_path("icon.ico")))
         self.setWindowTitle("Goida AI Unlocker")
         
-        self.dark_theme = is_system_dark_theme()
+        # Load theme setting
+        from app.core.settings import get_setting
+        saved_theme = get_setting("theme")
+        if saved_theme == "dark":
+            self.dark_theme = True
+        elif saved_theme == "light":
+            self.dark_theme = False
+        else:
+            self.dark_theme = is_system_dark_theme()
+
         from app.gui.localization import CURRENT_LANGUAGE
         self.language = CURRENT_LANGUAGE
         self.styles = get_stylesheet(self.dark_theme, self.language)
@@ -768,18 +777,56 @@ class MainWindow(QMainWindow):
     def switch_theme(self):
         def update():
             self.dark_theme = not self.dark_theme
+            from app.core.settings import set_setting
+            set_setting("theme", "dark" if self.dark_theme else "light")
+            self.apply_theme_styles()
+            self.apply_main_texts()
+        self._animate_transition(update)
+
+    def change_language_to(self, new_lang):
+        def update():
+            self.language = set_current_language(new_lang)
+            from app.core.settings import set_setting
+            set_setting("language", new_lang)
+            clear_stylesheet_cache()
             self.apply_theme_styles()
             self.apply_main_texts()
         self._animate_transition(update)
 
     def switch_language(self):
-        def update():
-            next_lang = "en" if self.language == "ru" else "ru"
-            self.language = set_current_language(next_lang)
-            clear_stylesheet_cache()
-            self.apply_theme_styles()
-            self.apply_main_texts()
-        self._animate_transition(update)
+        from app.gui.localization import get_supported_languages
+        menu = QMenu(self)
+        if self.dark_theme:
+            menu.setStyleSheet(
+                "QMenu { background:#2d333b; color:#f3f6fd; border:1px solid #3c434d; border-radius:10px; padding:6px; }"
+                "QMenu::item { padding:6px 16px; border-radius:8px; margin:2px 0; }"
+                "QMenu::item:selected { background:#246cf0; color:#ffffff; border-radius:8px; }"
+            )
+        else:
+            menu.setStyleSheet(
+                "QMenu { background:#ffffff; color:#1a1a1a; border:1px solid #cfd4db; border-radius:10px; padding:6px; }"
+                "QMenu::item { padding:6px 16px; border-radius:8px; margin:2px 0; }"
+                "QMenu::item:selected { background:#0078d4; color:#ffffff; border-radius:8px; }"
+            )
+
+        supported = get_supported_languages()
+        actions = {}
+        for code, name in supported.items():
+            action = menu.addAction(name)
+            action.setCheckable(True)
+            if code == self.language:
+                action.setChecked(True)
+            actions[action] = code
+
+        pos = self.language_button.mapToGlobal(self.language_button.rect().topLeft())
+        size_hint = menu.sizeHint()
+        pos.setY(pos.y() - size_hint.height() - 5)
+
+        selected_action = menu.exec(pos)
+        if selected_action and selected_action in actions:
+            new_lang = actions[selected_action]
+            if new_lang != self.language:
+                self.change_language_to(new_lang)
 
     def apply_theme_styles(self):
         self.styles = get_stylesheet(self.dark_theme, self.language)
