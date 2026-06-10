@@ -674,7 +674,24 @@ class MainWindow(QMainWindow):
             self.show_message(msg, success=True, word_wrap=True)
         else:
             import sys
-            hint = tr("admin_hint_windows") if sys.platform == "win32" else tr("admin_hint_unix")
+            import os
+            from app.utils.helpers import is_windows_admin
+            if sys.platform == "win32":
+                if is_windows_admin():
+                    hint = tr("hosts_locked_hint_windows")
+                else:
+                    hint = tr("admin_hint_windows")
+            else:
+                is_root = False
+                try:
+                    is_root = os.geteuid() == 0
+                except AttributeError:
+                    pass
+                if is_root:
+                    hint = tr("hosts_locked_hint_unix")
+                else:
+                    hint = tr("admin_hint_unix")
+
             if action == "install":
                 msg = tr("install_error", hint=hint)
             elif action == "update":

@@ -166,6 +166,14 @@ class HostsManager:
                 logger.error("Hosts content validation failed")
                 return False
 
+            # Try to remove Read-Only attribute if hosts file exists
+            if HOSTS_PATH.exists():
+                try:
+                    import stat
+                    os.chmod(HOSTS_PATH, stat.S_IWRITE)
+                except Exception as e:
+                    logger.debug("Failed to remove read-only attribute: %s", e)
+
             fd, temp_path = tempfile.mkstemp()
             os.close(fd)
             Path(temp_path).write_text(content, encoding="utf-8")
@@ -191,6 +199,9 @@ class HostsManager:
                     f"$source = '{safe_src}'\n"
                     f"$dest = '{safe_dst}'\n"
                     "try {\n"
+                    "    if (Test-Path $dest) {\n"
+                    "        Set-ItemProperty -Path $dest -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue\n"
+                    "    }\n"
                     "    Copy-Item -LiteralPath $source -Destination $dest -Force\n"
                     "    try { ipconfig /flushdns | Out-Null } catch {}\n"
                     "    exit 0\n"
