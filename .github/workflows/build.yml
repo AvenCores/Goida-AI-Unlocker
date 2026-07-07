@@ -7,69 +7,10 @@ permissions:
   contents: read
 
 jobs:
-  # ─────────────────────────────────────────────────────────────────────────────
-  # Windows: x64
-  # PyInstaller runs natively; architecture param selects the Python interpreter bitness.
-  # ─────────────────────────────────────────────────────────────────────────────
   build-windows:
-    name: Build Windows (${{ matrix.arch }})
+    name: Build Windows
     runs-on: windows-latest
 
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x64
-            python-arch: x64
-            output: Goida_AI_Unlocker_Windows_x64.exe
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Set up Python (${{ matrix.arch }})
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.x'
-          architecture: ${{ matrix.python-arch }}
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-        working-directory: source
-
-      - name: Build with PyInstaller
-        run: >
-          pyinstaller --onefile --noconsole
-          --uac-admin
-          --icon=icon.ico
-          --name="Goida_AI_Unlocker_Windows_${{ matrix.arch }}"
-          --noupx
-          --clean
-          --strip
-          --version-file=version.txt
-          --add-data "icon.ico;."
-          --add-data "app_info.json;."
-          --add-data "icons;icons"
-          --add-data "app;app"
-          main.py
-        working-directory: source
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: python-windows-${{ matrix.arch }}
-          path: source/dist/${{ matrix.output }}
-          if-no-files-found: error
-
-  # ─────────────────────────────────────────────────────────────────────────────
-  # Windows ARM64 — native windows-11-arm runner
-  # setup-python@v6 on ARM64 runners does not accept the 'architecture' param,
-  # so this target runs as a dedicated job.
-  # ─────────────────────────────────────────────────────────────────────────────
-  build-windows-arm64:
-    name: Build Windows (arm64)
-    runs-on: windows-11-arm
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -85,33 +26,31 @@ jobs:
 
       - name: Build with PyInstaller
         run: >
-          pyinstaller --onefile --noconsole
-          --uac-admin
+          pyinstaller main.py
+          --onefile
+          --noconsole
           --icon=icon.ico
-          --name="Goida_AI_Unlocker_Windows_arm64"
-          --noupx
           --clean
           --strip
+          --name="Goida_AI_Unlocker_Windows"
+          --noupx
+          --clean
           --version-file=version.txt
           --add-data "icon.ico;."
           --add-data "app_info.json;."
           --add-data "icons;icons"
           --add-data "app;app"
-          main.py
         working-directory: source
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: python-windows-arm64
-          path: source/dist/Goida_AI_Unlocker_Windows_arm64.exe
+          name: python-windows
+          path: source/dist/Goida_AI_Unlocker_Windows.exe
           if-no-files-found: error
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # Linux x64
-  # ─────────────────────────────────────────────────────────────────────────────
-  build-linux-x64:
-    name: Build Linux (x64)
+  build-linux:
+    name: Build Linux
     runs-on: ubuntu-latest
 
     steps:
@@ -129,104 +68,22 @@ jobs:
 
       - name: Build with PyInstaller
         run: >
-          pyinstaller --onefile --noconsole
+          pyinstaller main.py
+          --onefile
+          --noconsole
           --icon=icon.ico
-          --name="Goida_AI_Unlocker_Linux_x64"
-          --noupx
           --clean
           --strip
-          --version-file=version.txt
+          --name="Goida_AI_Unlocker_Linux"
           --add-data "icon.ico:."
           --add-data "app_info.json:."
           --add-data "icons:icons"
           --add-data "app:app"
-          --hidden-import=packaging
-          --hidden-import=packaging.version
-          --hidden-import=packaging.specifiers
-          --hidden-import=packaging.requirements
-          main.py
         working-directory: source
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: python-linux-x64
-          path: source/dist/Goida_AI_Unlocker_Linux_x64
-          if-no-files-found: error
-
-  # ─────────────────────────────────────────────────────────────────────────────
-  # Linux ARM64 — via QEMU emulation
-  # ─────────────────────────────────────────────────────────────────────────────
-  build-linux-arm64:
-    name: Build Linux (ARM64)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
-      - name: Build inside ARM64 container
-        uses: docker/build-push-action@v5
-        with:
-          context: source
-          file: .github/docker/Dockerfile.linux-arm64
-          platforms: linux/arm64
-          push: false
-          outputs: type=local,dest=source/dist-arm64
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: python-linux-arm64
-          path: source/dist-arm64/Goida_AI_Unlocker_Linux_arm64
-          if-no-files-found: error
-
-  # ─────────────────────────────────────────────────────────────────────────────
-  # macOS — universal2 binary (Intel + Apple Silicon in one file)
-  # ─────────────────────────────────────────────────────────────────────────────
-  build-macos:
-    name: Build macOS (universal2)
-    runs-on: macos-15
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Set up Python (universal2 / arm64 host)
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.x'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-        working-directory: source
-
-      - name: Build with PyInstaller (universal2)
-        run: >
-          pyinstaller --onefile --noconsole
-          --name="Goida_AI_Unlocker_macOS"
-          --target-arch universal2
-          --clean
-          --strip
-          --add-data "icon.ico:."
-          --add-data "app_info.json:."
-          --add-data "icons:icons"
-          --add-data "app:app"
-          --hidden-import=packaging
-          --hidden-import=packaging.version
-          --hidden-import=packaging.specifiers
-          --hidden-import=packaging.requirements
-          main.py
-        working-directory: source
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: python-macos-universal2
-          path: source/dist/Goida_AI_Unlocker_macOS
+          name: python-linux
+          path: source/dist/Goida_AI_Unlocker_Linux
           if-no-files-found: error
