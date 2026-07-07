@@ -5,10 +5,29 @@ import re as _re
 from pathlib import Path
 
 def resource_path(relative_path: str) -> str:
+    candidates = []
+
     try:
-        base_path = sys._MEIPASS
+        if getattr(sys, "_MEIPASS", None):
+            candidates.append(os.path.join(sys._MEIPASS, relative_path))
     except Exception:
-        base_path = os.path.abspath(".")
+        pass
+
+    base_path = os.path.abspath(".")
+    candidates.append(os.path.join(base_path, relative_path))
+
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    if os.path.exists(repo_root):
+        candidates.append(os.path.join(repo_root, relative_path))
+
+    source_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if os.path.exists(source_dir):
+        candidates.append(os.path.join(source_dir, relative_path))
+
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+
     return os.path.join(base_path, relative_path)
 
 def _get_backup_dir() -> Path:
