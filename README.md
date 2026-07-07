@@ -88,6 +88,9 @@
 git clone https://github.com/AvenCores/Goida-AI-Unlocker.git
 cd Goida-AI-Unlocker
 
+# Перейдите в папку source
+cd source
+
 # Установите зависимости
 python -m pip install -r requirements.txt
 

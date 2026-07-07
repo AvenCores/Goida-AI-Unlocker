@@ -5,3 +5,11 @@ build/
 dist/
 __pycache__/
 Goida_AI_Unlocker_Windows.spec
+
+# Source directory artifacts
+source/build/
+source/dist/
+source/__pycache__/
+source/.venv/
+source/linux-venv/
+source/*.spec
