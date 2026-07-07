@@ -15,6 +15,7 @@ class HttpClient:
     REMOTE_CACHE_TTL = 60.0
     _remote_main_line_cache: dict[str, tuple[float, tuple[str, str]]] = {}
     _remote_add_ver_cache: Optional[tuple[float, str]] = None
+    _additional_hosts_cache: Optional[tuple[float, tuple[str, str]]] = None
 
     @classmethod
     def fetch(cls, url: str, timeout: int = 10, bypass_cache: bool = False) -> str:
@@ -40,7 +41,14 @@ class HttpClient:
             return ""
 
     @classmethod
-    def fetch_additional_hosts(cls) -> tuple[str, str]:
+    def fetch_additional_hosts(cls, bypass_cache: bool = False) -> tuple[str, str]:
+        now = _time.time()
+        with cls._lock:
+            if not bypass_cache and cls._additional_hosts_cache:
+                ts, payload = cls._additional_hosts_cache
+                if now - ts < cls.REMOTE_CACHE_TTL:
+                    return payload
+
         raw = cls.fetch(ADDITIONAL_HOSTS_URL, bypass_cache=True)
         if not raw:
             return "", ""
@@ -51,7 +59,10 @@ class HttpClient:
             hosts_block = _tw.dedent(hosts_block)
             if not hosts_block:
                 version = ""
-            return version, hosts_block
+            payload = (version, hosts_block)
+            with cls._lock:
+                cls._additional_hosts_cache = (now, payload)
+            return payload
         except Exception as e:
             logger.error("Failed to parse additional hosts JSON: %s", e)
             return "", ""

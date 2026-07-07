@@ -77,6 +77,7 @@ class MainWindow(QMainWindow):
         self.current_provider = self.detect_installed_provider()
         self.provider_combo: Optional[QComboBox] = None
         self._check_updates_running = False
+        self._version_status_check_running = False
         self.home_page: Optional[QWidget] = None
         self.resource_path = resource_path
         self._processing_widget: Optional[QWidget] = None
@@ -752,9 +753,20 @@ class MainWindow(QMainWindow):
             self.check_version_status()
 
     def check_version_status(self):
+        if self._version_status_check_running:
+            return
+        self._version_status_check_running = True
         worker = VersionWorker(self.hosts_manager, self.current_provider, self)
-        worker.signals.status_ready.connect(self.apply_hosts_version_status, Qt.ConnectionType.QueuedConnection)
+        worker.signals.status_ready.connect(
+            self._on_version_status_ready,
+            Qt.ConnectionType.QueuedConnection,
+        )
         QThreadPool.globalInstance().start(worker)
+
+    @Slot(object)
+    def _on_version_status_ready(self, status: HostsStatusResult):
+        self._version_status_check_running = False
+        self.apply_hosts_version_status(status)
 
     def _animate_transition(self, update_func: Callable):
         if self.is_animating:

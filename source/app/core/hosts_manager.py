@@ -252,7 +252,7 @@ class HostsManager:
                 if not elevated:
                     raise PermissionError(tr("admin_hint_unix"))
 
-            _time.sleep(0.5)
+            _time.sleep(0.2)
             self.invalidate_cache()
             if not self._verify_applied_content(content):
                 logger.error("Hosts apply verification failed")
@@ -317,10 +317,28 @@ class HostsManager:
             url = "https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts"
         if not self.backup("install"):
             return False
-        content = HttpClient.fetch(url, bypass_cache=True)
+
+        main_content = [""]
+        additional_payload = [None]
+
+        def fetch_main():
+            main_content[0] = HttpClient.fetch(url, bypass_cache=True)
+
+        def fetch_additional():
+            additional_payload[0] = HttpClient.fetch_additional_hosts(bypass_cache=False)
+
+        t1 = threading.Thread(target=fetch_main, daemon=True)
+        t2 = threading.Thread(target=fetch_additional, daemon=True)
+        t1.start()
+        t2.start()
+        t1.join(timeout=30)
+        t2.join(timeout=30)
+
+        content = main_content[0]
         if not content:
             return False
-        add_ver, add_hosts = HttpClient.fetch_additional_hosts()
+
+        add_ver, add_hosts = additional_payload[0] or ("", "")
         if add_hosts:
             content += f"\n# additional_hosts_version {add_ver}\n{add_hosts.strip()}\n"
         return self.apply(content)
