@@ -14,7 +14,7 @@ class WorkerSignals(QObject):
     message = Signal(str, bool, bool)
 
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__(None)
 
 class HostsWorker(QRunnable):
     def __init__(self, action: str, manager: HostsManager, provider: str = "dns.malw.link", parent=None):
@@ -22,7 +22,7 @@ class HostsWorker(QRunnable):
         self.action = action
         self.manager = manager
         self.provider = provider
-        self.signals = WorkerSignals(parent)
+        self.signals = WorkerSignals()
 
     def run(self):
         try:
@@ -47,7 +47,7 @@ class VersionWorker(QRunnable):
         super().__init__()
         self.manager = manager
         self.provider = provider
-        self.signals = WorkerSignals(parent)
+        self.signals = WorkerSignals()
 
     def run(self):
         status = self.manager.check_status(self.provider)
@@ -57,7 +57,7 @@ class AppUpdateWorker(QRunnable):
     def __init__(self, resource_path_func: Callable[[str], str], parent=None):
         super().__init__()
         self.resource_path = resource_path_func
-        self.signals = WorkerSignals(parent)
+        self.signals = WorkerSignals()
 
     def run(self):
         try:
