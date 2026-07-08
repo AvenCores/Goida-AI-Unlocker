@@ -181,6 +181,7 @@ jobs:
           --onedir
           --windowed
           --target-arch x86_64
+          --osx-bundle-identifier=com.avencores.goida-ai-unlocker
           --icon=icon.icns
           --name="Goida_AI_Unlocker_macOS_x86_64"
           --add-data "icon.icns:."
@@ -190,15 +191,11 @@ jobs:
           --add-data "app:app"
         working-directory: source
 
-      - name: Package .app
-        run: ditto -c -k --keepParent Goida_AI_Unlocker_macOS_x86_64.app Goida_AI_Unlocker_macOS_x86_64.app
-        working-directory: source/dist
-
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: python-macos-x86_64
-          path: source/dist/Goida_AI_Unlocker_macOS_x86_64.app.zip
+          path: source/dist/Goida_AI_Unlocker_macOS_x86_64.app
           if-no-files-found: error
 
   build-macos-arm64:
@@ -224,6 +221,7 @@ jobs:
           pyinstaller main.py
           --onedir
           --windowed
+          --osx-bundle-identifier=com.avencores.goida-ai-unlocker
           --icon=icon.icns
           --name="Goida_AI_Unlocker_macOS_arm64"
           --add-data "icon.icns:."
@@ -233,14 +231,10 @@ jobs:
           --add-data "app:app"
         working-directory: source
 
-      - name: Package .app
-        run: ditto -c -k --keepParent Goida_AI_Unlocker_macOS_arm64.app Goida_AI_Unlocker_macOS_arm64.app
-        working-directory: source/dist
-
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: python-macos-arm64
-          path: source/dist/Goida_AI_Unlocker_macOS_arm64.app.zip
+          path: source/dist/Goida_AI_Unlocker_macOS_arm64.app
           if-no-files-found: error
 
