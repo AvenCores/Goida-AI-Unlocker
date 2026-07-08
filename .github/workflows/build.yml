@@ -123,7 +123,7 @@ jobs:
 
   build-macos-arm64:
     name: Build macOS (Apple Silicon)
-    runs-on: macos-latest
+    runs-on: macos-15
 
     steps:
       - name: Checkout repository
@@ -162,7 +162,7 @@ jobs:
 
   merge-macos-universal:
     name: Build macOS Universal .app
-    runs-on: macos-latest
+    runs-on: macos-15
     needs:
       - build-macos-x86_64
       - build-macos-arm64

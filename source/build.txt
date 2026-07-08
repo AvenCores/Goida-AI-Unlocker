@@ -9,7 +9,7 @@ pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlock
 
 macOS Universal (Intel + Apple Silicon):
 1. Build x86_64 .app on an Intel Mac or GitHub Actions runner (macos-13).
-2. Build arm64 .app on an Apple Silicon Mac or GitHub Actions runner (macos-latest).
+2. Build arm64 .app on an Apple Silicon Mac or GitHub Actions runner (macos-15).
 3. Merge the two bundles:
    python3 .github/scripts/merge_macos_apps.py \
      --x86_64 Goida_AI_Unlocker_macOS_x86_64.app \

@@ -120,7 +120,7 @@ python main.py
 pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS_x86_64" \
   --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
 
-# 2. Соберите arm64 .app на Apple Silicon Mac (или GitHub Actions runner macos-latest)
+# 2. Соберите arm64 .app на Apple Silicon Mac (или GitHub Actions runner macos-15)
 pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS_arm64" \
   --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
 
