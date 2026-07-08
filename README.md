@@ -112,27 +112,9 @@ python main.py
 
 **Linux:** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --name="Goida_AI_Unlocker_Linux" --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"```
 
-**macOS (одноархитектурный .app):** ```pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS" --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"```
+**macOS Intel (.app, x86_64):** ```pyinstaller main.py --onedir --windowed --target-arch x86_64 --icon=icon.icns --name="Goida_AI_Unlocker_macOS_x86_64" --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"```
 
-**macOS Universal (Intel + Apple Silicon):**
-```bash
-# 1. Соберите x86_64 .app на Intel-Mac (или GitHub Actions runner macos-15 с --target-arch x86_64)
-pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS_x86_64" \
-  --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
-
-# 2. Соберите arm64 .app на Apple Silicon Mac (или GitHub Actions runner macos-15)
-pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS_arm64" \
-  --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
-
-# 3. Объедините два .app в один Universal .app
-python3 .github/scripts/merge_macos_apps.py \
-  --x86_64 dist/Goida_AI_Unlocker_macOS_x86_64.app \
-  --arm64 dist/Goida_AI_Unlocker_macOS_arm64.app \
-  --output dist/Goida_AI_Unlocker_macOS_Universal.app
-
-# 4. Упакуйте в zip
-ditto -c -k --keepParent dist/Goida_AI_Unlocker_macOS_Universal.app dist/Goida_AI_Unlocker_macOS_Universal.zip
-```
+**macOS Apple Silicon (.app, arm64):** ```pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS_arm64" --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"```
 
 Скомпилированный файл появится в директории <code>dist/</code>.
 

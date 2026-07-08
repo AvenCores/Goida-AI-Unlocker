@@ -4,20 +4,8 @@ pyinstaller main.py --onefile --noconsole --icon=icon.ico --name="Goida_AI_Unloc
 Linux:
 pyinstaller main.py --onefile --noconsole --icon=icon.ico --name="Goida_AI_Unlocker_Linux" --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
 
-macOS (single-arch .app bundle):
-pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS" --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
+macOS Intel (.app, x86_64):
+pyinstaller main.py --onedir --windowed --target-arch x86_64 --icon=icon.icns --name="Goida_AI_Unlocker_macOS_x86_64" --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
 
-macOS Universal (Intel + Apple Silicon):
-1. Build x86_64 .app on an Intel Mac or GitHub Actions runner (macos-15 with --target-arch x86_64).
-2. Build arm64 .app on an Apple Silicon Mac or GitHub Actions runner (macos-15).
-3. Merge the two bundles:
-   python3 .github/scripts/merge_macos_apps.py \
-     --x86_64 Goida_AI_Unlocker_macOS_x86_64.app \
-     --arm64 Goida_AI_Unlocker_macOS_arm64.app \
-     --output Goida_AI_Unlocker_macOS_Universal.app
-4. Package:
-   ditto -c -k --keepParent Goida_AI_Unlocker_macOS_Universal.app Goida_AI_Unlocker_macOS_Universal.zip
-
-Build commands for step 1 and 2:
-pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS_x86_64" --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
+macOS Apple Silicon (.app, arm64):
 pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS_arm64" --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
