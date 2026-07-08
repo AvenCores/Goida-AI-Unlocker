@@ -112,17 +112,17 @@ python main.py
 
 **Linux:** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --name="Goida_AI_Unlocker_Linux" --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"```
 
-**macOS (одноархитектурный .app):** ```pyinstaller main.py --onedir --windowed --icon=icon.ico --name="Goida_AI_Unlocker_macOS" --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"```
+**macOS (одноархитектурный .app):** ```pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS" --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"```
 
 **macOS Universal (Intel + Apple Silicon):**
 ```bash
 # 1. Соберите x86_64 .app на Intel-Mac (или GitHub Actions runner macos-13)
-pyinstaller main.py --onedir --windowed --icon=icon.ico --name="Goida_AI_Unlocker_macOS_x86_64" \
-  --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
+pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS_x86_64" \
+  --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
 
 # 2. Соберите arm64 .app на Apple Silicon Mac (или GitHub Actions runner macos-latest)
-pyinstaller main.py --onedir --windowed --icon=icon.ico --name="Goida_AI_Unlocker_macOS_arm64" \
-  --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
+pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS_arm64" \
+  --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
 
 # 3. Объедините два .app в один Universal .app
 python3 .github/scripts/merge_macos_apps.py \

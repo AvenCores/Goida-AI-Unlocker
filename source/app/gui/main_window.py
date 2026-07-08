@@ -1,3 +1,4 @@
+import sys
 from typing import Optional, Callable
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QStackedWidget,
@@ -55,7 +56,8 @@ class MainWindow(QMainWindow):
         # Window settings
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setWindowIcon(QIcon(resource_path("icon.ico")))
+        icon_file = "icon.icns" if sys.platform == "darwin" else "icon.ico"
+        self.setWindowIcon(QIcon(resource_path(icon_file)))
         self.setWindowTitle("Goida AI Unlocker")
         
         # Load theme setting
