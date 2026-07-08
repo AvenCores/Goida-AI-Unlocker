@@ -120,6 +120,43 @@ jobs:
           path: source/dist/Goida_AI_Unlocker_Linux
           if-no-files-found: error
 
+  build-linux-arm64:
+    name: Build Linux ARM64
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        working-directory: source
+
+      - name: Build with PyInstaller
+        run: >
+          pyinstaller main.py
+          --onefile
+          --noconsole
+          --icon=icon.ico
+          --name="Goida_AI_Unlocker_Linux_ARM64"
+          --add-data "icon.ico:."
+          --add-data "app_info.json:."
+          --add-data "icons:icons"
+          --add-data "app:app"
+        working-directory: source
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-linux-arm64
+          path: source/dist/Goida_AI_Unlocker_Linux_ARM64
+          if-no-files-found: error
+
   build-macos-x86_64:
     name: Build macOS (Intel)
     runs-on: macos-15
