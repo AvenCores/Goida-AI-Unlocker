@@ -21,15 +21,16 @@
 > **Важно:** модуль не обходит прямые блокировки РКН на сетевом уровне. Если конкретный сервис заблокирован РКН по IP / SNI / TLS или иным способом, без дополнительных средств (VPN, прокси, zapret, byebyedpi и т.п.) он работать не будет.
 
 <p align="center">
-  <a href="https://github.com/AvenCores/Goida-AI-Unlocker/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/AvenCores/Goida-AI-Unlocker?style=flat-square" alt="License"/>
-  </a>
-  <a href="https://github.com/AvenCores/Goida-AI-Unlocker/releases/latest">
-    <img src="https://img.shields.io/github/v/release/AvenCores/Goida-AI-Unlocker?style=flat-square" alt="Latest release"/>
-  </a>
-  <a href="https://github.com/AvenCores/Goida-AI-Unlocker/releases">
-    <img src="https://img.shields.io/github/downloads/AvenCores/Goida-AI-Unlocker/total?style=flat-square" alt="Downloads"/>
-  </a>
+  <a href="https://github.com/AvenCores/Goida-AI-Unlocker"><img src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54" alt="Python"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge" alt="GPL-3.0 License"></a>
+  <a href="https://github.com/AvenCores/Goida-AI-Unlocker/releases/latest"><img src="https://img.shields.io/github/v/release/AvenCores/Goida-AI-Unlocker?style=for-the-badge" alt="Latest release"></a>
+  <a href="https://github.com/AvenCores/Goida-AI-Unlocker/stargazers"><img src="https://img.shields.io/github/stars/AvenCores/Goida-AI-Unlocker?style=for-the-badge" alt="GitHub stars"></a>
+  <img src="https://img.shields.io/github/forks/AvenCores/Goida-AI-Unlocker?style=for-the-badge" alt="GitHub forks">
+  <a href="https://github.com/AvenCores/Goida-AI-Unlocker/watchers">
+  <img src="https://img.shields.io/github/watchers/AvenCores/Goida-AI-Unlocker?style=for-the-badge" alt="GitHub Watchers"></a>
+  <a href="https://github.com/AvenCores/Goida-AI-Unlocker/releases"><img src="https://img.shields.io/github/downloads/AvenCores/Goida-AI-Unlocker/total?style=for-the-badge" alt="Downloads"></a>
+  <a href="https://github.com/AvenCores/Goida-AI-Unlocker/pulls"><img src="https://img.shields.io/github/issues-pr/AvenCores/Goida-AI-Unlocker?style=for-the-badge" alt="GitHub pull requests"></a>
+  <a href="https://github.com/AvenCores/Goida-AI-Unlocker/issues"><img src="https://img.shields.io/github/issues/AvenCores/Goida-AI-Unlocker?style=for-the-badge" alt="GitHub issues"></a>
 </p>
 
 ---
