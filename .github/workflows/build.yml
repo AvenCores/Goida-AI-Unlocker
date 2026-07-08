@@ -191,7 +191,7 @@ jobs:
         working-directory: source
 
       - name: Package .app
-        run: ditto -c -k --keepParent Goida_AI_Unlocker_macOS_x86_64.app Goida_AI_Unlocker_macOS_x86_64.app.zip
+        run: ditto -c -k --keepParent Goida_AI_Unlocker_macOS_x86_64.app Goida_AI_Unlocker_macOS_x86_64.app
         working-directory: source/dist
 
       - name: Upload artifact
@@ -234,7 +234,7 @@ jobs:
         working-directory: source
 
       - name: Package .app
-        run: ditto -c -k --keepParent Goida_AI_Unlocker_macOS_arm64.app Goida_AI_Unlocker_macOS_arm64.app.zip
+        run: ditto -c -k --keepParent Goida_AI_Unlocker_macOS_arm64.app Goida_AI_Unlocker_macOS_arm64.app
         working-directory: source/dist
 
       - name: Upload artifact
