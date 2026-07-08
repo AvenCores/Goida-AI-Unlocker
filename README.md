@@ -108,7 +108,9 @@ python main.py
 
 Для создания портативного одного файла используется [PyInstaller](https://pyinstaller.org/):
 
-**Windows:** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --name="Goida_AI_Unlocker_Windows" --version-file=version.txt --add-data "icon.ico;." --add-data "app_info.json;." --add-data "icons;icons" --add-data "app;app"```
+**Windows (x64):** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --name="Goida_AI_Unlocker_Windows" --version-file=version.txt --add-data "icon.ico;." --add-data "app_info.json;." --add-data "icons;icons" --add-data "app;app"```
+
+**Windows (ARM64):** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --name="Goida_AI_Unlocker_Windows_ARM64" --version-file=version.txt --add-data "icon.ico;." --add-data "app_info.json;." --add-data "icons;icons" --add-data "app;app"```
 
 **Linux:** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --name="Goida_AI_Unlocker_Linux" --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"```
 
