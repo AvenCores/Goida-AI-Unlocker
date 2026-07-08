@@ -84,7 +84,7 @@ jobs:
 
   build-macos-x86_64:
     name: Build macOS (Intel)
-    runs-on: macos-13
+    runs-on: macos-15
 
     steps:
       - name: Checkout repository
@@ -96,13 +96,13 @@ jobs:
           python-version: '3.x'
           architecture: x64
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Install dependencies (x86_64 under Rosetta)
+        run: arch -x86_64 python3 -m pip install -r requirements.txt
         working-directory: source
 
-      - name: Build with PyInstaller
+      - name: Build with PyInstaller (x86_64 under Rosetta)
         run: >
-          pyinstaller main.py
+          arch -x86_64 python3 -m pyinstaller main.py
           --onedir
           --windowed
           --icon=icon.icns

@@ -8,7 +8,7 @@ macOS (single-arch .app bundle):
 pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS" --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
 
 macOS Universal (Intel + Apple Silicon):
-1. Build x86_64 .app on an Intel Mac or GitHub Actions runner (macos-13).
+1. Build x86_64 .app on an Intel Mac or GitHub Actions runner (macos-15 with Rosetta 2).
 2. Build arm64 .app on an Apple Silicon Mac or GitHub Actions runner (macos-15).
 3. Merge the two bundles:
    python3 .github/scripts/merge_macos_apps.py \
