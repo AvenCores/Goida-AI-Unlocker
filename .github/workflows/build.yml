@@ -190,11 +190,15 @@ jobs:
           --add-data "app:app"
         working-directory: source
 
+      - name: Package .app
+        run: ditto -c -k --keepParent Goida_AI_Unlocker_macOS_x86_64.app Goida_AI_Unlocker_macOS_x86_64.app.zip
+        working-directory: source/dist
+
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: python-macos-x86_64
-          path: source/dist/Goida_AI_Unlocker_macOS_x86_64.app
+          path: source/dist/Goida_AI_Unlocker_macOS_x86_64.app.zip
           if-no-files-found: error
 
   build-macos-arm64:
@@ -229,10 +233,14 @@ jobs:
           --add-data "app:app"
         working-directory: source
 
+      - name: Package .app
+        run: ditto -c -k --keepParent Goida_AI_Unlocker_macOS_arm64.app Goida_AI_Unlocker_macOS_arm64.app.zip
+        working-directory: source/dist
+
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: python-macos-arm64
-          path: source/dist/Goida_AI_Unlocker_macOS_arm64.app
+          path: source/dist/Goida_AI_Unlocker_macOS_arm64.app.zip
           if-no-files-found: error
 
