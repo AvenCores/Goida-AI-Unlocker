@@ -96,15 +96,16 @@ jobs:
           python-version: '3.x'
           architecture: x64
 
-      - name: Install dependencies (x86_64 under Rosetta)
-        run: arch -x86_64 python3 -m pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
         working-directory: source
 
-      - name: Build with PyInstaller (x86_64 under Rosetta)
+      - name: Build with PyInstaller
         run: >
-          arch -x86_64 python3 -m pyinstaller main.py
+          pyinstaller main.py
           --onedir
           --windowed
+          --target-arch x86_64
           --icon=icon.icns
           --name="Goida_AI_Unlocker_macOS_x86_64"
           --add-data "icon.icns:."

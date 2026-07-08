@@ -116,7 +116,7 @@ python main.py
 
 **macOS Universal (Intel + Apple Silicon):**
 ```bash
-# 1. Соберите x86_64 .app на Intel-Mac (или GitHub Actions runner macos-15 с Rosetta 2)
+# 1. Соберите x86_64 .app на Intel-Mac (или GitHub Actions runner macos-15 с --target-arch x86_64)
 pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS_x86_64" \
   --add-data "icon.icns:." --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
 
