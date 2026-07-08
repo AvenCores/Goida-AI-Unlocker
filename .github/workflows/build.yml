@@ -81,3 +81,129 @@ jobs:
           name: python-linux
           path: source/dist/Goida_AI_Unlocker_Linux
           if-no-files-found: error
+
+  build-macos-x86_64:
+    name: Build macOS (Intel)
+    runs-on: macos-13
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+          architecture: x64
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        working-directory: source
+
+      - name: Build with PyInstaller
+        run: >
+          pyinstaller main.py
+          --onedir
+          --windowed
+          --icon=icon.ico
+          --name="Goida_AI_Unlocker_macOS_x86_64"
+          --add-data "icon.ico:."
+          --add-data "app_info.json:."
+          --add-data "icons:icons"
+          --add-data "app:app"
+        working-directory: source
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-macos-x86_64
+          path: source/dist/Goida_AI_Unlocker_macOS_x86_64.app
+          if-no-files-found: error
+
+  build-macos-arm64:
+    name: Build macOS (Apple Silicon)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+          architecture: arm64
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        working-directory: source
+
+      - name: Build with PyInstaller
+        run: >
+          pyinstaller main.py
+          --onedir
+          --windowed
+          --icon=icon.ico
+          --name="Goida_AI_Unlocker_macOS_arm64"
+          --add-data "icon.ico:."
+          --add-data "app_info.json:."
+          --add-data "icons:icons"
+          --add-data "app:app"
+        working-directory: source
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-macos-arm64
+          path: source/dist/Goida_AI_Unlocker_macOS_arm64.app
+          if-no-files-found: error
+
+  merge-macos-universal:
+    name: Build macOS Universal .app
+    runs-on: macos-latest
+    needs:
+      - build-macos-x86_64
+      - build-macos-arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Download x86_64 build
+        uses: actions/download-artifact@v7
+        with:
+          name: python-macos-x86_64
+          path: ./x86_64_app
+
+      - name: Download arm64 build
+        uses: actions/download-artifact@v7
+        with:
+          name: python-macos-arm64
+          path: ./arm64_app
+
+      - name: Merge into Universal .app
+        run: |
+          python3 .github/scripts/merge_macos_apps.py \
+            --x86_64 ./x86_64_app/Goida_AI_Unlocker_macOS_x86_64.app \
+            --arm64 ./arm64_app/Goida_AI_Unlocker_macOS_arm64.app \
+            --output ./Goida_AI_Unlocker_macOS_Universal.app
+
+      - name: Verify architectures
+        run: |
+          file ./Goida_AI_Unlocker_macOS_Universal.app/Contents/MacOS/*
+
+      - name: Package Universal .app
+        run: |
+          ditto -c -k --keepParent ./Goida_AI_Unlocker_macOS_Universal.app ./Goida_AI_Unlocker_macOS_Universal.zip
+
+      - name: Upload universal artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-macos-universal
+          path: ./Goida_AI_Unlocker_macOS_Universal.zip
+          if-no-files-found: error

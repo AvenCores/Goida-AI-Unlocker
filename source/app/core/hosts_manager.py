@@ -184,7 +184,7 @@ class HostsManager:
                 if sys.platform == "win32":
                     subprocess.run(["ipconfig", "/flushdns"], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
                 else:
-                    self._flush_dns_unix()
+                    self._flush_dns()
                 self.invalidate_cache()
                 if self._verify_applied_content(content):
                     return True
@@ -247,6 +247,10 @@ class HostsManager:
 
                 if not elevated:
                     raise PermissionError(tr("admin_hint_windows"))
+            elif sys.platform == "darwin":
+                elevated = self._apply_macos_elevated(temp_path)
+                if not elevated:
+                    raise PermissionError(tr("admin_hint_unix"))
             else:
                 elevated = self._apply_unix_elevated(temp_path)
                 if not elevated:
@@ -267,14 +271,55 @@ class HostsManager:
             if ps_script_path:
                 safe_remove(ps_script_path)
 
-    def _flush_dns_unix(self):
-        flush = (
-            "resolvectl flush-caches 2>/dev/null || "
-            "systemd-resolve --flush-caches 2>/dev/null || "
-            "/etc/init.d/nscd restart 2>/dev/null || "
-            "killall -HUP dnsmasq 2>/dev/null || true"
-        )
+    def _flush_dns(self):
+        if sys.platform == "darwin":
+            flush = (
+                "dscacheutil -flushcache 2>/dev/null; "
+                "killall -HUP mDNSResponder 2>/dev/null || true"
+            )
+        else:
+            flush = (
+                "resolvectl flush-caches 2>/dev/null || "
+                "systemd-resolve --flush-caches 2>/dev/null || "
+                "/etc/init.d/nscd restart 2>/dev/null || "
+                "killall -HUP dnsmasq 2>/dev/null || true"
+            )
         subprocess.run(flush, shell=True)
+
+    def _apply_macos_elevated(self, temp_path: str) -> bool:
+        flush = (
+            "dscacheutil -flushcache 2>/dev/null; "
+            "killall -HUP mDNSResponder 2>/dev/null || true"
+        )
+        s_src = temp_path.replace("'", "'\\''")
+        s_dst = str(HOSTS_PATH).replace("'", "'\\''")
+        shell_cmd = f"cp '{s_src}' '{s_dst}' && chmod 644 '{s_dst}' && {flush}"
+        applescript = f'do shell script "{shell_cmd}" with administrator privileges'
+
+        if shutil.which("osascript"):
+            try:
+                r = subprocess.run(
+                    ["osascript", "-e", applescript],
+                    timeout=120,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                if r.returncode == 0:
+                    return True
+            except Exception:
+                pass
+
+        if shutil.which("sudo"):
+            try:
+                r = subprocess.run(
+                    ["sudo", "bash", "-c", shell_cmd],
+                    timeout=120,
+                )
+                if r.returncode == 0:
+                    return True
+            except Exception:
+                pass
+        return False
 
     def _apply_unix_elevated(self, temp_path: str) -> bool:
         flush = (
@@ -286,7 +331,7 @@ class HostsManager:
         s_src = temp_path.replace("'", "'\\''")
         s_dst = str(HOSTS_PATH).replace("'", "'\\''")
         bash_cmd = f"cp '{s_src}' '{s_dst}' && chmod 644 '{s_dst}' && {flush}"
-        
+
         for launcher, args in (
             ("pkexec", ["pkexec", "bash", "-c", bash_cmd]),
             ("sudo", ["sudo", "bash", "-c", bash_cmd]),

@@ -90,7 +90,7 @@ def _open_hosts_file_linux_as_admin(wait=False) -> tuple[bool, str | None]:
                     cmd.extend([ep, str(HOSTS_PATH)])
                 else:
                     cmd = [launcher, ep, str(HOSTS_PATH)]
-                
+
                 if wait:
                     res = subprocess.run(cmd, capture_output=True, text=True)
                     if res.returncode != 0:
@@ -103,12 +103,48 @@ def _open_hosts_file_linux_as_admin(wait=False) -> tuple[bool, str | None]:
                 continue
     return False, "linux_admin_open_unavailable"
 
+
+def _open_hosts_file_macos_as_admin(wait=False) -> tuple[bool, str | None]:
+    target = str(HOSTS_PATH).replace('"', '\\"')
+    applescript = f'do shell script "open -e \"{target}\"" with administrator privileges'
+
+    if shutil.which("osascript"):
+        try:
+            cmd = ["osascript", "-e", applescript]
+            if wait:
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                if res.returncode != 0:
+                    logger.error("Admin open failed: %s", res.stderr)
+                    return False, res.stderr or "Admin open failed"
+            else:
+                subprocess.Popen(cmd, start_new_session=True)
+            return True, None
+        except Exception as e:
+            logger.error("macOS admin open error: %s", e)
+            return False, str(e)
+
+    if shutil.which("sudo"):
+        try:
+            cmd = ["sudo", "open", "-e", str(HOSTS_PATH)]
+            if wait:
+                subprocess.run(cmd, check=True, timeout=60)
+            else:
+                subprocess.Popen(cmd, start_new_session=True)
+            return True, None
+        except Exception as e:
+            logger.error("macOS sudo open error: %s", e)
+            return False, str(e)
+
+    return False, "macos_admin_open_unavailable"
+
 def open_hosts_file_sync() -> tuple[bool, str | None]:
     try:
         if sys.platform == "win32":
             opened, error_key = _open_hosts_file_windows_as_admin()
         elif sys.platform.startswith("linux"):
             opened, error_key = _open_hosts_file_linux_as_admin(wait=True)
+        elif sys.platform == "darwin":
+            opened, error_key = _open_hosts_file_macos_as_admin(wait=True)
         else:
             open_target(str(HOSTS_PATH))
             return True, None
@@ -123,6 +159,12 @@ def open_hosts_file_sync() -> tuple[bool, str | None]:
                 "Установите pkexec и графический текстовый редактор или запустите приложение от имени root."
                 if normalize_language(CURRENT_LANGUAGE) == "ru" else
                 "Install pkexec and a graphical text editor, or run the app as root."
+            )
+        elif error_key == "macos_admin_open_unavailable":
+            detail = (
+                "Установите osascript или запустите приложение от имени администратора."
+                if normalize_language(CURRENT_LANGUAGE) == "ru" else
+                "Install osascript or run the app as administrator."
             )
         else:
             detail = error_key or tr("admin_hint_unix")

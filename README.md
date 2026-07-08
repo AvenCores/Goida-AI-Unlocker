@@ -15,7 +15,7 @@
 
 <h1 align="center">Goida AI Unlocker</h1>
 <p align="center">
-  Мини-утилита для Windows и Linux, позволяющая <b>в один клик разблокировать популярные сервисы</b> путём обновления файла <code>hosts</code>. Под капотом — современная модульная архитектура на Python и PySide-интерфейс с поддержкой светлой и тёмной темы.
+  Мини-утилита для Windows, Linux и macOS, позволяющая <b>в один клик разблокировать популярные сервисы</b> путём обновления файла <code>hosts</code>. Под капотом — современная модульная архитектура на Python и PySide-интерфейс с поддержкой светлой и тёмной темы.
 </p>
 
 > **Важно:** модуль не обходит прямые блокировки РКН на сетевом уровне. Если конкретный сервис заблокирован РКН по IP / SNI / TLS или иным способом, без дополнительных средств (VPN, прокси, zapret, byebyedpi и т.п.) он работать не будет.
@@ -99,7 +99,7 @@ python main.py
 ```
 
 Требования:
-* Windows 10/11
+* Windows 10/11, Linux или macOS 11+
 * Python 3.8+
 
 ---
@@ -112,6 +112,27 @@ python main.py
 
 **Linux:** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --name="Goida_AI_Unlocker_Linux" --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"```
 
+**macOS (одноархитектурный .app):** ```pyinstaller main.py --onedir --windowed --icon=icon.ico --name="Goida_AI_Unlocker_macOS" --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"```
+
+**macOS Universal (Intel + Apple Silicon):**
+```bash
+# 1. Соберите x86_64 .app на Intel-Mac (или GitHub Actions runner macos-13)
+pyinstaller main.py --onedir --windowed --icon=icon.ico --name="Goida_AI_Unlocker_macOS_x86_64" \
+  --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
+
+# 2. Соберите arm64 .app на Apple Silicon Mac (или GitHub Actions runner macos-latest)
+pyinstaller main.py --onedir --windowed --icon=icon.ico --name="Goida_AI_Unlocker_macOS_arm64" \
+  --add-data "icon.ico:." --add-data "app_info.json:." --add-data "icons:icons" --add-data "app:app"
+
+# 3. Объедините два .app в один Universal .app
+python3 .github/scripts/merge_macos_apps.py \
+  --x86_64 dist/Goida_AI_Unlocker_macOS_x86_64.app \
+  --arm64 dist/Goida_AI_Unlocker_macOS_arm64.app \
+  --output dist/Goida_AI_Unlocker_macOS_Universal.app
+
+# 4. Упакуйте в zip
+ditto -c -k --keepParent dist/Goida_AI_Unlocker_macOS_Universal.app dist/Goida_AI_Unlocker_macOS_Universal.zip
+```
 
 Скомпилированный файл появится в директории <code>dist/</code>.
 

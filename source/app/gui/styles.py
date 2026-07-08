@@ -15,11 +15,22 @@ def is_system_dark_theme():
             return value == 0
         except Exception:
             return False
+    elif sys.platform == "darwin":
+        try:
+            out = subprocess.check_output(
+                ["defaults", "read", "-g", "AppleInterfaceStyle"],
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+            ).decode().strip()
+            return out.lower() == "dark"
+        except Exception:
+            return False
     else:
         try:
             out = subprocess.check_output(
                 ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL,
+                timeout=5,
             ).decode().strip()
             return "dark" in out.lower()
         except Exception:
