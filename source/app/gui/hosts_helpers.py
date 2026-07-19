@@ -105,8 +105,8 @@ def _open_hosts_file_linux_as_admin(wait=False) -> tuple[bool, str | None]:
 
 
 def _open_hosts_file_macos_as_admin(wait=False) -> tuple[bool, str | None]:
-    target = str(HOSTS_PATH).replace('"', '\\"')
-    applescript = f'do shell script "open -e \"{target}\"" with administrator privileges'
+    target = str(HOSTS_PATH).replace("'", "'\\''")
+    applescript = f"do shell script \"open -e '{target}'\" with administrator privileges"
 
     if shutil.which("osascript"):
         try:

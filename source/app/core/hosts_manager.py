@@ -122,7 +122,7 @@ class HostsManager:
             logger.error("All backup attempts failed: %s", last_error)
         return None
 
-    def get_latest_backup(self) -> Optional[Path]:
+    def get_backups_list(self) -> list[Path]:
         # Try primary backup dir and fallback
         dirs_to_check = [HOSTS_BACKUP_DIR]
         try:
@@ -143,7 +143,12 @@ class HostsManager:
                 ]
                 all_files.extend(files)
 
-        return max(all_files, key=lambda p: p.stat().st_mtime) if all_files else None
+        all_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        return all_files
+
+    def get_latest_backup(self) -> Optional[Path]:
+        files = self.get_backups_list()
+        return files[0] if files else None
 
     @staticmethod
     def _normalize_hosts_content(text: str) -> str:
@@ -391,23 +396,54 @@ class HostsManager:
     def restore(self) -> bool:
         if not self.backup("uninstall"):
             return False
-        default_hosts = "127.0.0.1       localhost\n::1             localhost\n"
-        if sys.platform == "win32":
-            default_hosts = (
-                "# Copyright (c) 1993-2009 Microsoft Corp.\n#\n"
-                "# This is a sample HOSTS file used by Microsoft TCP/IP for Windows.\n#\n"
-                "# This file contains the mappings of IP addresses to host names. Each\n"
-                "# entry should be kept on an individual line. The IP address should\n"
-                "# be placed in the first column followed by the corresponding host name.\n"
-                "# The IP address and the host name should be separated by at least one\n# space.\n#\n"
-                "# Additionally, comments (such as these) may be inserted on individual\n"
-                "# lines or following the machine name denoted by a '#' symbol.\n#\n"
-                "# For example:\n#\n#      102.54.94.97     rhino.acme.com          # source server\n"
-                "#       38.25.63.10     x.acme.com              # x client host\n\n"
-                "# localhost name resolution is handled within DNS itself.\n"
-                "#   127.0.0.1       localhost\n#   ::1             localhost"
-            )
-        return self.apply(default_hosts)
+
+        # Try to find a backup of the original hosts file
+        original_content = None
+        backups = self.get_backups_list()
+
+        for backup_path in backups:
+            try:
+                content = backup_path.read_text(encoding="utf-8", errors="ignore")
+                lines = content.splitlines()
+                if len(lines) >= 5 and lines[0].startswith("# Goida AI Unlocker hosts backup"):
+                    actual_hosts = "\n".join(lines[5:])
+                else:
+                    actual_hosts = content
+
+                # If this backup does not contain any bypass entries, it's our original hosts file!
+                if "dns.malw.link" not in actual_hosts and "dns.geohide.ru" not in actual_hosts:
+                    original_content = actual_hosts
+                    logger.info("Found clean original hosts backup: %s", backup_path)
+                    break
+            except Exception as e:
+                logger.error("Failed to read/parse backup %s: %s", backup_path, e)
+
+        if original_content is not None:
+            # Let's ensure it has at least localhost entries just to be safe
+            if not self.validate_content(original_content):
+                original_content = None
+
+        if original_content is None:
+            # Fallback to default clean hosts if no backup was found or if it was invalid
+            default_hosts = "127.0.0.1       localhost\n::1             localhost\n"
+            if sys.platform == "win32":
+                default_hosts = (
+                    "# Copyright (c) 1993-2009 Microsoft Corp.\n#\n"
+                    "# This is a sample HOSTS file used by Microsoft TCP/IP for Windows.\n#\n"
+                    "# This file contains the mappings of IP addresses to host names. Each\n"
+                    "# entry should be kept on an individual line. The IP address should\n"
+                    "# be placed in the first column followed by the corresponding host name.\n"
+                    "# The IP address and the host name should be separated by at least one\n# space.\n#\n"
+                    "# Additionally, comments (such as these) may be inserted on individual\n"
+                    "# lines or following the machine name denoted by a '#' symbol.\n#\n"
+                    "# For example:\n#\n#      102.54.94.97     rhino.acme.com          # source server\n"
+                    "#       38.25.63.10     x.acme.com              # x client host\n\n"
+                    "# localhost name resolution is handled within DNS itself.\n"
+                    "#   127.0.0.1       localhost\n#   ::1             localhost"
+                )
+            original_content = default_hosts
+
+        return self.apply(original_content)
 
     def check_status(self, provider: str = "dns.malw.link") -> HostsStatusResult:
         if not HOSTS_PATH.exists():
