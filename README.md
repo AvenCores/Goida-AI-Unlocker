@@ -55,7 +55,7 @@
 
 ## 📸 Скриншот интерфейса
 <div align="center">
-  <img alt="Goida_AI_Unlocker" src="https://i.ibb.co/VYV27rrc/chrome-ou-Gf3-Wks-UU.png" />
+  <img alt="Goida_AI_Unlocker" src="https://i.ibb.co/ymS4zzqK/chrome-k0jp-OT6-AC0.png" />
 </div>
 
 ---
