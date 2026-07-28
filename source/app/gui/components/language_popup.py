@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, Signal, QRect, QRectF
 from PySide6.QtGui import QPainter, QColor, QPen, QPainterPath, QFont
 
-# Flag definitions: horizontal/vertical stripes, cross (UK), or solid with accent
+# Flag definitions: horizontal/vertical stripes, cross, circle, or custom types
 _FLAGS: dict[str, dict] = {
     "ru": {"stripes": [("#ffffff", 1/3), ("#0039a6", 1/3), ("#d52b1e", 1/3)]},
     "en": {"type": "cross", "bg": "#012169", "cross": "#c8102e", "fimb": "#ffffff"},
@@ -12,6 +12,16 @@ _FLAGS: dict[str, dict] = {
     "kk": {"type": "kazakhstan", "bg": "#00afca", "gold": "#fec50c"},
     "fr": {"vertical": True, "stripes": [("#002395", 1/3), ("#ffffff", 1/3), ("#ed2939", 1/3)]},
     "pl": {"stripes": [("#ffffff", 0.5), ("#dc143c", 0.5)]},
+    "es": {"stripes": [("#c60b1e", 0.25), ("#ffc400", 0.5), ("#c60b1e", 0.25)]},
+    "pt": {"type": "portugal"},
+    "it": {"vertical": True, "stripes": [("#009246", 1/3), ("#ffffff", 1/3), ("#ce2b37", 1/3)]},
+    "tr": {"type": "crescent"},
+    "zh": {"type": "circle", "bg": "#de2910", "circle": "#ffde00"},
+    "ja": {"type": "circle", "bg": "#ffffff", "circle": "#bc002d"},
+    "ko": {"type": "taegeuk", "bg": "#ffffff"},
+    "cs": {"type": "czech"},
+    "nl": {"stripes": [("#ae1c28", 1/3), ("#ffffff", 1/3), ("#21468b", 1/3)]},
+    "sv": {"type": "nordic", "bg": "#006aa7", "cross": "#fecc00"},
 }
 
 
@@ -32,8 +42,8 @@ class LanguagePopup(QWidget):
         self.current_lang = current_lang
         self._hover_index = -1
         self._items: list[tuple[str, str]] = list(languages.items())
-        self._item_height = 40
-        self._padding = 8
+        self._item_height = 32
+        self._padding = 6
         self._radius = 12
 
         self._margin = 10  # space for manual shadow
@@ -70,7 +80,7 @@ class LanguagePopup(QWidget):
         painter.drawPath(path)
 
         # Items
-        painter.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+        painter.setFont(QFont("Segoe UI", 9.5, QFont.Weight.Medium))
         for i, (code, name) in enumerate(self._items):
             y = m + self._padding + i * self._item_height
             item_rect_x = m + self._padding
@@ -99,21 +109,21 @@ class LanguagePopup(QWidget):
             # Flag
             flag_def = _FLAGS.get(code)
             if flag_def:
-                self._draw_flag(painter, flag_def, item_rect_x + 10, y + 2 + (item_rect_h - 14) // 2, 20, 14)
+                self._draw_flag(painter, flag_def, item_rect_x + 8, y + 2 + (item_rect_h - 12) // 2, 18, 12)
 
             # Text
-            painter.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+            painter.setFont(QFont("Segoe UI", 9.5, QFont.Weight.Medium))
             painter.setPen(text_color)
-            text_rect = QRect(item_rect_x + 38, y + 2, item_rect_w - 62, item_rect_h)
+            text_rect = QRect(item_rect_x + 32, y + 2, item_rect_w - 54, item_rect_h)
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, name)
 
             # Checkmark for selected
             if is_selected:
-                painter.setPen(QPen(QColor("#ffffff"), 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
-                cx = item_rect_x + item_rect_w - 24
+                painter.setPen(QPen(QColor("#ffffff"), 1.8, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+                cx = item_rect_x + item_rect_w - 20
                 cy = y + 2 + item_rect_h // 2
-                painter.drawLine(cx - 5, cy, cx - 1, cy + 4)
-                painter.drawLine(cx - 1, cy + 4, cx + 6, cy - 4)
+                painter.drawLine(cx - 4, cy, cx - 1, cy + 3)
+                painter.drawLine(cx - 1, cy + 3, cx + 5, cy - 3)
 
         painter.end()
 
@@ -151,30 +161,100 @@ class LanguagePopup(QWidget):
         flag_type = flag_def.get("type", "stripes")
 
         if flag_type == "cross":
-            # UK-style: blue bg + white fimbriation + red cross
+            # UK-style: blue bg + white fimbriation + red cross (centered)
             painter.fillRect(x, y, w, h, QColor(flag_def["bg"]))
             fimb = QColor(flag_def["fimb"])
             cross = QColor(flag_def["cross"])
             cx, cy = x + w // 2, y + h // 2
-            # White cross (wider)
             painter.fillRect(cx - 3, y, 6, h, fimb)
             painter.fillRect(x, cy - 3, w, 6, fimb)
-            # Red cross (narrower)
             painter.fillRect(cx - 2, y, 4, h, cross)
             painter.fillRect(x, cy - 2, w, 4, cross)
+
+        elif flag_type == "nordic":
+            # Nordic cross (Sweden): vertical bar offset to the left
+            painter.fillRect(x, y, w, h, QColor(flag_def["bg"]))
+            cross_color = QColor(flag_def["cross"])
+            vx = x + int(w * 0.35)  # vertical bar at ~1/3 from left
+            cy = y + h // 2
+            painter.fillRect(vx - 2, y, 4, h, cross_color)
+            painter.fillRect(x, cy - 2, w, 4, cross_color)
 
         elif flag_type == "kazakhstan":
             # Sky-blue field + gold ornament stripe on left + gold sun in center
             painter.fillRect(x, y, w, h, QColor(flag_def["bg"]))
             gold = QColor(flag_def["gold"])
-            # Ornamental stripe on left
             painter.fillRect(x, y, 3, h, gold)
-            # Sun (small circle slightly above center)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(gold)
             sun_cx = x + w // 2 + 1
             sun_cy = y + h // 2 - 1
             painter.drawEllipse(sun_cx - 3, sun_cy - 3, 6, 6)
+
+        elif flag_type == "circle":
+            # Solid bg + centered circle (Japan, China)
+            painter.fillRect(x, y, w, h, QColor(flag_def["bg"]))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(flag_def["circle"]))
+            r = min(w, h) // 3
+            cx, cy = x + w // 2, y + h // 2
+            painter.drawEllipse(cx - r, cy - r, r * 2, r * 2)
+
+        elif flag_type == "crescent":
+            # Turkey: red bg + white crescent + white star
+            painter.fillRect(x, y, w, h, QColor("#e30a17"))
+            painter.setPen(Qt.PenStyle.NoPen)
+            cx, cy = x + w // 2 - 1, y + h // 2
+            r = min(w, h) // 3
+            # White circle
+            painter.setBrush(QColor("#ffffff"))
+            painter.drawEllipse(cx - r, cy - r, r * 2, r * 2)
+            # Red circle offset right to create crescent
+            painter.setBrush(QColor("#e30a17"))
+            offset = r // 2
+            painter.drawEllipse(cx - r + offset + 1, cy - r + 1, r * 2 - 2, r * 2 - 2)
+            # Small white star (dot) to the right
+            star_x = cx + r + 2
+            painter.setBrush(QColor("#ffffff"))
+            painter.drawEllipse(star_x - 1, cy - 1, 3, 3)
+
+        elif flag_type == "portugal":
+            # Portugal: green left (2/5) + red right (3/5) + yellow sphere at boundary
+            gw = int(w * 0.4)
+            painter.fillRect(x, y, gw, h, QColor("#046a38"))
+            painter.fillRect(x + gw, y, w - gw, h, QColor("#da291c"))
+            # Yellow armillary sphere at boundary
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor("#ffe900"))
+            sr = min(w, h) // 4
+            painter.drawEllipse(x + gw - sr, y + h // 2 - sr, sr * 2, sr * 2)
+
+        elif flag_type == "taegeuk":
+            # South Korea: white bg + red(top)/blue(bottom) taegeuk circle
+            painter.fillRect(x, y, w, h, QColor(flag_def["bg"]))
+            cx, cy = x + w // 2, y + h // 2
+            r = min(w, h) // 3
+            painter.setPen(Qt.PenStyle.NoPen)
+            # Top half red (180° span from 9 o'clock going up)
+            painter.setBrush(QColor("#cd2e3a"))
+            painter.drawPie(cx - r, cy - r, r * 2, r * 2, 180 * 16, 180 * 16)
+            # Bottom half blue (180° span from 3 o'clock going down)
+            painter.setBrush(QColor("#0047a0"))
+            painter.drawPie(cx - r, cy - r, r * 2, r * 2, 0, 180 * 16)
+
+        elif flag_type == "czech":
+            # Czech Republic: white top, red bottom, blue triangle on left
+            half_h = h // 2
+            painter.fillRect(x, y, w, half_h, QColor("#ffffff"))
+            painter.fillRect(x, y + half_h, w, h - half_h, QColor("#d7141a"))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor("#11457e"))
+            tri = QPainterPath()
+            tri.moveTo(x, y)
+            tri.lineTo(x + w // 2, y + h // 2)
+            tri.lineTo(x, y + h)
+            tri.closeSubpath()
+            painter.drawPath(tri)
 
         else:
             # Stripes (horizontal or vertical)
