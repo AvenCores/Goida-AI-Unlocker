@@ -23,6 +23,7 @@ class HostsWorker(QRunnable):
         self.manager = manager
         self.provider = provider
         self.signals = WorkerSignals()
+        self.save_content: str = ""
 
     def run(self):
         try:
@@ -30,11 +31,8 @@ class HostsWorker(QRunnable):
                 result = self.manager.update(self.provider)
             elif self.action == "uninstall":
                 result = self.manager.restore()
-            elif self.action == "open":
-                from app.gui.hosts_helpers import open_hosts_file_sync
-                result, error = open_hosts_file_sync()
-                self.signals.finished.emit(self.action, result, error or "")
-                return
+            elif self.action == "save":
+                result = self.manager.apply(self.save_content)
             else:
                 result = False
             self.signals.finished.emit(self.action, result, "")

@@ -7,3 +7,4 @@ from app.gui.pages.message_page import (
     build_update_available_page,
     build_no_update_page,
 )
+from app.gui.pages.hosts_editor_page import build_hosts_editor_page, build_hosts_backup_viewer_page

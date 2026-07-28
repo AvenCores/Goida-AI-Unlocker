@@ -24,6 +24,7 @@ from app.gui.pages.message_page import (
     build_update_available_page,
     build_no_update_page,
 )
+from app.gui.pages.hosts_editor_page import build_hosts_editor_page, build_hosts_backup_viewer_page
 
 
 class MainWindow(QMainWindow):
@@ -182,6 +183,8 @@ class MainWindow(QMainWindow):
         home_page.about_requested.connect(self.show_about)
         home_page.update_check_requested.connect(self.check_for_updates)
         home_page.provider_changed.connect(self._on_provider_changed)
+        home_page.open_hosts_requested.connect(self.show_hosts_editor)
+        home_page.view_backups_requested.connect(self.show_hosts_backup_viewer)
 
     # --- Window helpers ---
 
@@ -270,9 +273,62 @@ class MainWindow(QMainWindow):
         )
         self._add_and_switch(widget)
 
+    def show_hosts_editor(self):
+        def _on_save(content: str):
+            self._processing_widget = self.show_processing("save")
+            worker = HostsWorker("save", self.hosts_manager, self.current_provider, self)
+            worker.save_content = content
+            worker.signals.finished.connect(self._on_hosts_save_finished, Qt.ConnectionType.QueuedConnection)
+            QThreadPool.globalInstance().start(worker)
+
+        widget = build_hosts_editor_page(
+            self.hosts_manager, self.styles, self.dark_theme,
+            return_callback=lambda: self._return_to_main(widget),
+            save_callback=_on_save,
+            fix_size_fn=self._fix_widget_size,
+        )
+        self._add_and_switch(widget)
+
+    def show_hosts_backup_viewer(self):
+        widget = build_hosts_backup_viewer_page(
+            self.hosts_manager, self.styles, self.dark_theme,
+            return_callback=lambda: self._return_to_main(widget),
+            fix_size_fn=self._fix_widget_size,
+        )
+        self._add_and_switch(widget)
+
+    @Slot(str, bool, str)
+    def _on_hosts_save_finished(self, action: str, ok: bool, error: str):
+        if self._processing_widget is not None:
+            proc = self._processing_widget
+            self._processing_widget = None
+            QTimer.singleShot(400, lambda: self._remove_widget(proc))
+
+        if ok:
+            self.show_message(tr("hosts_editor_save_success"), success=True, word_wrap=True)
+        else:
+            import os
+            from app.utils.helpers import is_windows_admin
+            if sys.platform == "win32":
+                hint = tr("hosts_locked_hint_windows") if is_windows_admin() else tr("admin_hint_windows")
+            else:
+                is_root = False
+                try:
+                    is_root = os.geteuid() == 0
+                except AttributeError:
+                    pass
+                hint = tr("hosts_locked_hint_unix") if is_root else tr("admin_hint_unix")
+            self.show_message(tr("hosts_editor_save_error", hint=hint), success=False, word_wrap=True)
+
+        self.home_page.update_status_label()
+        self.check_version_status()
+
     # --- Installation / Workers ---
 
     def start_installation(self, action: str):
+        if action == "open":
+            self.show_hosts_editor()
+            return
         self._processing_widget = self.show_processing(action)
         worker = HostsWorker(action, self.hosts_manager, self.current_provider, self)
         worker.signals.finished.connect(self.on_hosts_finished, Qt.ConnectionType.QueuedConnection)
@@ -280,10 +336,7 @@ class MainWindow(QMainWindow):
 
     @Slot(str, bool, str)
     def on_hosts_finished(self, action: str, ok: bool, error: str):
-        if action == "open":
-            if not ok:
-                self.show_message(tr("open_hosts_error", hint=error), success=False, word_wrap=True)
-        elif ok:
+        if ok:
             if action == "install":
                 msg = tr("install_success")
             elif action == "update":

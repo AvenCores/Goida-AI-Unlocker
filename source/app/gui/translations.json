@@ -39,6 +39,7 @@
         "processing_update": "Обновление обхода...\nㅤПожалуйста, подождите.ㅤ",
         "processing_uninstall": "Удаление обхода...\nㅤПожалуйста, подождите.ㅤ",
         "processing_open": "Открытие файла hosts...\nㅤПожалуйста, подождите.ㅤ",
+        "processing_save": "Сохранение файла hosts...\nㅤПожалуйста, подождите.ㅤ",
         "install_success": "Файл hosts успешно установлен!\nㅤВозможно потребуется перезапустить браузер.ㅤ",
         "update_success": "Файл hosts успешно обновлён!\nㅤВозможно потребуется перезапустить браузер.ㅤ",
         "uninstall_success": "Файл hosts успешно восстановлен!\nㅤВозможно потребуется перезапустить браузер.ㅤ",
@@ -62,7 +63,15 @@
         "hosts_update_date_unknown": "Дата обновления hosts: неизвестно",
         "provider_malw": "dns.malw.link (Основной)",
         "provider_geohide": "GeoHideDNS (Резервный)",
-        "provider_repo_tooltip": "Открыть репозиторий"
+        "provider_repo_tooltip": "Открыть репозиторий",
+        "hosts_editor_title": "Редактор файла hosts",
+        "hosts_editor_save": " Сохранить",
+        "hosts_editor_save_success": "Файл hosts успешно сохранён!\nㅤВозможно потребуется перезапустить браузер.ㅤ",
+        "hosts_editor_save_error": "Не удалось сохранить файл hosts.\nㅤ{hint}ㅤ",
+        "hosts_backup_viewer_title": "Просмотр бэкапов hosts",
+        "hosts_backup_select": "Бэкап:",
+        "hosts_backup_none": "Бэкапы не найдены",
+        "hosts_backup_none_info": "Файлы резервных копий отсутствуют.\nУстановите или удалите обход, чтобы создать бэкап."
     },
     "en": {
         "language_name": "English",
@@ -104,6 +113,7 @@
         "processing_update": "Updating bypass...\nㅤPlease wait.ㅤ",
         "processing_uninstall": "Removing bypass...\nㅤPlease wait.ㅤ",
         "processing_open": "Opening hosts file...\nㅤPlease wait.ㅤ",
+        "processing_save": "Saving hosts file...\nㅤPlease wait.ㅤ",
         "install_success": "The hosts file was installed successfully!\nㅤYou may need to restart your browser.ㅤ",
         "update_success": "The hosts file was updated successfully!\nㅤYou may need to restart your browser.ㅤ",
         "uninstall_success": "The hosts file was restored successfully!\n!ㅤYou may need to restart your browser.ㅤ",
@@ -127,7 +137,15 @@
         "hosts_update_date_unknown": "Hosts update date: unknown",
         "provider_malw": "dns.malw.link (Primary)",
         "provider_geohide": "GeoHideDNS (Backup)",
-        "provider_repo_tooltip": "Open repository"
+        "provider_repo_tooltip": "Open repository",
+        "hosts_editor_title": "Hosts File Editor",
+        "hosts_editor_save": " Save",
+        "hosts_editor_save_success": "The hosts file was saved successfully!\nㅤYou may need to restart your browser.ㅤ",
+        "hosts_editor_save_error": "Failed to save the hosts file.\nㅤ{hint}ㅤ",
+        "hosts_backup_viewer_title": "Hosts Backup Viewer",
+        "hosts_backup_select": "Backup:",
+        "hosts_backup_none": "No backups found",
+        "hosts_backup_none_info": "No backup files found.\nInstall or remove the bypass to create a backup."
     },
     "de": {
         "language_name": "Deutsch",
@@ -169,6 +187,7 @@
         "processing_update": "Bypass wird aktualisiert...\nㅤBitte warten.ㅤ",
         "processing_uninstall": "Bypass wird entfernt...\nㅤBitte warten.ㅤ",
         "processing_open": "Hosts-Datei wird geöffnet...\nㅤBitte warten.ㅤ",
+        "processing_save": "Hosts-Datei wird gespeichert...\nㅤBitte warten.ㅤ",
         "install_success": "Hosts-Datei erfolgreich installiert!\nㅤMöglicherweise müssen Sie Ihren Browser neu starten.ㅤ",
         "update_success": "Hosts-Datei erfolgreich aktualisiert!\nㅤMöglicherweise müssen Sie Ihren Browser neu starten.ㅤ",
         "uninstall_success": "Hosts-Datei erfolgreich wiederhergestellt!\nㅤMöglicherweise müssen Sie Ihren Browser neu starten.ㅤ",
@@ -192,7 +211,15 @@
         "hosts_update_date_unknown": "Hosts-Update-Datum: unbekannt",
         "provider_malw": "dns.malw.link (Primär)",
         "provider_geohide": "GeoHideDNS (Secours)",
-        "provider_repo_tooltip": "Repository öffnen"
+        "provider_repo_tooltip": "Repository öffnen",
+        "hosts_editor_title": "Hosts-Datei-Editor",
+        "hosts_editor_save": " Speichern",
+        "hosts_editor_save_success": "Hosts-Datei erfolgreich gespeichert!\nㅤMöglicherweise müssen Sie Ihren Browser neu starten.ㅤ",
+        "hosts_editor_save_error": "Fehler beim Speichern der Hosts-Datei.\nㅤ{hint}ㅤ",
+        "hosts_backup_viewer_title": "Hosts-Backup-Betrachter",
+        "hosts_backup_select": "Backup:",
+        "hosts_backup_none": "Keine Backups gefunden",
+        "hosts_backup_none_info": "Keine Backup-Dateien gefunden.\nInstallieren oder entfernen Sie den Bypass, um ein Backup zu erstellen."
     },
     "uk": {
         "language_name": "Українська",
@@ -234,6 +261,7 @@
         "processing_update": "Оновлення обходу...\nㅤБудь ласка, зачекайте.ㅤ",
         "processing_uninstall": "Видалення обходу...\nㅤБудь ласка, зачекайте.ㅤ",
         "processing_open": "Відкриття файлу hosts...\nㅤБудь ласка, зачекайте.ㅤ",
+        "processing_save": "Збереження файлу hosts...\nㅤБудь ласка, зачекайте.ㅤ",
         "install_success": "Файл hosts успішно встановлено!\nㅤМожливо знадобиться перезапустити браузер.ㅤ",
         "update_success": "Файл hosts успішно оновлено!\nㅤМожливо знадобиться перезапустити браузер.ㅤ",
         "uninstall_success": "Файл hosts успішно відновлено!\nㅤМожливо знадобиться перезапустити браузер.ㅤ",
@@ -257,7 +285,15 @@
         "hosts_update_date_unknown": "Дата оновлення hosts: невідомо",
         "provider_malw": "dns.malw.link (Основний)",
         "provider_geohide": "GeoHideDNS (Резервний)",
-        "provider_repo_tooltip": "Відкрити репозиторій"
+        "provider_repo_tooltip": "Відкрити репозиторій",
+        "hosts_editor_title": "Редактор файлу hosts",
+        "hosts_editor_save": " Зберегти",
+        "hosts_editor_save_success": "Файл hosts успішно збережено!\nㅤМожливо знадобиться перезапустити браузер.ㅤ",
+        "hosts_editor_save_error": "Не вдалося зберегти файл hosts.\nㅤ{hint}ㅤ",
+        "hosts_backup_viewer_title": "Перегляд резервних копій hosts",
+        "hosts_backup_select": "Резервна копія:",
+        "hosts_backup_none": "Резервні копії не знайдені",
+        "hosts_backup_none_info": "Файли резервних копій відсутні.\nВстановіть або видаліть обхід, щоб створити резервну копію."
     },
     "be": {
         "language_name": "Беларуская",
@@ -299,6 +335,7 @@
         "processing_update": "Абнаўленне абыходу...\nㅤКалі ласка, пачакайце.ㅤ",
         "processing_uninstall": "Выдаленне абыходу...\nㅤКалі ласка, пачакайце.ㅤ",
         "processing_open": "Адкрыццё файла hosts...\nㅤКалі ласка, пачакайце.ㅤ",
+        "processing_save": "Захаванне файла hosts...\nㅤКалі ласка, пачакайце.ㅤ",
         "install_success": "Файл hosts паспяхова ўсталяваны!\nㅤМагчыма спатрэбіцца перазапусціць браўзер.ㅤ",
         "update_success": "Файл hosts паспяхова абноўлены!\nㅤМагчыма спатрэбіцца перазапусціць браўзер.ㅤ",
         "uninstall_success": "Файл hosts паспяхова адноўлены!\nㅤМагчыма спатрэбіцца перазапусціць браўзер.ㅤ",
@@ -322,7 +359,15 @@
         "hosts_update_date_unknown": "Дата абнаўлення hosts: невядома",
         "provider_malw": "dns.malw.link (Асноўны)",
         "provider_geohide": "GeoHideDNS (Рэзервовы)",
-        "provider_repo_tooltip": "Адкрыць рэпазіторый"
+        "provider_repo_tooltip": "Адкрыць рэпазіторый",
+        "hosts_editor_title": "Рэдактар файла hosts",
+        "hosts_editor_save": " Захаваць",
+        "hosts_editor_save_success": "Файл hosts паспяхова захаваны!\nㅤМагчыма спатрэбіцца перазапусціць браўзер.ㅤ",
+        "hosts_editor_save_error": "Не ўдалося захаваць файл hosts.\nㅤ{hint}ㅤ",
+        "hosts_backup_viewer_title": "Прагляд бэкапаў hosts",
+        "hosts_backup_select": "Бэкап:",
+        "hosts_backup_none": "Бэкапы не знойдзены",
+        "hosts_backup_none_info": "Файлы рэзервовых копій адсутнічаюць.\nУсталюйце або выдаліце абыход, каб стварыць бэкап."
     },
     "kk": {
         "language_name": "Қазақша",
@@ -364,6 +409,7 @@
         "processing_update": "Айналып өтуді жаңарту...\nㅤКүте тұрыңыз.ㅤ",
         "processing_uninstall": "Айналып өтуді жою...\nㅤКүте тұрыңыз.ㅤ",
         "processing_open": "hosts файлын ашу...\nㅤКүте тұрыңыз.ㅤ",
+        "processing_save": "hosts файлын сақтау...\nㅤКүте тұрыңыз.ㅤ",
         "install_success": "hosts файлы сәтті орнатылды!\nㅤБраузерді қайта іске қосу қажет болуы мүмкін.ㅤ",
         "update_success": "hosts файлы сәтті жаңартылды!\nㅤБраузерді қайта іске қосу қажет болуы мүмкін.ㅤ",
         "uninstall_success": "hosts файлы сәтті қалпына келтірілді!\nㅤБраузерді қайта іске қосу қажет болуы мүмкін.ㅤ",
@@ -387,7 +433,15 @@
         "hosts_update_date_unknown": "hosts жаңартылған күні: белгісіз",
         "provider_malw": "dns.malw.link (Негізгі)",
         "provider_geohide": "GeoHideDNS (Резервтік)",
-        "provider_repo_tooltip": "Репозиторийді ашу"
+        "provider_repo_tooltip": "Репозиторийді ашу",
+        "hosts_editor_title": "hosts файлының редакторы",
+        "hosts_editor_save": " Сақтау",
+        "hosts_editor_save_success": "hosts файлы сәтті сақталды!\nㅤБраузерді қайта іске қосу қажет болуы мүмкін.ㅤ",
+        "hosts_editor_save_error": "hosts файлын сақтау сәтсіз аяқталды.\nㅤ{hint}ㅤ",
+        "hosts_backup_viewer_title": "hosts резервтік көшірмелерін қарау",
+        "hosts_backup_select": "Резервтік көшірме:",
+        "hosts_backup_none": "Резервтік көшірмелер табылмады",
+        "hosts_backup_none_info": "Резервтік көшірме файлдары жоқ.\nАйналып өтуді орнатыңыз немесе жойыңыз."
     },
     "fr": {
         "language_name": "Français",
@@ -429,6 +483,7 @@
         "processing_update": "Mise à jour du contournement...\nㅤVeuillez patienter.ㅤ",
         "processing_uninstall": "Suppression du contournement...\nㅤVeuillez patienter.ㅤ",
         "processing_open": "Ouverture du fichier hosts...\nㅤVeuillez patienter.ㅤ",
+        "processing_save": "Enregistrement du fichier hosts...\nㅤVeuillez patienter.ㅤ",
         "install_success": "Le fichier hosts a été installé avec succès !\nㅤVous devrez peut-être redémarrer votre navigateur.ㅤ",
         "update_success": "Le fichier hosts a été mis à jour avec succès !\nㅤVous devrez peut-être redémarrer votre navigateur.ㅤ",
         "uninstall_success": "Le fichier hosts a été restauré avec succès !\nㅤVous devrez peut-être redémarrer votre navigateur.ㅤ",
@@ -452,7 +507,15 @@
         "hosts_update_date_unknown": "Date de mise à jour du hosts: inconnue",
         "provider_malw": "dns.malw.link (Principal)",
         "provider_geohide": "GeoHideDNS (Secours)",
-        "provider_repo_tooltip": "Ouvrir le dépôt"
+        "provider_repo_tooltip": "Ouvrir le dépôt",
+        "hosts_editor_title": "Éditeur du fichier hosts",
+        "hosts_editor_save": " Enregistrer",
+        "hosts_editor_save_success": "Le fichier hosts a été enregistré avec succès !\nㅤVous devrez peut-être redémarrer votre navigateur.ㅤ",
+        "hosts_editor_save_error": "Échec de l'enregistrement du fichier hosts.\nㅤ{hint}ㅤ",
+        "hosts_backup_viewer_title": "Visionneuse de sauvegardes hosts",
+        "hosts_backup_select": "Sauvegarde :",
+        "hosts_backup_none": "Aucune sauvegarde trouvée",
+        "hosts_backup_none_info": "Aucun fichier de sauvegarde trouvé.\nInstallez ou supprimez le contournement pour créer une sauvegarde."
     },
     "pl": {
         "language_name": "Polski",
@@ -494,6 +557,7 @@
         "processing_update": "Aktualizowanie obejścia...\nㅤProszę czekać.ㅤ",
         "processing_uninstall": "Usuwanie obejścia...\nㅤProszę czekać.ㅤ",
         "processing_open": "Otwieranie pliku hosts...\nㅤProszę czekać.ㅤ",
+        "processing_save": "Zapisywanie pliku hosts...\nㅤProszę czekać.ㅤ",
         "install_success": "Plik hosts został pomyślnie zainstalowany!\nㅤMoże być konieczne ponowne uruchomienie przeglądarki.ㅤ",
         "update_success": "Plik hosts został pomyślnie zaktualizowany!\nㅤMoże być konieczne ponowne uruchomienie przeglądarki.ㅤ",
         "uninstall_success": "Plik hosts został pomyślnie przywrócony!\nㅤMoże być konieczne ponowne uruchomienie przeglądarki.ㅤ",
@@ -517,6 +581,14 @@
         "hosts_update_date_unknown": "Data aktualizacji hosts: nieznana",
         "provider_malw": "dns.malw.link (Główny)",
         "provider_geohide": "GeoHideDNS (Zapasowy)",
-        "provider_repo_tooltip": "Otwórz repozytorium"
+        "provider_repo_tooltip": "Otwórz repozytorium",
+        "hosts_editor_title": "Edytor pliku hosts",
+        "hosts_editor_save": " Zapisz",
+        "hosts_editor_save_success": "Plik hosts został pomyślnie zapisany!\nㅤMoże być konieczne ponowne uruchomienie przeglądarki.ㅤ",
+        "hosts_editor_save_error": "Nie udało się zapisać pliku hosts.\nㅤ{hint}ㅤ",
+        "hosts_backup_viewer_title": "Przeglądarka kopii zapasowych hosts",
+        "hosts_backup_select": "Kopia zapasowa:",
+        "hosts_backup_none": "Nie znaleziono kopii zapasowych",
+        "hosts_backup_none_info": "Nie znaleziono plików kopii zapasowych.\nZainstaluj lub usuń obejście, aby utworzyć kopię zapasową."
     }
 }

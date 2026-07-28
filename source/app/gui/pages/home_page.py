@@ -1,24 +1,25 @@
 from typing import Optional
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QMenu
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox
 )
 from PySide6.QtCore import Qt, Signal, QSize
 from app.core.hosts_manager import HostsManager, HostsStatusResult
 from app.utils.helpers import open_target
 from app.gui.localization import tr, localize_update_date
 from app.gui.icons import get_icon
-from app.gui.hosts_helpers import open_latest_hosts_backup_file, open_hosts_backup_folder
 
 
 class HomePage(QWidget):
     """Main application home page with status, provider selection, and action buttons."""
 
     # Signals emitted to MainWindow for orchestration
-    install_requested = Signal(str)       # action: "install" | "update" | "uninstall" | "open"
+    install_requested = Signal(str)       # action: "install" | "update" | "uninstall"
     donate_requested = Signal()
     about_requested = Signal()
     update_check_requested = Signal()
     provider_changed = Signal(str)        # provider id
+    open_hosts_requested = Signal()       # open built-in hosts editor
+    view_backups_requested = Signal()     # open built-in backup viewer
 
     def __init__(self, hosts_manager: HostsManager, styles: dict, dark_theme: bool, current_provider: str):
         super().__init__()
@@ -209,8 +210,8 @@ class HomePage(QWidget):
         donate_button.clicked.connect(self.donate_requested.emit)
         about_button.clicked.connect(self.about_requested.emit)
         update_button.clicked.connect(self.update_check_requested.emit)
-        open_hosts_button.clicked.connect(lambda: self.install_requested.emit("open"))
-        backup_hosts_button.clicked.connect(self._show_backup_menu)
+        open_hosts_button.clicked.connect(self.open_hosts_requested.emit)
+        backup_hosts_button.clicked.connect(self.view_backups_requested.emit)
 
         # Layout
         layout.addWidget(install_button)
@@ -324,25 +325,3 @@ class HomePage(QWidget):
         url = urls.get(self.current_provider)
         if url:
             open_target(url)
-
-    def _show_backup_menu(self):
-        menu = QMenu(self)
-        if self.dark_theme:
-            menu.setStyleSheet(
-                "QMenu { background:#2d333b; color:#f3f6fd; border:1px solid #3c434d; border-radius:10px; padding:6px; }"
-                "QMenu::item { padding:6px 16px; border-radius:8px; margin:2px 0; }"
-                "QMenu::item:selected { background:#246cf0; color:#ffffff; border-radius:8px; }"
-            )
-        else:
-            menu.setStyleSheet(
-                "QMenu { background:#ffffff; color:#1a1a1a; border:1px solid #cfd4db; border-radius:10px; padding:6px; }"
-                "QMenu::item { padding:6px 16px; border-radius:8px; margin:2px 0; }"
-                "QMenu::item:selected { background:#0078d4; color:#ffffff; border-radius:8px; }"
-            )
-        act1 = menu.addAction(tr("backup_menu_open_file"))
-        act2 = menu.addAction(tr("backup_menu_open_folder"))
-        sel = menu.exec(self.backup_hosts_button.mapToGlobal(self.backup_hosts_button.rect().bottomLeft()))
-        if sel == act1:
-            open_latest_hosts_backup_file()
-        elif sel == act2:
-            open_hosts_backup_folder()

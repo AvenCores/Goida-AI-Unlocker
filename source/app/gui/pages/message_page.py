@@ -73,6 +73,8 @@ def build_processing_page(
         msg = tr("processing_install")
     elif action == "update":
         msg = tr("processing_update")
+    elif action == "save":
+        msg = tr("processing_save")
     elif action == "open":
         msg = tr("processing_open")
     else:
