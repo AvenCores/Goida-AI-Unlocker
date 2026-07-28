@@ -16,7 +16,7 @@ from app.core.constants import (
 from app.core.http_client import HttpClient
 from app.utils.helpers import (
     is_windows_admin, safe_remove, sanitize_backup_action,
-    extract_update_line, extract_additional_version
+    extract_update_line
 )
 from app.gui.localization import tr
 
@@ -63,9 +63,6 @@ class HostsManager:
             return "dns.malw.link" in content and "dns.geohide.ru" not in content
         else:
             return "dns.malw.link" in content or "dns.geohide.ru" in content
-
-    def get_local_add_version(self) -> str:
-        return extract_additional_version(self.read())
 
     @staticmethod
     def validate_content(content: str) -> bool:
@@ -368,29 +365,10 @@ class HostsManager:
         if not self.backup("install"):
             return False
 
-        main_content = [""]
-        additional_payload = [None]
-
-        def fetch_main():
-            main_content[0] = HttpClient.fetch(url, bypass_cache=True)
-
-        def fetch_additional():
-            additional_payload[0] = HttpClient.fetch_additional_hosts(bypass_cache=False)
-
-        t1 = threading.Thread(target=fetch_main, daemon=True)
-        t2 = threading.Thread(target=fetch_additional, daemon=True)
-        t1.start()
-        t2.start()
-        t1.join(timeout=30)
-        t2.join(timeout=30)
-
-        content = main_content[0]
+        content = HttpClient.fetch(url, bypass_cache=True)
         if not content:
             return False
 
-        add_ver, add_hosts = additional_payload[0] or ("", "")
-        if add_hosts:
-            content += f"\n# additional_hosts_version {add_ver}\n{add_hosts.strip()}\n"
         return self.apply(content)
 
     def restore(self) -> bool:
@@ -455,30 +433,11 @@ class HostsManager:
                 return HostsStatusResult("not_installed", "#e06c75", "")
 
             local_line, local_date = extract_update_line(text)
-            local_add_ver = extract_additional_version(text)
-
-            remote_line, remote_date = "", ""
-            remote_add_ver = ""
-
-            def fetch_main():
-                nonlocal remote_line, remote_date
-                remote_line, remote_date = HttpClient.get_remote_main_line_cached(provider)
-
-            def fetch_add():
-                nonlocal remote_add_ver
-                remote_add_ver = HttpClient.get_remote_add_version_cached()
-
-            t1 = threading.Thread(target=fetch_main, daemon=True)
-            t2 = threading.Thread(target=fetch_add, daemon=True)
-            t1.start()
-            t2.start()
-            t1.join(timeout=15)
-            t2.join(timeout=15)
+            remote_line, remote_date = HttpClient.get_remote_main_line_cached(provider)
 
             main_match = local_line == remote_line and local_line.startswith("#")
-            add_match = (local_add_ver == remote_add_ver) if remote_add_ver else (local_add_ver == "")
 
-            if main_match and add_match:
+            if main_match:
                 return HostsStatusResult("up_to_date", "#43b581", remote_date)
             return HostsStatusResult("outdated", "#e06c75", remote_date)
         except Exception:

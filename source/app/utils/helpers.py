@@ -6,7 +6,6 @@ import atexit
 import time as _time
 from pathlib import Path
 from app.core.logger import logger
-from app.core.constants import _ADDITIONAL_HOSTS_VERSION_RE
 
 def open_target(path: str):
     try:
@@ -120,8 +119,3 @@ def extract_update_line(content: bytes | str) -> tuple[str, str]:
         return "", ""
     except Exception:
         return "", ""
-
-
-def extract_additional_version(text: str) -> str:
-    match = _ADDITIONAL_HOSTS_VERSION_RE.search(text)
-    return match.group(1) if match else ""

@@ -1,9 +1,9 @@
 import json
-from typing import Callable
 from PySide6.QtCore import QObject, Signal, QRunnable
 from app.core.logger import logger
 from app.core.hosts_manager import HostsManager
 from app.core.http_client import HttpClient
+from app.core.constants import APP_VERSION, GITHUB_RELEASES_API_URL, GITHUB_RELEASES_PAGE_URL
 from app.gui.localization import tr
 
 class WorkerSignals(QObject):
@@ -54,25 +54,21 @@ class VersionWorker(QRunnable):
         self.signals.status_ready.emit(status)
 
 class AppUpdateWorker(QRunnable):
-    def __init__(self, resource_path_func: Callable[[str], str], parent=None):
+    def __init__(self, parent=None):
         super().__init__()
-        self.resource_path = resource_path_func
         self.signals = WorkerSignals()
 
     def run(self):
         try:
-            with open(self.resource_path("app_info.json"), "r", encoding="utf-8") as f:
-                local = json.load(f)
-            local_ver = local.get("version", "0.0.0")
-            remote_url = local.get("update_info_url")
-            if not remote_url:
-                raise RuntimeError(tr("update_url_missing"))
-            remote_content = HttpClient.fetch(remote_url, bypass_cache=True)
+            local_ver = APP_VERSION
+            remote_content = HttpClient.fetch(GITHUB_RELEASES_API_URL, bypass_cache=True)
             if not remote_content:
                 raise RuntimeError(tr("update_info_unavailable"))
             remote_data = json.loads(remote_content)
-            remote_ver = remote_data.get("version", "0.0.0")
-            download_url = remote_data.get("download_url", "https://github.com/AvenCores/Goida-AI-Unlocker")
+            remote_ver = remote_data.get("tag_name", "").lstrip("vV")
+            if not remote_ver:
+                raise RuntimeError(tr("update_info_unavailable"))
+            download_url = remote_data.get("html_url", GITHUB_RELEASES_PAGE_URL)
 
             def parse(v):
                 return tuple(int(x) for x in v.strip("vV").split(".") if x.isdigit())

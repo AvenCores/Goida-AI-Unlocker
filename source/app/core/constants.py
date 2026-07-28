@@ -1,6 +1,5 @@
 import sys
 import os
-import json
 import re as _re
 from pathlib import Path
 
@@ -51,19 +50,12 @@ HOSTS_BACKUP_DIR = _get_backup_dir()
 HOSTS_BACKUP_PREFIX = "hosts_backup_"
 SETTINGS_PATH = _get_settings_path()
 
-ADDITIONAL_HOSTS_URL = "https://raw.githubusercontent.com/AvenCores/Goida-AI-Unlocker/refs/heads/main/additional_hosts.json"
+GITHUB_RELEASES_API_URL = "https://api.github.com/repos/AvenCores/Goida-AI-Unlocker/releases/latest"
+GITHUB_RELEASES_PAGE_URL = "https://github.com/AvenCores/Goida-AI-Unlocker/releases/latest"
 
-APP_VERSION = "0.0.0"
-try:
-    with open(resource_path("app_info.json"), "r", encoding="utf-8") as _vf:
-        APP_VERSION = json.load(_vf).get("version", APP_VERSION)
-except Exception:
-    pass
+APP_VERSION = "1.3.1"
 
 _LAYOUT_FILLER = "\u3164"
-
-# Regex
-_ADDITIONAL_HOSTS_VERSION_RE = _re.compile(r"# additional_hosts_version\s+(\S+)")
 
 _MONTH_NAME_ALIASES = {
     "январь": 0, "января": 0, "january": 0,

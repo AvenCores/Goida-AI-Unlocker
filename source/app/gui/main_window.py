@@ -81,7 +81,6 @@ class MainWindow(QMainWindow):
         self._check_updates_running = False
         self._version_status_check_running = False
         self.home_page: Optional[QWidget] = None
-        self.resource_path = resource_path
         self._processing_widget: Optional[QWidget] = None
         
         # UI components
@@ -1147,7 +1146,7 @@ class MainWindow(QMainWindow):
             return
         self._check_updates_running = True
 
-        worker = AppUpdateWorker(self.resource_path, self)
+        worker = AppUpdateWorker(self)
         worker.signals.update_ready.connect(self.on_app_update_ready, Qt.ConnectionType.QueuedConnection)
         worker.signals.no_update.connect(self.on_app_up_to_date, Qt.ConnectionType.QueuedConnection)
         worker.signals.message.connect(self.on_app_update_message, Qt.ConnectionType.QueuedConnection)
