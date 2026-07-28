@@ -1,6 +1,18 @@
 from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import Qt, Signal, QRect
+from PySide6.QtCore import Qt, Signal, QRect, QRectF
 from PySide6.QtGui import QPainter, QColor, QPen, QPainterPath, QFont
+
+# Flag definitions: horizontal/vertical stripes, cross (UK), or solid with accent
+_FLAGS: dict[str, dict] = {
+    "ru": {"stripes": [("#ffffff", 1/3), ("#0039a6", 1/3), ("#d52b1e", 1/3)]},
+    "en": {"type": "cross", "bg": "#012169", "cross": "#c8102e", "fimb": "#ffffff"},
+    "de": {"stripes": [("#000000", 1/3), ("#dd0000", 1/3), ("#ffcc00", 1/3)]},
+    "uk": {"stripes": [("#0057b7", 0.5), ("#ffd700", 0.5)]},
+    "be": {"stripes": [("#d52b1e", 2/3), ("#009639", 1/3)]},
+    "kk": {"type": "kazakhstan", "bg": "#00afca", "gold": "#fec50c"},
+    "fr": {"vertical": True, "stripes": [("#002395", 1/3), ("#ffffff", 1/3), ("#ed2939", 1/3)]},
+    "pl": {"stripes": [("#ffffff", 0.5), ("#dc143c", 0.5)]},
+}
 
 
 class LanguagePopup(QWidget):
@@ -84,9 +96,15 @@ class LanguagePopup(QWidget):
             else:
                 text_color = QColor("#f3f6fd") if self.dark_theme else QColor("#1a1a1a")
 
+            # Flag
+            flag_def = _FLAGS.get(code)
+            if flag_def:
+                self._draw_flag(painter, flag_def, item_rect_x + 10, y + 2 + (item_rect_h - 14) // 2, 20, 14)
+
             # Text
+            painter.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
             painter.setPen(text_color)
-            text_rect = QRect(item_rect_x + 14, y + 2, item_rect_w - 40, item_rect_h)
+            text_rect = QRect(item_rect_x + 38, y + 2, item_rect_w - 62, item_rect_h)
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, name)
 
             # Checkmark for selected
@@ -122,6 +140,64 @@ class LanguagePopup(QWidget):
         self._hover_index = -1
         self.update()
         super().leaveEvent(event)
+
+    def _draw_flag(self, painter: QPainter, flag_def: dict, x: int, y: int, w: int, h: int):
+        """Draw a small rounded flag."""
+        painter.save()
+        clip_path = QPainterPath()
+        clip_path.addRoundedRect(QRectF(x, y, w, h), 3, 3)
+        painter.setClipPath(clip_path)
+
+        flag_type = flag_def.get("type", "stripes")
+
+        if flag_type == "cross":
+            # UK-style: blue bg + white fimbriation + red cross
+            painter.fillRect(x, y, w, h, QColor(flag_def["bg"]))
+            fimb = QColor(flag_def["fimb"])
+            cross = QColor(flag_def["cross"])
+            cx, cy = x + w // 2, y + h // 2
+            # White cross (wider)
+            painter.fillRect(cx - 3, y, 6, h, fimb)
+            painter.fillRect(x, cy - 3, w, 6, fimb)
+            # Red cross (narrower)
+            painter.fillRect(cx - 2, y, 4, h, cross)
+            painter.fillRect(x, cy - 2, w, 4, cross)
+
+        elif flag_type == "kazakhstan":
+            # Sky-blue field + gold ornament stripe on left + gold sun in center
+            painter.fillRect(x, y, w, h, QColor(flag_def["bg"]))
+            gold = QColor(flag_def["gold"])
+            # Ornamental stripe on left
+            painter.fillRect(x, y, 3, h, gold)
+            # Sun (small circle slightly above center)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(gold)
+            sun_cx = x + w // 2 + 1
+            sun_cy = y + h // 2 - 1
+            painter.drawEllipse(sun_cx - 3, sun_cy - 3, 6, 6)
+
+        else:
+            # Stripes (horizontal or vertical)
+            vertical = flag_def.get("vertical", False)
+            stripes = flag_def["stripes"]
+            offset = 0.0
+            for color_hex, fraction in stripes:
+                color = QColor(color_hex)
+                if vertical:
+                    sx = x + int(offset * w)
+                    sw = int((offset + fraction) * w) - int(offset * w)
+                    painter.fillRect(sx, y, sw + 1, h, color)
+                else:
+                    sy = y + int(offset * h)
+                    sh = int((offset + fraction) * h) - int(offset * h)
+                    painter.fillRect(x, sy, w, sh + 1, color)
+                offset += fraction
+
+        painter.setClipping(False)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setPen(QPen(QColor(0, 0, 0, 40), 0.8))
+        painter.drawRoundedRect(QRectF(x, y, w, h), 3, 3)
+        painter.restore()
 
     def _index_at(self, y: float) -> int:
         rel = y - self._margin - self._padding
