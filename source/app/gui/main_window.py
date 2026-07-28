@@ -2,7 +2,7 @@ import sys
 from typing import Optional, Callable
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QStackedWidget,
-    QPushButton, QToolButton, QComboBox, QApplication, QMenu
+    QPushButton, QToolButton, QComboBox, QApplication
 )
 from PySide6.QtCore import Qt, QTimer, Slot, QThreadPool, QSize
 from PySide6.QtGui import QIcon
@@ -60,6 +60,7 @@ class MainWindow(QMainWindow):
         self._check_updates_running = False
         self._version_status_check_running = False
         self._processing_widget: Optional[QWidget] = None
+        self._lang_popup: Optional[QWidget] = None
 
         # UI components
         self.title_bar: Optional[QWidget] = None
@@ -493,38 +494,22 @@ class MainWindow(QMainWindow):
 
     def switch_language(self):
         from app.gui.localization import get_supported_languages
-        menu = QMenu(self)
-        if self.dark_theme:
-            menu.setStyleSheet(
-                "QMenu { background:#2d333b; color:#f3f6fd; border:1px solid #3c434d; border-radius:10px; padding:6px; }"
-                "QMenu::item { padding:6px 16px; border-radius:8px; margin:2px 0; }"
-                "QMenu::item:selected { background:#246cf0; color:#ffffff; border-radius:8px; }"
-            )
-        else:
-            menu.setStyleSheet(
-                "QMenu { background:#ffffff; color:#1a1a1a; border:1px solid #cfd4db; border-radius:10px; padding:6px; }"
-                "QMenu::item { padding:6px 16px; border-radius:8px; margin:2px 0; }"
-                "QMenu::item:selected { background:#0078d4; color:#ffffff; border-radius:8px; }"
-            )
+        from app.gui.components.language_popup import LanguagePopup
 
         supported = get_supported_languages()
-        actions = {}
-        for code, name in supported.items():
-            action = menu.addAction(name)
-            action.setCheckable(True)
-            if code == self.language:
-                action.setChecked(True)
-            actions[action] = code
+        popup = LanguagePopup(supported, self.language, self.dark_theme, self)
+        popup.language_selected.connect(self._on_language_popup_selected)
 
         pos = self.language_button.mapToGlobal(self.language_button.rect().topLeft())
-        size_hint = menu.sizeHint()
-        pos.setY(pos.y() - size_hint.height() - 5)
+        pos.setX(pos.x() - 14)
+        pos.setY(pos.y() - popup.height() + 6)
+        popup.move(pos)
+        popup.show()
+        self._lang_popup = popup
 
-        selected_action = menu.exec(pos)
-        if selected_action and selected_action in actions:
-            new_lang = actions[selected_action]
-            if new_lang != self.language:
-                self.change_language_to(new_lang)
+    def _on_language_popup_selected(self, code: str):
+        if code != self.language:
+            self.change_language_to(code)
 
     def _apply_theme_styles(self):
         self.styles = get_stylesheet(self.dark_theme, self.language)
