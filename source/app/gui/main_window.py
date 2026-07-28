@@ -100,6 +100,7 @@ class MainWindow(QMainWindow):
         self.update_button: Optional[QPushButton] = None
         self.open_hosts_button: Optional[QPushButton] = None
         self.backup_hosts_button: Optional[QPushButton] = None
+        self.provider_repo_button: Optional[QPushButton] = None
 
         self.setup_ui()
         self.apply_main_texts()
@@ -203,12 +204,34 @@ class MainWindow(QMainWindow):
         provider_combo.setCursor(Qt.CursorShape.PointingHandCursor)
         self.provider_combo = provider_combo
 
+        provider_repo_button = QPushButton()
+        provider_repo_button.setIcon(get_icon("globe.svg", 18, dark_theme=self.dark_theme))
+        provider_repo_button.setIconSize(QSize(18, 18))
+        provider_repo_button.setProperty("icon_name", "globe.svg")
+        provider_repo_button.setProperty("icon_force_dark", False)
+        provider_repo_button.setProperty("style_role", "provider_repo")
+        provider_repo_button.setFixedSize(32, 32)
+        provider_repo_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        provider_repo_button.setToolTip(tr("provider_repo_tooltip"))
+        provider_repo_button.setStyleSheet(
+            "QPushButton { background: transparent; border: none; padding: 4px; border-radius: 6px; }"
+            "QPushButton:hover { background: rgba(128,128,128,0.15); }"
+        )
+        provider_repo_button.clicked.connect(self.open_provider_repo)
+        self.provider_repo_button = provider_repo_button
+
+        provider_hbox = QHBoxLayout()
+        provider_hbox.setSpacing(6)
+        provider_hbox.setContentsMargins(0, 0, 0, 0)
+        provider_hbox.addWidget(provider_combo)
+        provider_hbox.addWidget(provider_repo_button)
+
         status_container = QWidget()
         status_vbox = QVBoxLayout(status_container)
         status_vbox.setContentsMargins(16, 12, 16, 12)
         status_vbox.setSpacing(8)
         status_vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        status_vbox.addWidget(provider_combo)
+        status_vbox.addLayout(provider_hbox)
         status_vbox.addWidget(textinformer)
         status_vbox.addWidget(version_label)
         status_vbox.addWidget(update_date_label)
@@ -753,6 +776,15 @@ class MainWindow(QMainWindow):
             self.update_installation_status_label()
             self.check_version_status()
 
+    def open_provider_repo(self):
+        urls = {
+            "dns.malw.link": "https://github.com/ImMALWARE/dns.malw.link",
+            "geohide": "https://github.com/Internet-Helper/GeoHideDNS",
+        }
+        url = urls.get(self.current_provider)
+        if url:
+            open_target(url)
+
     def check_version_status(self):
         if self._version_status_check_running:
             return
@@ -905,6 +937,8 @@ class MainWindow(QMainWindow):
             self.provider_combo.setItemText(0, tr("provider_malw"))
             self.provider_combo.setItemText(1, tr("provider_geohide"))
             self.provider_combo.blockSignals(False)
+        if self.provider_repo_button:
+            self.provider_repo_button.setToolTip(tr("provider_repo_tooltip"))
 
         stored_key = self.version_label.property("status_key")
         if stored_key:

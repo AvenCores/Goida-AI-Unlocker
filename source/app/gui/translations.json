@@ -61,7 +61,8 @@
         "hosts_update_date": "Дата обновления hosts: {date}",
         "hosts_update_date_unknown": "Дата обновления hosts: неизвестно",
         "provider_malw": "dns.malw.link (Основной)",
-        "provider_geohide": "GeoHideDNS (Резервный)"
+        "provider_geohide": "GeoHideDNS (Резервный)",
+        "provider_repo_tooltip": "Открыть репозиторий"
     },
     "en": {
         "language_name": "English",
@@ -125,7 +126,8 @@
         "hosts_update_date": "Hosts update date: {date}",
         "hosts_update_date_unknown": "Hosts update date: unknown",
         "provider_malw": "dns.malw.link (Primary)",
-        "provider_geohide": "GeoHideDNS (Backup)"
+        "provider_geohide": "GeoHideDNS (Backup)",
+        "provider_repo_tooltip": "Open repository"
     },
     "de": {
         "language_name": "Deutsch",
@@ -189,7 +191,8 @@
         "hosts_update_date": "Hosts-Update-Datum: {date}",
         "hosts_update_date_unknown": "Hosts-Update-Datum: unbekannt",
         "provider_malw": "dns.malw.link (Primär)",
-        "provider_geohide": "GeoHideDNS (Secours)"
+        "provider_geohide": "GeoHideDNS (Secours)",
+        "provider_repo_tooltip": "Repository öffnen"
     },
     "uk": {
         "language_name": "Українська",
@@ -253,7 +256,8 @@
         "hosts_update_date": "Дата оновлення hosts: {date}",
         "hosts_update_date_unknown": "Дата оновлення hosts: невідомо",
         "provider_malw": "dns.malw.link (Основний)",
-        "provider_geohide": "GeoHideDNS (Резервний)"
+        "provider_geohide": "GeoHideDNS (Резервний)",
+        "provider_repo_tooltip": "Відкрити репозиторій"
     },
     "be": {
         "language_name": "Беларуская",
@@ -317,7 +321,8 @@
         "hosts_update_date": "Дата абнаўлення hosts: {date}",
         "hosts_update_date_unknown": "Дата абнаўлення hosts: невядома",
         "provider_malw": "dns.malw.link (Асноўны)",
-        "provider_geohide": "GeoHideDNS (Рэзервовы)"
+        "provider_geohide": "GeoHideDNS (Рэзервовы)",
+        "provider_repo_tooltip": "Адкрыць рэпазіторый"
     },
     "kk": {
         "language_name": "Қазақша",
@@ -381,7 +386,8 @@
         "hosts_update_date": "hosts жаңартылған күні: {date}",
         "hosts_update_date_unknown": "hosts жаңартылған күні: белгісіз",
         "provider_malw": "dns.malw.link (Негізгі)",
-        "provider_geohide": "GeoHideDNS (Резервтік)"
+        "provider_geohide": "GeoHideDNS (Резервтік)",
+        "provider_repo_tooltip": "Репозиторийді ашу"
     },
     "fr": {
         "language_name": "Français",
@@ -445,7 +451,8 @@
         "hosts_update_date": "Date de mise à jour du hosts: {date}",
         "hosts_update_date_unknown": "Date de mise à jour du hosts: inconnue",
         "provider_malw": "dns.malw.link (Principal)",
-        "provider_geohide": "GeoHideDNS (Secours)"
+        "provider_geohide": "GeoHideDNS (Secours)",
+        "provider_repo_tooltip": "Ouvrir le dépôt"
     },
     "pl": {
         "language_name": "Polski",
@@ -509,6 +516,7 @@
         "hosts_update_date": "Data aktualizacji hosts: {date}",
         "hosts_update_date_unknown": "Data aktualizacji hosts: nieznana",
         "provider_malw": "dns.malw.link (Główny)",
-        "provider_geohide": "GeoHideDNS (Zapasowy)"
+        "provider_geohide": "GeoHideDNS (Zapasowy)",
+        "provider_repo_tooltip": "Otwórz repozytorium"
     }
 }
