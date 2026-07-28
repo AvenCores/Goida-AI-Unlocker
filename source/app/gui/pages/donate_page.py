@@ -47,7 +47,6 @@ def build_donate_page(
     cl.addWidget(title)
 
     sber_icon_lbl = create_icon_label("sber.svg", 36, dark_theme=dark_theme)
-    sber_icon_lbl.setProperty("icon_force_dark", True)
     cl.addWidget(sber_icon_lbl)
 
     card_num = "2202 2050 1464 4675"
