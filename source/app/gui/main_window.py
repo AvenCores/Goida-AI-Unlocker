@@ -994,6 +994,10 @@ class MainWindow(QMainWindow):
         title.setStyleSheet("font-size:22px; font-weight:600;")
         cl.addWidget(title)
 
+        sber_icon_lbl = create_icon_label("sber.svg", 36, dark_theme=self.dark_theme)
+        sber_icon_lbl.setProperty("icon_force_dark", True)
+        cl.addWidget(sber_icon_lbl)
+
         card_num = "2202 2050 1464 4675"
         card_lbl = QLabel(f"ㅤSBER: <b>{card_num}</b>ㅤ")
         card_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
