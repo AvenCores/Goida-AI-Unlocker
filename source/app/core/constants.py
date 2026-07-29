@@ -53,7 +53,7 @@ SETTINGS_PATH = _get_settings_path()
 GITHUB_RELEASES_API_URL = "https://api.github.com/repos/AvenCores/Goida-AI-Unlocker/releases/latest"
 GITHUB_RELEASES_PAGE_URL = "https://github.com/AvenCores/Goida-AI-Unlocker/releases/latest"
 
-APP_VERSION = "1.3.2"
+APP_VERSION = "1.3.3"
 
 _LAYOUT_FILLER = "\u3164"
 
