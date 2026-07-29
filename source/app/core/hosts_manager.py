@@ -18,7 +18,6 @@ from app.utils.helpers import (
     is_windows_admin, safe_remove, sanitize_backup_action,
     extract_update_line
 )
-from app.gui.localization import tr
 
 # Pre-compile regex for performance
 _IP_RE = _re.compile(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$")
@@ -159,14 +158,54 @@ class HostsManager:
             return False
         return self._normalize_hosts_content(actual_content) == self._normalize_hosts_content(expected_content)
 
+    def _try_direct_copy(self, temp_path: str, content: str, retries: int = 3) -> bool:
+        """Try direct file copy with retries. Returns True on success, raises on final failure."""
+        last_err = None
+        for attempt in range(retries):
+            try:
+                shutil.copy(temp_path, HOSTS_PATH)
+                if sys.platform == "win32":
+                    subprocess.run(["ipconfig", "/flushdns"], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
+                else:
+                    self._flush_dns()
+                self.invalidate_cache()
+                if self._verify_applied_content(content):
+                    return True
+                last_err = RuntimeError("Verification failed: content mismatch after write")
+            except (PermissionError, OSError) as e:
+                last_err = e
+            if attempt < retries - 1:
+                _time.sleep(0.5)
+        if last_err:
+            raise last_err
+        return False
+
+    def _try_cmd_copy(self, temp_path: str, content: str) -> bool:
+        """Fallback: use cmd /c copy on Windows."""
+        try:
+            r = subprocess.run(
+                ["cmd", "/c", "copy", "/Y", temp_path, str(HOSTS_PATH)],
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                timeout=30,
+                capture_output=True,
+            )
+            if r.returncode == 0:
+                _time.sleep(0.2)
+                self.invalidate_cache()
+                if self._verify_applied_content(content):
+                    return True
+        except Exception:
+            pass
+        return False
+
     def apply(self, content: str) -> bool:
+        """Apply content to hosts file. Returns True on success, raises RuntimeError on failure."""
         temp_path: Optional[str] = None
         ps_script_path: Optional[str] = None
 
         try:
             if not self.validate_content(content):
-                logger.error("Hosts content validation failed")
-                return False
+                raise RuntimeError("Hosts content validation failed")
 
             # Try to remove Read-Only attribute if hosts file exists
             if HOSTS_PATH.exists():
@@ -180,18 +219,14 @@ class HostsManager:
             os.close(fd)
             Path(temp_path).write_text(content, encoding="utf-8")
 
-            # Try direct copy if we have permissions (major performance boost)
+            # Try direct copy with retries (works if we already have permissions)
             try:
-                shutil.copy(temp_path, HOSTS_PATH)
-                if sys.platform == "win32":
-                    subprocess.run(["ipconfig", "/flushdns"], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
-                else:
-                    self._flush_dns()
-                self.invalidate_cache()
-                if self._verify_applied_content(content):
+                if self._try_direct_copy(temp_path, content):
                     return True
-            except (PermissionError, OSError):
-                pass # Fallback to elevated copy
+            except (PermissionError, OSError) as e:
+                logger.debug("Direct copy failed: %s", e)
+            except RuntimeError as e:
+                logger.debug("Direct copy verification failed: %s", e)
 
             if sys.platform == "win32":
                 safe_src = temp_path.replace("'", "''")
@@ -244,29 +279,40 @@ class HostsManager:
                         ]
                         r = subprocess.run(cmd, creationflags=subprocess.CREATE_NO_WINDOW, timeout=90)
                     elevated = r.returncode == 0
-                except Exception:
+                except Exception as e:
+                    logger.debug("PowerShell elevated copy failed: %s", e)
                     elevated = False
 
+                # Fallback: cmd /c copy (sometimes works when PowerShell doesn't)
+                if not elevated or not self._verify_applied_content(content):
+                    if self._try_cmd_copy(temp_path, content):
+                        return True
+
                 if not elevated:
-                    raise PermissionError(tr("admin_hint_windows"))
+                    raise PermissionError("UAC elevation was denied or PowerShell execution failed")
+
             elif sys.platform == "darwin":
                 elevated = self._apply_macos_elevated(temp_path)
                 if not elevated:
-                    raise PermissionError(tr("admin_hint_unix"))
+                    raise PermissionError("macOS elevation failed (osascript/sudo)")
             else:
                 elevated = self._apply_unix_elevated(temp_path)
                 if not elevated:
-                    raise PermissionError(tr("admin_hint_unix"))
+                    raise PermissionError("Linux elevation failed (pkexec/sudo)")
 
-            _time.sleep(0.2)
+            _time.sleep(0.3)
             self.invalidate_cache()
             if not self._verify_applied_content(content):
-                logger.error("Hosts apply verification failed")
-                return False
+                raise RuntimeError(
+                    "Hosts file write verification failed: the file may be locked by another process "
+                    "or protected by security software"
+                )
             return True
+        except (PermissionError, RuntimeError):
+            raise
         except Exception as e:
             logger.error("Apply hosts failed: %s", e)
-            return False
+            raise RuntimeError(f"Failed to write hosts file: {e}")
         finally:
             if temp_path:
                 safe_remove(temp_path)
@@ -363,17 +409,17 @@ class HostsManager:
         else:
             url = "https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts"
         if not self.backup("install"):
-            return False
+            raise RuntimeError("Failed to create hosts backup before install")
 
         content = HttpClient.fetch(url, bypass_cache=True)
         if not content:
-            return False
+            raise RuntimeError("Failed to download hosts file from remote repository")
 
         return self.apply(content)
 
     def restore(self) -> bool:
         if not self.backup("uninstall"):
-            return False
+            raise RuntimeError("Failed to create hosts backup before uninstall")
 
         # Try to find a backup of the original hosts file
         original_content = None

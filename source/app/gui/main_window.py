@@ -308,21 +308,35 @@ class MainWindow(QMainWindow):
         if ok:
             self.show_message(tr("hosts_editor_save_success"), success=True, word_wrap=True)
         else:
-            import os
-            from app.utils.helpers import is_windows_admin
-            if sys.platform == "win32":
-                hint = tr("hosts_locked_hint_windows") if is_windows_admin() else tr("admin_hint_windows")
-            else:
-                is_root = False
-                try:
-                    is_root = os.geteuid() == 0
-                except AttributeError:
-                    pass
-                hint = tr("hosts_locked_hint_unix") if is_root else tr("admin_hint_unix")
+            hint = self._get_error_hint(error)
             self.show_message(tr("hosts_editor_save_error", hint=hint), success=False, word_wrap=True)
 
         self.home_page.update_status_label()
         self.check_version_status()
+
+    def _get_error_hint(self, error: str) -> str:
+        """Determine the error hint to show based on the actual error and privileges."""
+        import os
+        from app.utils.helpers import is_windows_admin
+
+        # If we have a specific error message from the worker, show it
+        if error:
+            return error
+
+        # Fallback heuristic when no specific error is available
+        if sys.platform == "win32":
+            if is_windows_admin():
+                return tr("hosts_locked_hint_windows")
+            return tr("admin_hint_windows")
+        else:
+            is_root = False
+            try:
+                is_root = os.geteuid() == 0
+            except AttributeError:
+                pass
+            if is_root:
+                return tr("hosts_locked_hint_unix")
+            return tr("admin_hint_unix")
 
     # --- Installation / Workers ---
 
@@ -346,23 +360,7 @@ class MainWindow(QMainWindow):
                 msg = tr("uninstall_success")
             self.show_message(msg, success=True, word_wrap=True)
         else:
-            import os
-            from app.utils.helpers import is_windows_admin
-            if sys.platform == "win32":
-                if is_windows_admin():
-                    hint = tr("hosts_locked_hint_windows")
-                else:
-                    hint = tr("admin_hint_windows")
-            else:
-                is_root = False
-                try:
-                    is_root = os.geteuid() == 0
-                except AttributeError:
-                    pass
-                if is_root:
-                    hint = tr("hosts_locked_hint_unix")
-                else:
-                    hint = tr("admin_hint_unix")
+            hint = self._get_error_hint(error)
 
             if action == "install":
                 msg = tr("install_error", hint=hint)

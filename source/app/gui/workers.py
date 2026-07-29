@@ -36,6 +36,9 @@ class HostsWorker(QRunnable):
             else:
                 result = False
             self.signals.finished.emit(self.action, result, "")
+        except (PermissionError, RuntimeError) as e:
+            logger.exception("Hosts operation failed")
+            self.signals.finished.emit(self.action, False, str(e))
         except Exception as e:
             logger.exception("Hosts operation failed")
             self.signals.finished.emit(self.action, False, str(e))
