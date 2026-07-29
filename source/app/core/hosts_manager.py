@@ -198,10 +198,133 @@ class HostsManager:
             pass
         return False
 
+    def _unlock_hosts_windows(self) -> bool:
+        """Aggressively unlock hosts file: stop DNS cache, take ownership, grant full control."""
+        hosts_str = str(HOSTS_PATH)
+        steps = [
+            # Stop DNS Client service (it holds a lock on hosts)
+            ["net", "stop", "dnscache", "/y"],
+            # Take ownership of the file
+            ["takeown", "/f", hosts_str],
+            # Grant Administrators full control
+            ["icacls", hosts_str, "/grant", "*S-1-5-32-544:F", "/c"],
+            # Also grant current user full control
+            ["icacls", hosts_str, "/grant", "*S-1-1-0:F", "/c"],
+            # Remove read-only attribute via attrib
+            ["attrib", "-R", hosts_str],
+        ]
+        any_success = False
+        for cmd in steps:
+            try:
+                r = subprocess.run(
+                    cmd,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                    timeout=15,
+                    capture_output=True,
+                )
+                if r.returncode == 0:
+                    any_success = True
+            except Exception as e:
+                logger.debug("Unlock step %s failed: %s", cmd[0], e)
+        return any_success
+
+    def _restore_dns_service_windows(self):
+        """Restart DNS Client service after hosts modification."""
+        try:
+            subprocess.run(
+                ["net", "start", "dnscache"],
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                timeout=15,
+                capture_output=True,
+            )
+        except Exception:
+            pass
+
+    def _try_winapi_write(self, content: str) -> bool:
+        """Ultimate fallback: write hosts file directly via Windows API (CreateFileW + WriteFile).
+        This bypasses most file system filter drivers and sharing violations."""
+        if sys.platform != "win32":
+            return False
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            GENERIC_WRITE = 0x40000000
+            FILE_SHARE_READ = 0x00000001
+            FILE_SHARE_WRITE = 0x00000002
+            FILE_SHARE_DELETE = 0x00000004
+            CREATE_ALWAYS = 2
+            FILE_ATTRIBUTE_NORMAL = 0x80
+            INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value
+
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+
+            # Set proper return type for 64-bit handle
+            kernel32.CreateFileW.restype = ctypes.c_void_p
+            kernel32.CreateFileW.argtypes = [
+                ctypes.c_wchar_p,  # lpFileName
+                wintypes.DWORD,    # dwDesiredAccess
+                wintypes.DWORD,    # dwShareMode
+                ctypes.c_void_p,   # lpSecurityAttributes
+                wintypes.DWORD,    # dwCreationDisposition
+                wintypes.DWORD,    # dwFlagsAndAttributes
+                ctypes.c_void_p,   # hTemplateFile
+            ]
+
+            handle = kernel32.CreateFileW(
+                str(HOSTS_PATH),
+                GENERIC_WRITE,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                None,
+                CREATE_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL,
+                None,
+            )
+
+            if handle == INVALID_HANDLE_VALUE or handle is None:
+                err = ctypes.get_last_error()
+                logger.debug("CreateFileW failed with error code: %d", err)
+                return False
+
+            try:
+                data = content.encode("utf-8")
+                written = wintypes.DWORD(0)
+
+                kernel32.WriteFile.argtypes = [
+                    ctypes.c_void_p,        # hFile
+                    ctypes.c_char_p,        # lpBuffer
+                    wintypes.DWORD,         # nNumberOfBytesToWrite
+                    ctypes.POINTER(wintypes.DWORD),  # lpNumberOfBytesWritten
+                    ctypes.c_void_p,        # lpOverlapped
+                ]
+                kernel32.WriteFile.restype = wintypes.BOOL
+
+                success = kernel32.WriteFile(
+                    handle,
+                    data,
+                    len(data),
+                    ctypes.byref(written),
+                    None,
+                )
+                if not success or written.value != len(data):
+                    logger.debug("WriteFile failed or incomplete write")
+                    return False
+            finally:
+                kernel32.CloseHandle(handle)
+
+            _time.sleep(0.2)
+            self.invalidate_cache()
+            if self._verify_applied_content(content):
+                return True
+        except Exception as e:
+            logger.debug("WinAPI write failed: %s", e)
+        return False
+
     def apply(self, content: str) -> bool:
         """Apply content to hosts file. Returns True on success, raises RuntimeError on failure."""
         temp_path: Optional[str] = None
         ps_script_path: Optional[str] = None
+        dns_stopped = False
 
         try:
             if not self.validate_content(content):
@@ -219,7 +342,7 @@ class HostsManager:
             os.close(fd)
             Path(temp_path).write_text(content, encoding="utf-8")
 
-            # Try direct copy with retries (works if we already have permissions)
+            # --- Attempt 1: Direct copy with retries ---
             try:
                 if self._try_direct_copy(temp_path, content):
                     return True
@@ -229,6 +352,19 @@ class HostsManager:
                 logger.debug("Direct copy verification failed: %s", e)
 
             if sys.platform == "win32":
+                # --- Attempt 2: Unlock hosts (stop DNS cache, takeown, icacls) + retry ---
+                if is_windows_admin():
+                    logger.info("Attempting aggressive hosts unlock...")
+                    self._unlock_hosts_windows()
+                    dns_stopped = True
+                    try:
+                        if self._try_direct_copy(temp_path, content, retries=2):
+                            self._flush_dns_windows()
+                            return True
+                    except (PermissionError, OSError, RuntimeError) as e:
+                        logger.debug("Post-unlock direct copy failed: %s", e)
+
+                # --- Attempt 3: PowerShell elevated copy ---
                 safe_src = temp_path.replace("'", "''")
                 safe_dst = str(HOSTS_PATH).replace("'", "''")
                 ps = (
@@ -283,13 +419,30 @@ class HostsManager:
                     logger.debug("PowerShell elevated copy failed: %s", e)
                     elevated = False
 
-                # Fallback: cmd /c copy (sometimes works when PowerShell doesn't)
-                if not elevated or not self._verify_applied_content(content):
-                    if self._try_cmd_copy(temp_path, content):
+                if elevated:
+                    _time.sleep(0.3)
+                    self.invalidate_cache()
+                    if self._verify_applied_content(content):
+                        self._flush_dns_windows()
                         return True
 
-                if not elevated:
+                # --- Attempt 4: cmd /c copy ---
+                if self._try_cmd_copy(temp_path, content):
+                    self._flush_dns_windows()
+                    return True
+
+                # --- Attempt 5: Windows API direct write (ultimate fallback) ---
+                if self._try_winapi_write(content):
+                    self._flush_dns_windows()
+                    return True
+
+                # All attempts exhausted
+                if not elevated and not is_windows_admin():
                     raise PermissionError("UAC elevation was denied or PowerShell execution failed")
+                raise RuntimeError(
+                    "All write methods failed. The hosts file may be locked by another process "
+                    "or protected by security software. Try closing other programs and retrying."
+                )
 
             elif sys.platform == "darwin":
                 elevated = self._apply_macos_elevated(temp_path)
@@ -314,10 +467,24 @@ class HostsManager:
             logger.error("Apply hosts failed: %s", e)
             raise RuntimeError(f"Failed to write hosts file: {e}")
         finally:
+            if dns_stopped:
+                self._restore_dns_service_windows()
             if temp_path:
                 safe_remove(temp_path)
             if ps_script_path:
                 safe_remove(ps_script_path)
+
+    def _flush_dns_windows(self):
+        """Flush DNS cache on Windows."""
+        try:
+            subprocess.run(
+                ["ipconfig", "/flushdns"],
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                timeout=10,
+                capture_output=True,
+            )
+        except Exception:
+            pass
 
     def _flush_dns(self):
         if sys.platform == "darwin":
