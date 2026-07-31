@@ -15,7 +15,7 @@
 
 <h1 align="center">Goida AI Unlocker</h1>
 <p align="center">
-  Мини-утилита для Windows, Linux и macOS, позволяющая <b>в один клик разблокировать популярные сервисы</b> путём обновления файла <code>hosts</code>. Под капотом — современная модульная архитектура на Python и PySide-интерфейс с поддержкой светлой и тёмной темы.
+  Кроссплатформенная утилита для Windows, Linux и macOS, позволяющая <b>в один клик разблокировать популярные сервисы</b> путём обновления файла <code>hosts</code>. Под капотом — модульная архитектура на Python, PySide6-интерфейс с поддержкой светлой/тёмной темы, встроенный редактор hosts, менеджер резервных копий и локализация на 18 языков.
 </p>
 
 > **Важно:** модуль не обходит прямые блокировки РКН на сетевом уровне. Если конкретный сервис заблокирован РКН по IP / SNI / TLS или иным способом, без дополнительных средств (VPN, прокси, zapret, byebyedpi и т.п.) он работать не будет.
@@ -63,14 +63,17 @@
 ## 🌟 Основные возможности
 
 * 🔓 Разблокировка более 60 AI-сервисов, соцсетей, игровых и музыкальных платформ (полный список ниже).
-* 🗂️ Автоматическое создание резервной копии и восстановление исходного <code>hosts</code>.
-* 🎨 Поддержка тёмной/светлой темы — определяется по настройкам Windows или переключается вручную.
-* 🖱️ Удобный и лаконичный интерфейс: "Установить", "Удалить", "Сменить тему" и т. д.
+* 🌐 Два DNS-провайдера на выбор: <a href="https://github.com/ImMALWARE/dns.malw.link">dns.malw.link</a> (основной) и <a href="https://github.com/Internet-Helper/GeoHideDNS">GeoHideDNS</a> (резервный) — переключение в один клик.
+* 🗂️ Автоматическое создание резервной копии перед каждой операцией; встроенный просмотрщик бэкапов.
+* ✏️ Встроенный редактор файла <code>hosts</code> с подсветкой и сохранением прямо из приложения.
+* 🎨 Поддержка тёмной/светлой темы — определяется по системным настройкам или переключается вручную с плавной анимацией.
+* 🌍 Мультиязычный интерфейс: 18 языков с автоопределением по системной локали.
 * 📈 Автоматическая проверка актуальности файла <code>hosts</code> и предложение обновить обход блокировок одним кликом.
-* 🚿 После установки, обновления или удаления обхода автоматически очищается DNS-кэш, выполняется <code>ipconfig /release</code> → <code>/renew</code> и <code>netsh winsock reset</code> для применения изменений без перезагрузки.
-* 🔄 Приложение умеет проверять собственные обновления и предлагает скачать новую версию, когда она доступна.
+* 🚿 После установки, обновления или удаления обхода автоматически очищается DNS-кэш для применения изменений без перезагрузки.
+* 🔄 Проверка обновлений самого приложения через GitHub API с предложением скачать новую версию.
 * ⚡️ Работа без сторонних VPN/прокси: достаточно обновить <code>hosts</code>.
-* 🔒 Запрос прав администратора выполняется только на момент записи, в остальное время программа работает в обычном режиме.
+* 🔒 Повышение привилегий только на момент записи (UAC / pkexec / osascript), в остальное время программа работает в обычном режиме.
+* 🛡️ Множественные стратегии записи hosts: прямое копирование, PowerShell elevation, Windows API — для обхода блокировок антивирусов и защитников.
 
 ---
 
@@ -79,8 +82,14 @@
 ### 1. Скачайте готовый релиз (рекомендуется)
 
 1. Перейдите во вкладку <a href="https://github.com/AvenCores/Goida-AI-Unlocker/releases/latest">Releases</a>.
-2. Скачайте файл с пометкой <code>.exe</code> (x64).
-3. Запустите <code>Goida AI Unlocker.exe</code> от имени администратора и нажмите «Установить обход блокировок».
+2. Скачайте файл для вашей платформы:
+   - **Windows x64** — <code>Goida_AI_Unlocker_Windows.exe</code>
+   - **Windows ARM64** — <code>Goida_AI_Unlocker_Windows_ARM64.exe</code>
+   - **Linux x64** — <code>Goida_AI_Unlocker_Linux</code>
+   - **Linux ARM64** — <code>Goida_AI_Unlocker_Linux_ARM64</code>
+   - **macOS Intel** — <code>Goida_AI_Unlocker_macOS_x86_64.app</code>
+   - **macOS Apple Silicon** — <code>Goida_AI_Unlocker_macOS_arm64.app</code>
+3. Запустите от имени администратора (Windows) или с правами root (Linux/macOS) и нажмите «Установить обход блокировок».
 
 ### 2. Запуск из исходников
 
@@ -100,14 +109,15 @@ python main.py
 ```
 
 Требования:
-* Windows 10/11, Linux или macOS 11+
+* Windows 10/11 (x64, ARM64), Linux (x64, ARM64) или macOS 11+ (Intel, Apple Silicon)
 * Python 3.8+
+* PySide6 (устанавливается автоматически через <code>requirements.txt</code>)
 
 ---
 
-## 🛠️ Сборка собственного EXE
+## 🛠️ Сборка собственного бинарника
 
-Для создания портативного одного файла используется [PyInstaller](https://pyinstaller.org/):
+Для создания портативного файла используется [PyInstaller](https://pyinstaller.org/). Все команды выполняются из директории <code>source/</code>:
 
 **Windows (x64):** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --name="Goida_AI_Unlocker_Windows" --version-file=version.txt --add-data "icon.ico;." --add-data "icons;icons" --add-data "app;app"```
 
@@ -123,10 +133,17 @@ python main.py
 
 Скомпилированный файл появится в директории <code>dist/</code>.
 
+> 💡 Также доступен GitHub Actions workflow (<code>.github/workflows/build.yml</code>) для автоматической сборки под все платформы (запускается вручную через <code>workflow_dispatch</code>).
+
 ---
 
 ## 🧩 Как это работает
-Приложение скачивает свежий файл <code>hosts</code> из репозитория <a href="https://github.com/ImMALWARE/dns.malw.link">dns.malw.link</a> или <a href="https://github.com/Internet-Helper/GeoHideDNS">GeoHideDNS</a> и заменяет системный <code>C:\Windows\System32\drivers\etc\hosts</code>. При необходимости предыдущая версия автоматически сохраняется и может быть восстановлена кнопкой «Удалить обход блокировок».
+
+1. Приложение скачивает актуальный файл <code>hosts</code> из выбранного репозитория (<a href="https://github.com/ImMALWARE/dns.malw.link">dns.malw.link</a> или <a href="https://github.com/Internet-Helper/GeoHideDNS">GeoHideDNS</a>).
+2. Создаёт резервную копию текущего системного <code>hosts</code> в <code>~/.goida-ai-unlocker/hosts-backups/</code>.
+3. Заменяет системный файл (<code>C:\Windows\System32\drivers\etc\hosts</code> / <code>/etc/hosts</code>) с верификацией результата.
+4. Очищает DNS-кэш для немедленного применения изменений.
+5. При удалении обхода — восстанавливает оригинальный <code>hosts</code> из чистой резервной копии.
 
 > ⚠️ Изменение <code>hosts</code> может повлиять на работу некоторых корпоративных VPN/прокси. Если возникнут проблемы — воспользуйтесь кнопкой «Удалить обход блокировок» или вручную верните оригинальный файл.
 
@@ -167,6 +184,35 @@ python main.py
 ### 🚫 Блокировка вредных сайтов
 * Скримеры: <code>only-fans.uk</code>, <code>only-fans.me</code>, <code>onlyfans.wtf</code>
 * IP-логгеры: <code>iplogger.org</code>, <code>wl.gl</code>, <code>ed.tc</code>, <code>bc.ax</code>, <code>maper.info</code>, <code>2no.co</code>, <code>yip.su</code>, <code>iplis.ru</code>, <code>ezstat.ru</code>, <code>iplog.co</code>, <code>grabify.org</code>
+
+---
+
+## 🌍 Поддерживаемые языки
+
+Интерфейс переведён на 18 языков. Язык определяется автоматически по системной локали, но может быть изменён вручную через всплывающее меню:
+
+Русский · English · Deutsch · Українська · Беларуская · Қазақша · Français · Polski · Español · Português · Italiano · Türkçe · 中文 · 日本語 · 한국어 · Čeština · Nederlands · Svenska
+
+---
+
+## 📁 Структура проекта
+
+```
+source/
+├── main.py                  # Точка входа
+├── requirements.txt         # Зависимости (PySide6, PyInstaller)
+├── version.txt              # Версия для Windows PE-ресурсов
+├── build.txt                # Команды сборки для всех платформ
+├── icon.ico / icon.icns     # Иконки приложения
+├── icons/                   # SVG-иконки интерфейса
+└── app/
+    ├── core/                # Ядро: настройки, константы, hosts-менеджер, HTTP-клиент, логгер
+    ├── gui/                 # GUI: главное окно, страницы, компоненты, стили, локализация
+    │   ├── pages/           # Страницы: главная, «О программе», донат, редактор hosts, сообщения
+    │   ├── components/      # Компоненты: title bar, навигатор страниц, языковой popup, карточки
+    │   └── translations.json# Переводы на 18 языков
+    └── utils/               # Утилиты: открытие ссылок, проверка привилегий, хелперы
+```
 
 ---
 
