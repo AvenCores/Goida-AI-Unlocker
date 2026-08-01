@@ -71,29 +71,63 @@ class HostsManager:
             return True
         return False
 
-    def backup(self, action: str) -> Optional[Path]:
-        try:
-            data = HOSTS_PATH.read_bytes()
-        except Exception as e:
-            logger.error("Backup read error: %s", e)
-            return None
-
-        # Try multiple locations for backup if primary fails
-        dirs_to_try = [HOSTS_BACKUP_DIR]
+    def _get_backup_dirs(self) -> list[Path]:
+        dirs = []
+        if HOSTS_BACKUP_DIR not in dirs:
+            dirs.append(HOSTS_BACKUP_DIR)
         try:
             temp_fallback = Path(tempfile.gettempdir()) / "goida-ai-unlocker-backups"
-            if temp_fallback != HOSTS_BACKUP_DIR:
-                dirs_to_try.append(temp_fallback)
+            if temp_fallback not in dirs:
+                dirs.append(temp_fallback)
         except Exception:
             pass
+        try:
+            local_appdata = os.environ.get("LOCALAPPDATA")
+            if local_appdata:
+                local_fallback = Path(local_appdata) / "goida-ai-unlocker" / "hosts-backups"
+                if local_fallback not in dirs:
+                    dirs.append(local_fallback)
+        except Exception:
+            pass
+        try:
+            appdata = os.environ.get("APPDATA")
+            if appdata:
+                appdata_fallback = Path(appdata) / "goida-ai-unlocker" / "hosts-backups"
+                if appdata_fallback not in dirs:
+                    dirs.append(appdata_fallback)
+        except Exception:
+            pass
+        try:
+            cwd_fallback = Path.cwd() / "hosts-backups"
+            if cwd_fallback not in dirs:
+                dirs.append(cwd_fallback)
+        except Exception:
+            pass
+        return dirs
 
+    def backup(self, action: str) -> Optional[Path]:
+        data = None
+        if HOSTS_PATH.exists():
+            try:
+                data = HOSTS_PATH.read_bytes()
+            except Exception as e:
+                logger.error("Backup read bytes error: %s", e)
+                try:
+                    data = HOSTS_PATH.read_text(encoding="utf-8", errors="ignore").encode("utf-8")
+                except Exception as e2:
+                    logger.error("Backup read text error: %s", e2)
+
+        if data is None:
+            # Fallback for missing or unreadable hosts file
+            data = b"# Initial hosts file\n127.0.0.1       localhost\n::1             localhost\n"
+
+        dirs_to_try = self._get_backup_dirs()
         last_error = None
         for backup_dir in dirs_to_try:
             try:
                 backup_dir.mkdir(parents=True, exist_ok=True)
                 tag = sanitize_backup_action(action)
                 ts = _time.strftime("%Y%m%d_%H%M%S")
-                # Fallback for time_ns if not available (Python < 3.7)
                 try:
                     ns = _time.time_ns() % 1_000_000
                 except (AttributeError, NotImplementedError):
@@ -119,25 +153,23 @@ class HostsManager:
         return None
 
     def get_backups_list(self) -> list[Path]:
-        # Try primary backup dir and fallback
-        dirs_to_check = [HOSTS_BACKUP_DIR]
-        try:
-            temp_fallback = Path(tempfile.gettempdir()) / "goida-ai-unlocker-backups"
-            if temp_fallback != HOSTS_BACKUP_DIR:
-                dirs_to_check.append(temp_fallback)
-        except Exception:
-            pass
-
+        dirs_to_check = self._get_backup_dirs()
         all_files = []
+        seen_names = set()
         for backup_dir in dirs_to_check:
             if backup_dir.is_dir():
-                files = [
-                    f for f in backup_dir.iterdir()
-                    if f.is_file()
-                    and f.name.lower().startswith(HOSTS_BACKUP_PREFIX)
-                    and f.name.lower().endswith(".txt")
-                ]
-                all_files.extend(files)
+                try:
+                    for f in backup_dir.iterdir():
+                        if (
+                            f.is_file()
+                            and f.name.lower().startswith(HOSTS_BACKUP_PREFIX)
+                            and f.name.lower().endswith(".txt")
+                            and f.name not in seen_names
+                        ):
+                            seen_names.add(f.name)
+                            all_files.append(f)
+                except Exception as e:
+                    logger.debug("Failed to list backups in %s: %s", backup_dir, e)
 
         all_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
         return all_files
@@ -576,7 +608,7 @@ class HostsManager:
         else:
             url = "https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts"
         if not self.backup("install"):
-            raise RuntimeError("Failed to create hosts backup before install")
+            logger.warning("Failed to create hosts backup before install, proceeding anyway")
 
         content = HttpClient.fetch(url, bypass_cache=True)
         if not content:
@@ -586,7 +618,7 @@ class HostsManager:
 
     def restore(self) -> bool:
         if not self.backup("uninstall"):
-            raise RuntimeError("Failed to create hosts backup before uninstall")
+            logger.warning("Failed to create hosts backup before uninstall, proceeding anyway")
 
         # Try to find a backup of the original hosts file
         original_content = None
