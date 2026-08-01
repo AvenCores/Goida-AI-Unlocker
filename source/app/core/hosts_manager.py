@@ -204,8 +204,10 @@ class HostsManager:
                 if self._verify_applied_content(content):
                     return True
                 last_err = RuntimeError("Verification failed: content mismatch after write")
+                logger.debug("Direct copy attempt %d: verification failed", attempt + 1)
             except (PermissionError, OSError) as e:
                 last_err = e
+                logger.debug("Direct copy attempt %d failed: %s", attempt + 1, e)
             if attempt < retries - 1:
                 _time.sleep(0.5)
         if last_err:
@@ -230,6 +232,25 @@ class HostsManager:
             pass
         return False
 
+    def _try_cmd_type(self, temp_path: str, content: str) -> bool:
+        """Fallback: use cmd /c type to overwrite hosts (bypasses some copy locks)."""
+        try:
+            r = subprocess.run(
+                ["cmd", "/c", "type", temp_path, ">", str(HOSTS_PATH)],
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                timeout=30,
+                capture_output=True,
+                shell=True,
+            )
+            if r.returncode == 0:
+                _time.sleep(0.2)
+                self.invalidate_cache()
+                if self._verify_applied_content(content):
+                    return True
+        except Exception:
+            pass
+        return False
+
     def _unlock_hosts_windows(self) -> bool:
         """Aggressively unlock hosts file: stop DNS cache, take ownership, grant full control."""
         hosts_str = str(HOSTS_PATH)
@@ -244,6 +265,8 @@ class HostsManager:
             ["icacls", hosts_str, "/grant", "*S-1-1-0:F", "/c"],
             # Remove read-only attribute via attrib
             ["attrib", "-R", hosts_str],
+            # Also try PowerShell to remove read-only (sometimes more reliable)
+            ["powershell", "-NoProfile", "-Command", f"Set-ItemProperty -Path '{hosts_str}' -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue"],
         ]
         any_success = False
         for cmd in steps:
@@ -256,6 +279,8 @@ class HostsManager:
                 )
                 if r.returncode == 0:
                     any_success = True
+                else:
+                    logger.debug("Unlock step %s returned %d: %s", cmd[0], r.returncode, r.stderr.decode(errors="ignore")[:200])
             except Exception as e:
                 logger.debug("Unlock step %s failed: %s", cmd[0], e)
         return any_success
@@ -420,6 +445,7 @@ class HostsManager:
                 safe_script = ps_script_path.replace("'", "''")
 
                 elevated = False
+                uac_denied = False
                 try:
                     if is_windows_admin():
                         r = subprocess.run(
@@ -428,8 +454,11 @@ class HostsManager:
                                 "-ExecutionPolicy", "Bypass", "-File", ps_script_path
                             ],
                             creationflags=subprocess.CREATE_NO_WINDOW,
-                            timeout=60
+                            timeout=60,
+                            capture_output=True,
                         )
+                        if r.returncode != 0:
+                            logger.debug("PowerShell script failed (admin): %s", r.stderr.decode(errors="ignore"))
                     else:
                         cmd = [
                             "powershell", "-WindowStyle", "Hidden", "-NoProfile",
@@ -441,11 +470,17 @@ class HostsManager:
                             "-Wait -PassThru -ErrorAction Stop; "
                             "if ($null -eq $p) { exit 1 }; "
                             "exit $p.ExitCode "
+                            "} catch [System.OperationCanceledException] { "
+                            "exit 1223 "  # ERROR_CANCELLED — user clicked No in UAC
                             "} catch { "
                             "exit 1 "
                             "}"
                         ]
-                        r = subprocess.run(cmd, creationflags=subprocess.CREATE_NO_WINDOW, timeout=90)
+                        r = subprocess.run(cmd, creationflags=subprocess.CREATE_NO_WINDOW, timeout=90, capture_output=True)
+                        if r.returncode == 1223:
+                            uac_denied = True
+                        elif r.returncode != 0:
+                            logger.debug("PowerShell elevated copy failed: rc=%d stderr=%s", r.returncode, r.stderr.decode(errors="ignore"))
                     elevated = r.returncode == 0
                 except Exception as e:
                     logger.debug("PowerShell elevated copy failed: %s", e)
@@ -463,12 +498,19 @@ class HostsManager:
                     self._flush_dns_windows()
                     return True
 
-                # --- Attempt 5: Windows API direct write (ultimate fallback) ---
+                # --- Attempt 5: cmd /c type (alternative shell write) ---
+                if self._try_cmd_type(temp_path, content):
+                    self._flush_dns_windows()
+                    return True
+
+                # --- Attempt 6: Windows API direct write (ultimate fallback) ---
                 if self._try_winapi_write(content):
                     self._flush_dns_windows()
                     return True
 
                 # All attempts exhausted
+                if uac_denied:
+                    raise PermissionError("UAC elevation was denied by user")
                 if not elevated and not is_windows_admin():
                     raise PermissionError("UAC elevation was denied or PowerShell execution failed")
                 raise RuntimeError(
