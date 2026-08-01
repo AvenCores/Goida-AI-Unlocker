@@ -32,6 +32,7 @@ class HostsManager:
     def __init__(self):
         self._cache: Optional[tuple[float, str]] = None
         self._lock = threading.Lock()
+        self.backup_failed: bool = False
 
     def read(self) -> str:
         if not HOSTS_PATH.exists():
@@ -97,12 +98,6 @@ class HostsManager:
                     dirs.append(appdata_fallback)
         except Exception:
             pass
-        try:
-            cwd_fallback = Path.cwd() / "hosts-backups"
-            if cwd_fallback not in dirs:
-                dirs.append(cwd_fallback)
-        except Exception:
-            pass
         return dirs
 
     def backup(self, action: str) -> Optional[Path]:
@@ -118,7 +113,12 @@ class HostsManager:
                     logger.error("Backup read text error: %s", e2)
 
         if data is None:
-            # Fallback for missing or unreadable hosts file
+            if HOSTS_PATH.exists():
+                # hosts exists but is unreadable — do NOT substitute a fake file,
+                # otherwise restore() would overwrite the user's real hosts with a stub.
+                logger.error("Cannot backup: hosts file exists but is unreadable")
+                return None
+            # hosts genuinely missing — backup a minimal default so restore() has something
             data = b"# Initial hosts file\n127.0.0.1       localhost\n::1             localhost\n"
 
         dirs_to_try = self._get_backup_dirs()
@@ -607,7 +607,8 @@ class HostsManager:
             url = "https://github.com/Internet-Helper/GeoHideDNS/raw/refs/heads/main/hosts/hosts"
         else:
             url = "https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts"
-        if not self.backup("install"):
+        self.backup_failed = not self.backup("install")
+        if self.backup_failed:
             logger.warning("Failed to create hosts backup before install, proceeding anyway")
 
         content = HttpClient.fetch(url, bypass_cache=True)
@@ -617,7 +618,8 @@ class HostsManager:
         return self.apply(content)
 
     def restore(self) -> bool:
-        if not self.backup("uninstall"):
+        self.backup_failed = not self.backup("uninstall")
+        if self.backup_failed:
             logger.warning("Failed to create hosts backup before uninstall, proceeding anyway")
 
         # Try to find a backup of the original hosts file

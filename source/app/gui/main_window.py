@@ -298,8 +298,8 @@ class MainWindow(QMainWindow):
         )
         self._add_and_switch(widget)
 
-    @Slot(str, bool, str)
-    def _on_hosts_save_finished(self, action: str, ok: bool, error: str):
+    @Slot(str, bool, str, bool)
+    def _on_hosts_save_finished(self, action: str, ok: bool, error: str, backup_failed: bool = False):
         if self._processing_widget is not None:
             proc = self._processing_widget
             self._processing_widget = None
@@ -349,8 +349,8 @@ class MainWindow(QMainWindow):
         worker.signals.finished.connect(self.on_hosts_finished, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(worker)
 
-    @Slot(str, bool, str)
-    def on_hosts_finished(self, action: str, ok: bool, error: str):
+    @Slot(str, bool, str, bool)
+    def on_hosts_finished(self, action: str, ok: bool, error: str, backup_failed: bool = False):
         if ok:
             if action == "install":
                 msg = tr("install_success")
@@ -358,6 +358,8 @@ class MainWindow(QMainWindow):
                 msg = tr("update_success")
             else:
                 msg = tr("uninstall_success")
+            if backup_failed:
+                msg += "\n\n" + tr("backup_warning")
             self.show_message(msg, success=True, word_wrap=True)
         else:
             hint = self._get_error_hint(error)

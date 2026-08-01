@@ -7,7 +7,7 @@ from app.core.constants import APP_VERSION, GITHUB_RELEASES_API_URL, GITHUB_RELE
 from app.gui.localization import tr
 
 class WorkerSignals(QObject):
-    finished = Signal(str, bool, str)
+    finished = Signal(str, bool, str, bool)
     status_ready = Signal(object)
     update_ready = Signal(str, str, str)
     no_update = Signal(str, str)
@@ -35,13 +35,13 @@ class HostsWorker(QRunnable):
                 result = self.manager.apply(self.save_content)
             else:
                 result = False
-            self.signals.finished.emit(self.action, result, "")
+            self.signals.finished.emit(self.action, result, "", self.manager.backup_failed)
         except (PermissionError, RuntimeError) as e:
             logger.exception("Hosts operation failed")
-            self.signals.finished.emit(self.action, False, str(e))
+            self.signals.finished.emit(self.action, False, str(e), self.manager.backup_failed)
         except Exception as e:
             logger.exception("Hosts operation failed")
-            self.signals.finished.emit(self.action, False, str(e))
+            self.signals.finished.emit(self.action, False, str(e), self.manager.backup_failed)
 
 class VersionWorker(QRunnable):
     def __init__(self, manager: HostsManager, provider: str = "dns.malw.link", parent=None):

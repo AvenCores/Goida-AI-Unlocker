@@ -50,6 +50,7 @@
         "install_error": "Не удалось установить файл hosts.\nㅤ{hint}ㅤ",
         "update_error": "Не удалось обновить файл hosts.\nㅤ{hint}ㅤ",
         "uninstall_error": "Не удалось восстановить файл hosts.\nㅤ{hint}ㅤ",
+        "backup_warning": "⚠️ Не удалось создать резервную копию hosts. Восстановление может быть невозможно.",
         "open_hosts_error": "Не удалось открыть файл hosts.\nㅤ{hint}ㅤ",
         "donate_title": "Поддержать автора",
         "copy_card": "Скопировать номер карты",
@@ -145,7 +146,8 @@
         "hosts_backup_viewer_title": "Hosts Backup Viewer",
         "hosts_backup_select": "Backup:",
         "hosts_backup_none": "No backups found",
-        "hosts_backup_none_info": "No backup files found.\nInstall or remove the bypass to create a backup."
+        "hosts_backup_none_info": "No backup files found.\nInstall or remove the bypass to create a backup.",
+        "backup_warning": "⚠️ Failed to create a hosts backup. Restore may not be possible."
     },
     "de": {
         "language_name": "Deutsch",
@@ -219,7 +221,8 @@
         "hosts_backup_viewer_title": "Hosts-Backup-Betrachter",
         "hosts_backup_select": "Backup:",
         "hosts_backup_none": "Keine Backups gefunden",
-        "hosts_backup_none_info": "Keine Backup-Dateien gefunden.\nInstallieren oder entfernen Sie den Bypass, um ein Backup zu erstellen."
+        "hosts_backup_none_info": "Keine Backup-Dateien gefunden.\nInstallieren oder entfernen Sie den Bypass, um ein Backup zu erstellen.",
+        "backup_warning": "⚠️ Hosts-Sicherung konnte nicht erstellt werden. Wiederherstellung evtl. nicht möglich."
     },
     "uk": {
         "language_name": "Українська",
@@ -293,7 +296,8 @@
         "hosts_backup_viewer_title": "Перегляд резервних копій hosts",
         "hosts_backup_select": "Резервна копія:",
         "hosts_backup_none": "Резервні копії не знайдені",
-        "hosts_backup_none_info": "Файли резервних копій відсутні.\nВстановіть або видаліть обхід, щоб створити резервну копію."
+        "hosts_backup_none_info": "Файли резервних копій відсутні.\nВстановіть або видаліть обхід, щоб створити резервну копію.",
+        "backup_warning": "⚠️ Не вдалося створити резервну копію hosts. Відновлення може бути неможливим."
     },
     "be": {
         "language_name": "Беларуская",
@@ -367,7 +371,8 @@
         "hosts_backup_viewer_title": "Прагляд бэкапаў hosts",
         "hosts_backup_select": "Бэкап:",
         "hosts_backup_none": "Бэкапы не знойдзены",
-        "hosts_backup_none_info": "Файлы рэзервовых копій адсутнічаюць.\nУсталюйце або выдаліце абыход, каб стварыць бэкап."
+        "hosts_backup_none_info": "Файлы рэзервовых копій адсутнічаюць.\nУсталюйце або выдаліце абыход, каб стварыць бэкап.",
+        "backup_warning": "⚠️ Не ўдалося стварыць рэзервовую копію hosts. Аднаўленне можа быць немагчымым."
     },
     "kk": {
         "language_name": "Қазақша",
@@ -441,7 +446,8 @@
         "hosts_backup_viewer_title": "hosts резервтік көшірмелерін қарау",
         "hosts_backup_select": "Резервтік көшірме:",
         "hosts_backup_none": "Резервтік көшірмелер табылмады",
-        "hosts_backup_none_info": "Резервтік көшірме файлдары жоқ.\nАйналып өтуді орнатыңыз немесе жойыңыз."
+        "hosts_backup_none_info": "Резервтік көшірме файлдары жоқ.\nАйналып өтуді орнатыңыз немесе жойыңыз.",
+        "backup_warning": "⚠️ hosts сақтық көшірмесін жасау мүмкін болмады. Қалпына келтіру мүмкін болмауы мүмкін."
     },
     "fr": {
         "language_name": "Français",
@@ -515,7 +521,8 @@
         "hosts_backup_viewer_title": "Visionneuse de sauvegardes hosts",
         "hosts_backup_select": "Sauvegarde :",
         "hosts_backup_none": "Aucune sauvegarde trouvée",
-        "hosts_backup_none_info": "Aucun fichier de sauvegarde trouvé.\nInstallez ou supprimez le contournement pour créer une sauvegarde."
+        "hosts_backup_none_info": "Aucun fichier de sauvegarde trouvé.\nInstallez ou supprimez le contournement pour créer une sauvegarde.",
+        "backup_warning": "⚠️ Échec de la création de la sauvegarde hosts. La restauration peut être impossible."
     },
     "pl": {
         "language_name": "Polski",
@@ -589,7 +596,8 @@
         "hosts_backup_viewer_title": "Przeglądarka kopii zapasowych hosts",
         "hosts_backup_select": "Kopia zapasowa:",
         "hosts_backup_none": "Nie znaleziono kopii zapasowych",
-        "hosts_backup_none_info": "Nie znaleziono plików kopii zapasowych.\nZainstaluj lub usuń obejście, aby utworzyć kopię zapasową."
+        "hosts_backup_none_info": "Nie znaleziono plików kopii zapasowych.\nZainstaluj lub usuń obejście, aby utworzyć kopię zapasową.",
+        "backup_warning": "⚠️ Nie udało się utworzyć kopii zapasowej hosts. Przywracanie może być niemożliwe."
     },
     "es": {
         "language_name": "Español",
@@ -663,7 +671,8 @@
         "hosts_backup_viewer_title": "Visor de copias de seguridad de hosts",
         "hosts_backup_select": "Copia de seguridad:",
         "hosts_backup_none": "No se encontraron copias de seguridad",
-        "hosts_backup_none_info": "No se encontraron archivos de copia de seguridad.\nInstale o elimine el bypass para crear una copia de seguridad."
+        "hosts_backup_none_info": "No se encontraron archivos de copia de seguridad.\nInstale o elimine el bypass para crear una copia de seguridad.",
+        "backup_warning": "⚠️ No se pudo crear la copia de seguridad de hosts. La restauración puede ser imposible."
     },
     "pt": {
         "language_name": "Português",
@@ -737,7 +746,8 @@
         "hosts_backup_viewer_title": "Visualizador de backups do hosts",
         "hosts_backup_select": "Backup:",
         "hosts_backup_none": "Nenhum backup encontrado",
-        "hosts_backup_none_info": "Nenhum arquivo de backup encontrado.\nInstale ou remova o bypass para criar um backup."
+        "hosts_backup_none_info": "Nenhum arquivo de backup encontrado.\nInstale ou remova o bypass para criar um backup.",
+        "backup_warning": "⚠️ Falha ao criar backup do hosts. A restauração pode não ser possível."
     },
     "it": {
         "language_name": "Italiano",
@@ -811,7 +821,8 @@
         "hosts_backup_viewer_title": "Visualizzatore backup hosts",
         "hosts_backup_select": "Backup:",
         "hosts_backup_none": "Nessun backup trovato",
-        "hosts_backup_none_info": "Nessun file di backup trovato.\nInstalla o rimuovi il bypass per creare un backup."
+        "hosts_backup_none_info": "Nessun file di backup trovato.\nInstalla o rimuovi il bypass per creare un backup.",
+        "backup_warning": "⚠️ Impossibile creare il backup di hosts. Il ripristino potrebbe non essere possibile."
     },
     "tr": {
         "language_name": "Türkçe",
@@ -885,7 +896,8 @@
         "hosts_backup_viewer_title": "hosts yedek görüntüleyici",
         "hosts_backup_select": "Yedek:",
         "hosts_backup_none": "Yedek bulunamadı",
-        "hosts_backup_none_info": "Yedek dosyası bulunamadı.\nYedek oluşturmak için atlamayı yükleyin veya kaldırın."
+        "hosts_backup_none_info": "Yedek dosyası bulunamadı.\nYedek oluşturmak için atlamayı yükleyin veya kaldırın.",
+        "backup_warning": "⚠️ hosts yedeği oluşturulamadı. Geri yükleme mümkün olmayabilir."
     },
     "zh": {
         "language_name": "中文",
@@ -959,7 +971,8 @@
         "hosts_backup_viewer_title": "hosts 备份查看器",
         "hosts_backup_select": "备份：",
         "hosts_backup_none": "未找到备份",
-        "hosts_backup_none_info": "未找到备份文件。\n请安装或移除绕过以创建备份。"
+        "hosts_backup_none_info": "未找到备份文件。\n请安装或移除绕过以创建备份。",
+        "backup_warning": "⚠️ 无法创建 hosts 备份。可能无法恢复。"
     },
     "ja": {
         "language_name": "日本語",
@@ -1033,7 +1046,8 @@
         "hosts_backup_viewer_title": "hostsバックアップビューア",
         "hosts_backup_select": "バックアップ:",
         "hosts_backup_none": "バックアップが見つかりません",
-        "hosts_backup_none_info": "バックアップファイルが見つかりません。\nバイパスをインストールまたは削除してバックアップを作成してください。"
+        "hosts_backup_none_info": "バックアップファイルが見つかりません。\nバイパスをインストールまたは削除してバックアップを作成してください。",
+        "backup_warning": "⚠️ hosts のバックアップを作成できませんでした。復元できない場合があります。"
     },
     "ko": {
         "language_name": "한국어",
@@ -1107,7 +1121,8 @@
         "hosts_backup_viewer_title": "hosts 백업 뷰어",
         "hosts_backup_select": "백업:",
         "hosts_backup_none": "백업을 찾을 수 없음",
-        "hosts_backup_none_info": "백업 파일이 없습니다.\n우회를 설치하거나 제거하여 백업을 생성하세요."
+        "hosts_backup_none_info": "백업 파일이 없습니다.\n우회를 설치하거나 제거하여 백업을 생성하세요.",
+        "backup_warning": "⚠️ hosts 백업을 만들지 못했습니다. 복원이 불가능할 수 있습니다."
     },
     "cs": {
         "language_name": "Čeština",
@@ -1181,7 +1196,8 @@
         "hosts_backup_viewer_title": "Prohlížeč záloh hosts",
         "hosts_backup_select": "Záloha:",
         "hosts_backup_none": "Žádné zálohy nenalezeny",
-        "hosts_backup_none_info": "Nebyly nalezeny žádné záložní soubory.\nNainstalujte nebo odstraňte obcházení pro vytvoření zálohy."
+        "hosts_backup_none_info": "Nebyly nalezeny žádné záložní soubory.\nNainstalujte nebo odstraňte obcházení pro vytvoření zálohy.",
+        "backup_warning": "⚠️ Nepodařilo se vytvořit zálohu hosts. Obnovení nemusí být možné."
     },
     "nl": {
         "language_name": "Nederlands",
@@ -1255,7 +1271,8 @@
         "hosts_backup_viewer_title": "hosts-back-upviewer",
         "hosts_backup_select": "Back-up:",
         "hosts_backup_none": "Geen back-ups gevonden",
-        "hosts_backup_none_info": "Geen back-upbestanden gevonden.\nInstalleer of verwijder de bypass om een back-up te maken."
+        "hosts_backup_none_info": "Geen back-upbestanden gevonden.\nInstalleer of verwijder de bypass om een back-up te maken.",
+        "backup_warning": "⚠️ Kan geen back-up van hosts maken. Herstel is mogelijk niet mogelijk."
     },
     "sv": {
         "language_name": "Svenska",
@@ -1329,6 +1346,7 @@
         "hosts_backup_viewer_title": "hosts-säkerhetskopsvisare",
         "hosts_backup_select": "Säkerhetskopia:",
         "hosts_backup_none": "Inga säkerhetskopior hittades",
-        "hosts_backup_none_info": "Inga säkerhetskopior hittades.\nInstallera eller ta bort förbikopplingen för att skapa en säkerhetskopia."
+        "hosts_backup_none_info": "Inga säkerhetskopior hittades.\nInstallera eller ta bort förbikopplingen för att skapa en säkerhetskopia.",
+        "backup_warning": "⚠️ Kunde inte skapa säkerhetskopia av hosts. Återställning kanske inte är möjlig."
     }
 }
