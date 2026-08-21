@@ -327,19 +327,21 @@ class DnsManager:
         if code == 0:
             return True
 
+        # Прямой вызов требует прав администратора (CIM PermissionDenied).
+        # Если мы не админ — сразу элевация через UAC (скрытое окно),
+        # чтобы не тратить время на заведомо бесполезные попытки.
+        if not is_windows_admin():
+            return self._set_interface_dns_elevated(iface, servers)
+
         logger.warning("Direct Set-DnsClientServerAddress failed on %s: %s", iface, output.strip())
-        # Пробуем netsh без элевации (может сработать при запуске от админа)
+        # Мы уже админ — пробуем netsh как альтернативу
         if self._set_interface_dns_netsh(iface, ipv4):
             return True
-
-        # Требуются права администратора — поднимаемся через UAC (как в hosts_manager)
-        if not is_windows_admin():
-            return self._set_interface_dns_elevated(iface, ipv4 + ipv6)
         logger.error("Failed to set DNS on %s even with admin rights", iface)
         return False
 
     def _set_interface_dns_elevated(self, iface: str, servers: list) -> bool:
-        """Устанавливает DNS через UAC-элевацию (PowerShell Start-Process -Verb runAs)."""
+        """Устанавливает DNS через UAC-элевацию (скрытое окно, как в hosts_manager)."""
         quoted_servers = ", ".join(f"'{s}'" for s in servers)
         inner = (
             f"Set-DnsClientServerAddress -InterfaceAlias '{iface}' "
@@ -347,12 +349,22 @@ class DnsManager:
         )
         encoded = base64.b64encode(inner.encode("utf-16-le")).decode("ascii")
         launcher = (
-            "$p = Start-Process powershell -ArgumentList '-NoProfile','-NonInteractive',"
-            f"'-EncodedCommand','{encoded}' -Verb RunAs -PassThru -Wait; "
-            "exit $p.ExitCode"
+            "$ErrorActionPreference = 'Stop'; "
+            "try { "
+            "$p = Start-Process powershell -Verb runAs -WindowStyle Hidden "
+            f"-ArgumentList '-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand {encoded}' "
+            "-Wait -PassThru -ErrorAction Stop; "
+            "if ($null -eq $p) { exit 1 }; "
+            "exit $p.ExitCode "
+            "} catch [System.OperationCanceledException] { "
+            "exit 1223 "
+            "} catch { "
+            "exit 1 "
+            "}"
         )
         code, output = _run_command(
-            ["powershell", "-NoProfile", "-NonInteractive", "-Command", launcher],
+            ["powershell", "-WindowStyle", "Hidden", "-NoProfile", "-NonInteractive",
+             "-Command", launcher],
             timeout=120,
         )
         if code == 0:
@@ -364,18 +376,28 @@ class DnsManager:
         return False
 
     def _reset_interface_dns_elevated(self, iface: str) -> bool:
-        """Сбрасывает DNS через UAC-элевацию."""
+        """Сбрасывает DNS через UAC-элевацию (скрытое окно)."""
         inner = (
             f"Set-DnsClientServerAddress -InterfaceAlias '{iface}' -ResetServerAddresses"
         )
         encoded = base64.b64encode(inner.encode("utf-16-le")).decode("ascii")
         launcher = (
-            "$p = Start-Process powershell -ArgumentList '-NoProfile','-NonInteractive',"
-            f"'-EncodedCommand','{encoded}' -Verb RunAs -PassThru -Wait; "
-            "exit $p.ExitCode"
+            "$ErrorActionPreference = 'Stop'; "
+            "try { "
+            "$p = Start-Process powershell -Verb runAs -WindowStyle Hidden "
+            f"-ArgumentList '-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand {encoded}' "
+            "-Wait -PassThru -ErrorAction Stop; "
+            "if ($null -eq $p) { exit 1 }; "
+            "exit $p.ExitCode "
+            "} catch [System.OperationCanceledException] { "
+            "exit 1223 "
+            "} catch { "
+            "exit 1 "
+            "}"
         )
         code, output = _run_command(
-            ["powershell", "-NoProfile", "-NonInteractive", "-Command", launcher],
+            ["powershell", "-WindowStyle", "Hidden", "-NoProfile", "-NonInteractive",
+             "-Command", launcher],
             timeout=120,
         )
         if code == 0:
