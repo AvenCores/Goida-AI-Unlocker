@@ -53,6 +53,17 @@ SETTINGS_PATH = _get_settings_path()
 GITHUB_RELEASES_API_URL = "https://api.github.com/repos/AvenCores/Goida-AI-Unlocker/releases/latest"
 GITHUB_RELEASES_PAGE_URL = "https://github.com/AvenCores/Goida-AI-Unlocker/releases/latest"
 
+# Xbox DNS (https://xbox-dns.ru) — разблокировка через смену системных DNS-серверов
+XBOX_DNS_PRIMARY_IPV4 = "111.88.96.50"
+XBOX_DNS_SECONDARY_IPV4 = "111.88.96.51"
+XBOX_DNS_PRIMARY_IPV6 = "2a00:ab00:1233:26::50"
+XBOX_DNS_SECONDARY_IPV6 = "2a00:ab00:1233:26::51"
+XBOX_DNS_SERVERS = (XBOX_DNS_PRIMARY_IPV4, XBOX_DNS_SECONDARY_IPV4)
+XBOX_DNS_SERVERS_IPV6 = (XBOX_DNS_PRIMARY_IPV6, XBOX_DNS_SECONDARY_IPV6)
+XBOX_DNS_DOH_URL = "https://xbox-dns.ru/dns-query"
+XBOX_DNS_DOT_HOST = "xbox-dns.ru"
+XBOX_DNS_SITE_URL = "https://xbox-dns.ru"
+
 APP_VERSION = "1.3.4"
 
 _LAYOUT_FILLER = "\u3164"

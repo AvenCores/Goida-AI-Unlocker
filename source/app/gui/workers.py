@@ -2,6 +2,7 @@ import json
 from PySide6.QtCore import QObject, Signal, QRunnable
 from app.core.logger import logger
 from app.core.hosts_manager import HostsManager
+from app.core.dns_manager import DnsManager
 from app.core.http_client import HttpClient
 from app.core.constants import APP_VERSION, GITHUB_RELEASES_API_URL, GITHUB_RELEASES_PAGE_URL
 from app.gui.localization import tr
@@ -17,7 +18,7 @@ class WorkerSignals(QObject):
         super().__init__(None)
 
 class HostsWorker(QRunnable):
-    def __init__(self, action: str, manager: HostsManager, provider: str = "dns.malw.link", parent=None):
+    def __init__(self, action: str, manager, provider: str = "dns.malw.link", parent=None):
         super().__init__()
         self.action = action
         self.manager = manager
@@ -37,14 +38,14 @@ class HostsWorker(QRunnable):
                 result = False
             self.signals.finished.emit(self.action, result, "", self.manager.backup_failed)
         except (PermissionError, RuntimeError) as e:
-            logger.exception("Hosts operation failed")
+            logger.exception("Unlock operation failed")
             self.signals.finished.emit(self.action, False, str(e), self.manager.backup_failed)
         except Exception as e:
-            logger.exception("Hosts operation failed")
+            logger.exception("Unlock operation failed")
             self.signals.finished.emit(self.action, False, str(e), self.manager.backup_failed)
 
 class VersionWorker(QRunnable):
-    def __init__(self, manager: HostsManager, provider: str = "dns.malw.link", parent=None):
+    def __init__(self, manager, provider: str = "dns.malw.link", parent=None):
         super().__init__()
         self.manager = manager
         self.provider = provider

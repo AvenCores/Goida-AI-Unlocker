@@ -9,6 +9,8 @@ from PySide6.QtGui import QIcon
 
 from app.core.constants import resource_path
 from app.core.hosts_manager import HostsManager, HostsStatusResult
+from app.core.dns_manager import DnsManager, DNS_PROVIDER_ID
+from app.core.settings import get_setting, set_setting
 from app.gui.localization import tr, set_current_language
 from app.gui.styles import get_stylesheet, get_about_toolbutton_style, clear_stylesheet_cache, is_system_dark_theme
 from app.gui.icons import get_icon, refresh_icons
@@ -56,7 +58,11 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(self.styles["main"])
 
         self.hosts_manager = HostsManager()
+        self.dns_manager = DnsManager()
         self.current_provider = self._detect_installed_provider()
+        self.current_mechanism = get_setting("mechanism", "hosts")
+        if self.current_mechanism not in ("hosts", DNS_PROVIDER_ID):
+            self.current_mechanism = "hosts"
         self._check_updates_running = False
         self._version_status_check_running = False
         self._processing_widget: Optional[QWidget] = None
@@ -116,7 +122,10 @@ class MainWindow(QMainWindow):
         self.title_label = title_label
 
         # Home page
-        home_page = HomePage(self.hosts_manager, self.styles, self.dark_theme, self.current_provider)
+        home_page = HomePage(
+            self.hosts_manager, self.dns_manager, self.styles,
+            self.dark_theme, self.current_provider, self.current_mechanism
+        )
         self.home_page = home_page
 
         # Footer with language/theme buttons
@@ -184,6 +193,7 @@ class MainWindow(QMainWindow):
         home_page.about_requested.connect(self.show_about)
         home_page.update_check_requested.connect(self.check_for_updates)
         home_page.provider_changed.connect(self._on_provider_changed)
+        home_page.mechanism_changed.connect(self._on_mechanism_changed)
         home_page.open_hosts_requested.connect(self.show_hosts_editor)
         home_page.view_backups_requested.connect(self.show_hosts_backup_viewer)
 
@@ -345,31 +355,33 @@ class MainWindow(QMainWindow):
             self.show_hosts_editor()
             return
         self._processing_widget = self.show_processing(action)
-        worker = HostsWorker(action, self.hosts_manager, self.current_provider, self)
+        if self.current_mechanism == DNS_PROVIDER_ID:
+            worker = HostsWorker(action, self.dns_manager, DNS_PROVIDER_ID, self)
+        else:
+            worker = HostsWorker(action, self.hosts_manager, self.current_provider, self)
         worker.signals.finished.connect(self.on_hosts_finished, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(worker)
 
     @Slot(str, bool, str, bool)
     def on_hosts_finished(self, action: str, ok: bool, error: str, backup_failed: bool = False):
+        is_dns = self.current_mechanism == DNS_PROVIDER_ID
         if ok:
             if action == "install":
-                msg = tr("install_success")
+                msg = tr("dns_install_success" if is_dns else "install_success")
             elif action == "update":
-                msg = tr("update_success")
+                msg = tr("dns_install_success" if is_dns else "update_success")
             else:
-                msg = tr("uninstall_success")
-            if backup_failed:
-                msg += "\n\n" + tr("backup_warning")
+                msg = tr("dns_uninstall_success" if is_dns else "uninstall_success")
             self.show_message(msg, success=True, word_wrap=True)
         else:
             hint = self._get_error_hint(error)
 
             if action == "install":
-                msg = tr("install_error", hint=hint)
+                msg = tr("dns_install_error" if is_dns else "install_error", hint=hint)
             elif action == "update":
-                msg = tr("update_error", hint=hint)
+                msg = tr("dns_install_error" if is_dns else "update_error", hint=hint)
             else:
-                msg = tr("uninstall_error", hint=hint)
+                msg = tr("dns_uninstall_error" if is_dns else "uninstall_error", hint=hint)
             self.show_message(msg, success=False, word_wrap=True)
 
         if self._processing_widget is not None:
@@ -386,7 +398,10 @@ class MainWindow(QMainWindow):
         if self._version_status_check_running:
             return
         self._version_status_check_running = True
-        worker = VersionWorker(self.hosts_manager, self.current_provider, self)
+        if self.current_mechanism == DNS_PROVIDER_ID:
+            worker = VersionWorker(self.dns_manager, DNS_PROVIDER_ID, self)
+        else:
+            worker = VersionWorker(self.hosts_manager, self.current_provider, self)
         worker.signals.status_ready.connect(
             self._on_version_status_ready,
             Qt.ConnectionType.QueuedConnection,
@@ -394,7 +409,7 @@ class MainWindow(QMainWindow):
         QThreadPool.globalInstance().start(worker)
 
     @Slot(object)
-    def _on_version_status_ready(self, status: HostsStatusResult):
+    def _on_version_status_ready(self, status):
         self._version_status_check_running = False
         self.home_page.apply_hosts_version_status(status)
 
@@ -406,6 +421,11 @@ class MainWindow(QMainWindow):
 
     def _on_provider_changed(self, provider: str):
         self.current_provider = provider
+        self.check_version_status()
+
+    def _on_mechanism_changed(self, mechanism: str):
+        self.current_mechanism = mechanism
+        set_setting("mechanism", mechanism)
         self.check_version_status()
 
     # --- App updates ---

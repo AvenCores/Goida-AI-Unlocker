@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, QSize
 from app.core.hosts_manager import HostsManager, HostsStatusResult
+from app.core.dns_manager import DnsManager, DNS_PROVIDER_ID
 from app.utils.helpers import open_target
 from app.gui.localization import tr, localize_update_date
 from app.gui.icons import get_icon
@@ -18,15 +19,19 @@ class HomePage(QWidget):
     about_requested = Signal()
     update_check_requested = Signal()
     provider_changed = Signal(str)        # provider id
+    mechanism_changed = Signal(str)       # mechanism id: "hosts" | "xbox-dns"
     open_hosts_requested = Signal()       # open built-in hosts editor
     view_backups_requested = Signal()     # open built-in backup viewer
 
-    def __init__(self, hosts_manager: HostsManager, styles: dict, dark_theme: bool, current_provider: str):
+    def __init__(self, hosts_manager: HostsManager, dns_manager: DnsManager, styles: dict,
+                 dark_theme: bool, current_provider: str, current_mechanism: str = "hosts"):
         super().__init__()
         self.hosts_manager = hosts_manager
+        self.dns_manager = dns_manager
         self.styles = styles
         self.dark_theme = dark_theme
         self.current_provider = current_provider
+        self.current_mechanism = current_mechanism
 
         # UI references
         self.app_title_label: Optional[QLabel] = None
@@ -43,6 +48,7 @@ class HomePage(QWidget):
         self.backup_hosts_button: Optional[QPushButton] = None
         self.provider_combo: Optional[QComboBox] = None
         self.provider_repo_button: Optional[QPushButton] = None
+        self.mechanism_combo: Optional[QComboBox] = None
 
         self._build_ui()
 
@@ -91,6 +97,14 @@ class HomePage(QWidget):
         )
         self.update_date_label = update_date_label
 
+        # Mechanism combo (hosts / Xbox DNS)
+        mechanism_combo = QComboBox()
+        mechanism_combo.addItem(tr("mechanism_hosts"), "hosts")
+        mechanism_combo.addItem(tr("mechanism_xbox_dns"), DNS_PROVIDER_ID)
+        mechanism_combo.setStyleSheet(self.styles["combo"])
+        mechanism_combo.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.mechanism_combo = mechanism_combo
+
         # Provider combo
         provider_combo = QComboBox()
         provider_combo.addItem(tr("provider_malw"), "dns.malw.link")
@@ -127,6 +141,7 @@ class HomePage(QWidget):
         status_vbox.setContentsMargins(16, 12, 16, 12)
         status_vbox.setSpacing(8)
         status_vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        status_vbox.addWidget(mechanism_combo)
         status_vbox.addLayout(provider_hbox)
         status_vbox.addWidget(textinformer)
         status_vbox.addWidget(version_label)
@@ -138,6 +153,10 @@ class HomePage(QWidget):
         initial_idx = 1 if self.current_provider == "geohide" else 0
         provider_combo.setCurrentIndex(initial_idx)
         provider_combo.currentIndexChanged.connect(self._on_provider_changed)
+
+        mechanism_idx = mechanism_combo.findData(self.current_mechanism)
+        mechanism_combo.setCurrentIndex(mechanism_idx if mechanism_idx >= 0 else 0)
+        mechanism_combo.currentIndexChanged.connect(self._on_mechanism_changed)
 
         # Action buttons
         install_button = QPushButton(tr("install_button_install"))
@@ -227,28 +246,45 @@ class HomePage(QWidget):
         layout.addWidget(update_button)
         layout.addWidget(about_button)
 
+        # Применяем видимость hosts-контролов для стартового механизма без эмита сигнала
+        self._update_mechanism_controls_visibility()
+
     # --- Public API ---
 
     def update_status_label(self):
-        installed = self.hosts_manager.is_installed(self.current_provider)
+        if self.current_mechanism == DNS_PROVIDER_ID:
+            installed = self.dns_manager.is_installed(DNS_PROVIDER_ID)
+        else:
+            installed = self.hosts_manager.is_installed(self.current_provider)
         color = "#43b581" if installed else "#e06c75"
         key = "status_installed" if installed else "status_not_installed"
         self.textinformer.setText(tr("unlock_status", status=tr(key), color=color))
 
-    def apply_hosts_version_status(self, status: HostsStatusResult):
+    def apply_hosts_version_status(self, status):
         self.version_label.setProperty("status_key", status.key)
         self.version_label.setProperty("status_color", status.color)
         self.version_label.setProperty("update_date_value", status.date)
 
-        self.version_label.setText(
-            tr("hosts_version_status", color=status.color, status=tr(f"hosts_status_{status.key}"))
-        )
-        if status.date:
-            self.update_date_label.setText(tr("hosts_update_date", date=localize_update_date(status.date)))
+        if self.current_mechanism == DNS_PROVIDER_ID:
+            # Для DNS-механизма нет версий hosts-репозитория — показываем факт установки
+            installed = status.key == "installed"
+            color = "#43b581" if installed else "#e06c75"
+            key = "status_installed" if installed else "status_not_installed"
+            self.version_label.setText(
+                tr("hosts_version_status", color=color, status=tr(key))
+            )
+            self.update_date_label.setText(tr("dns_servers_label", servers=status.date))
+            mode = "install"
         else:
-            self.update_date_label.setText(tr("hosts_update_date_unknown"))
+            self.version_label.setText(
+                tr("hosts_version_status", color=status.color, status=tr(f"hosts_status_{status.key}"))
+            )
+            if status.date:
+                self.update_date_label.setText(tr("hosts_update_date", date=localize_update_date(status.date)))
+            else:
+                self.update_date_label.setText(tr("hosts_update_date_unknown"))
+            mode = "update" if status.key == "outdated" else "install"
 
-        mode = "update" if status.key == "outdated" else "install"
         self.install_button.setProperty("install_mode", mode)
         self.install_button.setText(tr("install_button_update" if mode == "update" else "install_button_install"))
 
@@ -261,6 +297,11 @@ class HomePage(QWidget):
             self.provider_combo.setItemText(0, tr("provider_malw"))
             self.provider_combo.setItemText(1, tr("provider_geohide"))
             self.provider_combo.blockSignals(False)
+        if self.mechanism_combo:
+            self.mechanism_combo.blockSignals(True)
+            self.mechanism_combo.setItemText(0, tr("mechanism_hosts"))
+            self.mechanism_combo.setItemText(1, tr("mechanism_xbox_dns"))
+            self.mechanism_combo.blockSignals(False)
         if self.provider_repo_button:
             self.provider_repo_button.setToolTip(tr("provider_repo_tooltip"))
 
@@ -296,6 +337,8 @@ class HomePage(QWidget):
         self.uninstall_button.setStyleSheet(self.styles["button2"])
         if self.provider_combo:
             self.provider_combo.setStyleSheet(self.styles["combo"])
+        if self.mechanism_combo:
+            self.mechanism_combo.setStyleSheet(self.styles["combo"])
         self.donate_button.setStyleSheet(self.styles["theme"])
         self.open_hosts_button.setStyleSheet(self.styles["theme"])
         self.backup_hosts_button.setStyleSheet(self.styles["theme"])
@@ -316,6 +359,22 @@ class HomePage(QWidget):
             self.current_provider = selected_provider
             self.update_status_label()
             self.provider_changed.emit(selected_provider)
+
+    def _on_mechanism_changed(self):
+        selected = self.mechanism_combo.currentData()
+        if selected:
+            self.current_mechanism = selected
+            self._update_mechanism_controls_visibility()
+            self.update_status_label()
+            self.mechanism_changed.emit(selected)
+
+    def _update_mechanism_controls_visibility(self):
+        """Скрывает hosts-специфичные контролы при DNS-механизме."""
+        is_dns = self.current_mechanism == DNS_PROVIDER_ID
+        self.provider_combo.setVisible(not is_dns)
+        self.provider_repo_button.setVisible(not is_dns)
+        self.open_hosts_button.setVisible(not is_dns)
+        self.backup_hosts_button.setVisible(not is_dns)
 
     def _open_provider_repo(self):
         urls = {
