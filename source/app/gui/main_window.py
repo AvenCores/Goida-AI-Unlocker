@@ -83,6 +83,9 @@ class MainWindow(QMainWindow):
         self._setup_ui()
         self._apply_main_texts()
         self.check_version_status()
+        # Подстраиваем размер окна под стартовый механизм (Hosts/DNS)
+        QTimer.singleShot(0, self._adjust_window_to_content)
+        QTimer.singleShot(150, self._adjust_window_to_content)
 
     def _setup_ui(self):
         main_container = QWidget()
@@ -225,6 +228,39 @@ class MainWindow(QMainWindow):
         h = self.height() - (self.title_bar.height() if self.title_bar else 32)
         w.setMinimumSize(self.width(), h)
         w.setMaximumSize(self.width(), h)
+
+    def _adjust_window_to_content(self):
+        """Подстраивает высоту окна под размер контента главной страницы.
+
+        Вызывается при смене механизма (Hosts/DNS): контент имеет разную
+        высоту, и без этого окно остаётся с прежним размером, из-за чего
+        кнопки не вмещаются.
+        """
+        if not self.home_page:
+            return
+        content_h = self.home_page.sizeHint().height()
+        footer_h = 64  # футер с кнопками языка/темы
+        title_h = self.title_bar.height() if self.title_bar else 32
+        target_h = max(640, content_h + footer_h + title_h)
+        if abs(self.height() - target_h) > 4:
+            # Сначала ослабляем min-ограничения: у самого окна и обёрток
+            # minimumSize «запирает» resize на размере предыдущего режима
+            self.setMinimumSize(0, 0)
+            self._home_wrapper.setMinimumSize(0, 0)
+            self._home_wrapper.setMaximumSize(16777215, 16777215)
+            if self.stacked_widget:
+                for i in range(self.stacked_widget.count()):
+                    w = self.stacked_widget.widget(i)
+                    if w:
+                        w.setMinimumSize(0, 0)
+                        w.setMaximumSize(16777215, 16777215)
+            self.resize(self.width(), target_h)
+            QApplication.processEvents()
+            self._fix_widget_size(self._home_wrapper)
+            if self.stacked_widget:
+                cur = self.stacked_widget.currentWidget()
+                if cur:
+                    self._fix_widget_size(cur)
 
     # --- Page navigation ---
 
@@ -431,6 +467,11 @@ class MainWindow(QMainWindow):
     def _on_mechanism_changed(self, mechanism: str):
         self.current_mechanism = mechanism
         set_setting("mechanism", mechanism)
+        # Контент разной высоты — подстраиваем размер окна после того,
+        # как лейаут главной страницы пересчитается (два прохода:
+        # немедленно и после обработки Qt событий видимости)
+        QTimer.singleShot(0, self._adjust_window_to_content)
+        QTimer.singleShot(100, self._adjust_window_to_content)
         self.check_version_status()
 
     def _on_dns_provider_changed(self, provider: str):
