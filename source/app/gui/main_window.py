@@ -255,7 +255,6 @@ class MainWindow(QMainWindow):
                         w.setMinimumSize(0, 0)
                         w.setMaximumSize(16777215, 16777215)
             self.resize(self.width(), target_h)
-            QApplication.processEvents()
             self._fix_widget_size(self._home_wrapper)
             if self.stacked_widget:
                 cur = self.stacked_widget.currentWidget()

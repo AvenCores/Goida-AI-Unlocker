@@ -311,10 +311,12 @@ class HomePage(QWidget):
         self._relayout()
 
     def _relayout(self):
-        """Форсирует полный пересчёт лейаутов и перерисовку.
+        """Форсирует пересчёт лейаутов всей цепочки родителей.
 
         Без этого виджеты, скрытые до первого показа окна, остаются
         с нулевой высотой / перекрываются после смены механизма.
+        ВАЖНО: без синхронных repaint() — они перерисовывают каждый
+        виджет и вызывают тормоза; Qt сам перерисует изменённые области.
         """
         parent = self.status_container
         while parent is not None:
@@ -327,12 +329,6 @@ class HomePage(QWidget):
             parent = parent.parentWidget()
         self.status_container.adjustSize()
         self.updateGeometry()
-        # repaint() синхронно перерисовывает виджеты; update() лишь ставит
-        # событие в очередь, из-за чего возможен артефакт наложения
-        self.repaint()
-        self.status_container.repaint()
-        for child in self.findChildren(QWidget):
-            child.repaint()
 
     def apply_texts(self):
         self.app_title_label.setText(self.styles["about_title_html"])

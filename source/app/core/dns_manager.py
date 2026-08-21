@@ -4,6 +4,7 @@ import platform
 import re
 import subprocess
 import threading
+import time
 from dataclasses import dataclass
 
 from app.core.constants import (
@@ -91,24 +92,44 @@ class DnsManager:
     def __init__(self):
         self.threading_lock = threading.Lock()
         self.backup_failed = False
+        # Кэш результата is_installed: каждый вызов запускает PowerShell (~1 сек),
+        # поэтому без кэша UI «тормозит» при каждом обновлении статуса
+        self._install_cache = {}          # provider_id -> bool
+        self._install_cache_ts = {}       # provider_id -> timestamp
+        self._install_cache_ttl = 5.0     # секунды
 
     # ------------------------------------------------------------------
     # Публичный интерфейс (совместим с HostsManager)
     # ------------------------------------------------------------------
 
     def is_installed(self, provider: str = DNS_PROVIDER_ID) -> bool:
-        """Проверяет, установлены ли DNS-серверы выбранного провайдера."""
+        """Проверяет, установлены ли DNS-серверы выбранного провайдера.
+
+        Результат кэшируется на несколько секунд: каждая проверка запускает
+        PowerShell (~1 сек), что заметно тормозило UI.
+        """
         if provider not in DNS_PROVIDERS:
             return False
+        now = time.monotonic()
+        ts = self._install_cache_ts.get(provider)
+        if ts is not None and (now - ts) < self._install_cache_ttl:
+            return self._install_cache[provider]
         ipv4_servers, _ = get_dns_provider_servers(provider)
         active = self._get_active_interfaces()
-        if not active:
-            return False
+        result = False
         for iface in active:
             current = self._get_interface_dns(iface)
             if current and all(server in current for server in ipv4_servers):
-                return True
-        return False
+                result = True
+                break
+        self._install_cache[provider] = result
+        self._install_cache_ts[provider] = now
+        return result
+
+    def invalidate_install_cache(self):
+        """Сбрасывает кэш is_installed (после установки/удаления DNS)."""
+        self._install_cache.clear()
+        self._install_cache_ts.clear()
 
     def update(self, provider: str = DNS_PROVIDER_ID) -> bool:
         """Устанавливает DNS-серверы выбранного провайдера на все активные интерфейсы."""
@@ -120,6 +141,7 @@ class DnsManager:
             ok = self._apply_dns_to_all(list(ipv4_servers), list(ipv6_servers))
             if ok:
                 self._flush_dns_cache()
+            self.invalidate_install_cache()
             return ok
 
     def restore(self) -> bool:
@@ -129,6 +151,7 @@ class DnsManager:
             if ok:
                 self._flush_dns_cache()
                 set_setting(_ORIGINAL_DNS_SETTING_KEY, None)
+            self.invalidate_install_cache()
             return ok
 
     def check_status(self, provider: str = DNS_PROVIDER_ID) -> DnsStatusResult:
