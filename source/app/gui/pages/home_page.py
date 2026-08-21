@@ -100,7 +100,7 @@ class HomePage(QWidget):
         # Mechanism combo (hosts / Xbox DNS)
         mechanism_combo = QComboBox()
         mechanism_combo.addItem(tr("mechanism_hosts"), "hosts")
-        mechanism_combo.addItem(tr("mechanism_xbox_dns"), DNS_PROVIDER_ID)
+        mechanism_combo.addItem(tr("mechanism_dns"), DNS_PROVIDER_ID)
         mechanism_combo.setStyleSheet(self.styles["combo"])
         mechanism_combo.setCursor(Qt.CursorShape.PointingHandCursor)
         self.mechanism_combo = mechanism_combo
@@ -266,16 +266,19 @@ class HomePage(QWidget):
         self.version_label.setProperty("update_date_value", status.date)
 
         if self.current_mechanism == DNS_PROVIDER_ID:
-            # Для DNS-механизма нет версий hosts-репозитория — показываем факт установки
+            # Для DNS-механизма строка версии hosts не нужна — скрываем её
+            self.version_label.hide()
+            # Показываем статус установки DNS-серверов
             installed = status.key == "installed"
             color = "#43b581" if installed else "#e06c75"
             key = "status_installed" if installed else "status_not_installed"
-            self.version_label.setText(
-                tr("hosts_version_status", color=color, status=tr(key))
-            )
-            self.update_date_label.setText(tr("dns_servers_label", servers=status.date))
+            self.update_date_label.setText(tr(
+                "dns_servers_status_label",
+                servers=status.date, color=color, status=tr(key),
+            ))
             mode = "install"
         else:
+            self.version_label.show()
             self.version_label.setText(
                 tr("hosts_version_status", color=status.color, status=tr(f"hosts_status_{status.key}"))
             )
@@ -300,7 +303,7 @@ class HomePage(QWidget):
         if self.mechanism_combo:
             self.mechanism_combo.blockSignals(True)
             self.mechanism_combo.setItemText(0, tr("mechanism_hosts"))
-            self.mechanism_combo.setItemText(1, tr("mechanism_xbox_dns"))
+            self.mechanism_combo.setItemText(1, tr("mechanism_dns"))
             self.mechanism_combo.blockSignals(False)
         if self.provider_repo_button:
             self.provider_repo_button.setToolTip(tr("provider_repo_tooltip"))
@@ -314,8 +317,13 @@ class HomePage(QWidget):
             )
             self.apply_hosts_version_status(status)
         else:
-            self.version_label.setText(tr("version_checking"))
-            self.update_date_label.setText(tr("update_date_checking"))
+            if self.current_mechanism == DNS_PROVIDER_ID:
+                self.version_label.hide()
+                self.update_date_label.setText("")
+            else:
+                self.version_label.show()
+                self.version_label.setText(tr("version_checking"))
+                self.update_date_label.setText(tr("update_date_checking"))
             self.install_button.setProperty("install_mode", self.install_button.property("install_mode") or "install")
 
         self.uninstall_button.setText(tr("uninstall_button"))
@@ -375,6 +383,10 @@ class HomePage(QWidget):
         self.provider_repo_button.setVisible(not is_dns)
         self.open_hosts_button.setVisible(not is_dns)
         self.backup_hosts_button.setVisible(not is_dns)
+        # Строка «Версия hosts» имеет смысл только для hosts-механизма
+        self.version_label.setVisible(not is_dns)
+        if is_dns:
+            self.update_date_label.setText("")
 
     def _open_provider_repo(self):
         urls = {

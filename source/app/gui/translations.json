@@ -73,13 +73,14 @@
                "hosts_backup_select":  "Бэкап:",
                "hosts_backup_none":  "Бэкапы не найдены",
                "hosts_backup_none_info":  "Файлы резервных копий отсутствуют.\nУстановите или удалите обход, чтобы создать бэкап.",
-               "mechanism_hosts":  "hosts (файл hosts)",
-               "mechanism_xbox_dns":  "Xbox DNS (системный DNS)",
                "dns_servers_label":  "DNS-серверы: {servers}",
                "dns_install_success":  "Xbox DNS успешно установлен!\nㅤDNS-серверы изменены на 111.88.96.50 / 111.88.96.51ㅤ",
                "dns_install_error":  "Не удалось установить Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS удалён, системные DNS восстановлены.",
-               "dns_uninstall_error":  "Не удалось удалить Xbox DNS.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Не удалось удалить Xbox DNS.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "DNS-серверы ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "en":  {
                "language_name":  "English",
@@ -155,13 +156,14 @@
                "hosts_backup_none":  "No backups found",
                "hosts_backup_none_info":  "No backup files found.\nInstall or remove the bypass to create a backup.",
                "backup_warning":  "⚠️ Failed to create a hosts backup. Restore may not be possible.",
-               "mechanism_hosts":  "hosts (hosts file)",
-               "mechanism_xbox_dns":  "Xbox DNS (system DNS)",
                "dns_servers_label":  "DNS servers: {servers}",
                "dns_install_success":  "Xbox DNS installed successfully!\nㅤDNS servers changed to 111.88.96.50 / 111.88.96.51ㅤ",
                "dns_install_error":  "Failed to install Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS removed, system DNS restored.",
-               "dns_uninstall_error":  "Failed to remove Xbox DNS.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Failed to remove Xbox DNS.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "DNS servers ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "de":  {
                "language_name":  "Deutsch",
@@ -237,13 +239,14 @@
                "hosts_backup_none":  "Keine Backups gefunden",
                "hosts_backup_none_info":  "Keine Backup-Dateien gefunden.\nInstallieren oder entfernen Sie den Bypass, um ein Backup zu erstellen.",
                "backup_warning":  "⚠️ Hosts-Sicherung konnte nicht erstellt werden. Wiederherstellung evtl. nicht möglich.",
-               "mechanism_hosts":  "hosts (Hosts-Datei)",
-               "mechanism_xbox_dns":  "Xbox DNS (System-DNS)",
                "dns_servers_label":  "DNS-Server: {servers}",
                "dns_install_success":  "Xbox DNS erfolgreich installiert!\nㅤDNS-Server geändert auf 111.88.96.50 / 111.88.96.51ㅤ",
                "dns_install_error":  "Xbox DNS konnte nicht installiert werden.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS entfernt, System-DNS wiederhergestellt.",
-               "dns_uninstall_error":  "Xbox DNS konnte nicht entfernt werden.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Xbox DNS konnte nicht entfernt werden.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "DNS-Server ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "uk":  {
                "language_name":  "Українська",
@@ -319,13 +322,14 @@
                "hosts_backup_none":  "Резервні копії не знайдені",
                "hosts_backup_none_info":  "Файли резервних копій відсутні.\nВстановіть або видаліть обхід, щоб створити резервну копію.",
                "backup_warning":  "⚠️ Не вдалося створити резервну копію hosts. Відновлення може бути неможливим.",
-               "mechanism_hosts":  "hosts (файл hosts)",
-               "mechanism_xbox_dns":  "Xbox DNS (системний DNS)",
                "dns_servers_label":  "DNS-сервери: {servers}",
                "dns_install_success":  "Xbox DNS успішно встановлено!\nㅤDNS-сервери змінено на 111.88.96.50 / 111.88.96.51ㅤ",
                "dns_install_error":  "Не вдалося встановити Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS видалено, системні DNS відновлено.",
-               "dns_uninstall_error":  "Не вдалося видалити Xbox DNS.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Не вдалося видалити Xbox DNS.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "DNS-сервери ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "be":  {
                "language_name":  "Беларуская",
@@ -401,13 +405,14 @@
                "hosts_backup_none":  "Бэкапы не знойдзены",
                "hosts_backup_none_info":  "Файлы рэзервовых копій адсутнічаюць.\nУсталюйце або выдаліце абыход, каб стварыць бэкап.",
                "backup_warning":  "⚠️ Не ўдалося стварыць рэзервовую копію hosts. Аднаўленне можа быць немагчымым.",
-               "mechanism_hosts":  "hosts (файл hosts)",
-               "mechanism_xbox_dns":  "Xbox DNS (сістэмны DNS)",
                "dns_servers_label":  "DNS-серверы: {servers}",
                "dns_install_success":  "Xbox DNS паспяхова ўстаноўлены!\nㅤDNS-серверы зменены на 111.88.96.50 / 111.88.96.51ㅤ",
                "dns_install_error":  "Не ўдалося ўсталяваць Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS выдалены, сістэмныя DNS адноўлены.",
-               "dns_uninstall_error":  "Не ўдалося выдаліць Xbox DNS.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Не ўдалося выдаліць Xbox DNS.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "DNS-серверы ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "kk":  {
                "language_name":  "Қазақша",
@@ -483,13 +488,14 @@
                "hosts_backup_none":  "Резервтік көшірмелер табылмады",
                "hosts_backup_none_info":  "Резервтік көшірме файлдары жоқ.\nАйналып өтуді орнатыңыз немесе жойыңыз.",
                "backup_warning":  "⚠️ hosts сақтық көшірмесін жасау мүмкін болмады. Қалпына келтіру мүмкін болмауы мүмкін.",
-               "mechanism_hosts":  "hosts (hosts файлы)",
-               "mechanism_xbox_dns":  "Xbox DNS (жүйелік DNS)",
                "dns_servers_label":  "DNS-серверлер: {servers}",
                "dns_install_success":  "Xbox DNS сәтті орнатылды!\nㅤDNS-серверлер 111.88.96.50 / 111.88.96.51 болып өзгертілдіㅤ",
                "dns_install_error":  "Xbox DNS орнату мүмкін болмады.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS жойылды, жүйелік DNS қалпына келтірілді.",
-               "dns_uninstall_error":  "Xbox DNS жою мүмкін болмады.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Xbox DNS жою мүмкін болмады.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "DNS-серверлер ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "fr":  {
                "language_name":  "Français",
@@ -565,13 +571,14 @@
                "hosts_backup_none":  "Aucune sauvegarde trouvée",
                "hosts_backup_none_info":  "Aucun fichier de sauvegarde trouvé.\nInstallez ou supprimez le contournement pour créer une sauvegarde.",
                "backup_warning":  "⚠️ Échec de la création de la sauvegarde hosts. La restauration peut être impossible.",
-               "mechanism_hosts":  "hosts (fichier hosts)",
-               "mechanism_xbox_dns":  "Xbox DNS (DNS système)",
                "dns_servers_label":  "Serveurs DNS : {servers}",
                "dns_install_success":  "Xbox DNS installé avec succès !\nㅤServeurs DNS modifiés en 111.88.96.50 / 111.88.96.51ㅤ",
                "dns_install_error":  "Échec de l\u0027installation de Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS supprimé, DNS système restaurés.",
-               "dns_uninstall_error":  "Échec de la suppression de Xbox DNS.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Échec de la suppression de Xbox DNS.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "Serveurs DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "pl":  {
                "language_name":  "Polski",
@@ -647,13 +654,14 @@
                "hosts_backup_none":  "Nie znaleziono kopii zapasowych",
                "hosts_backup_none_info":  "Nie znaleziono plików kopii zapasowych.\nZainstaluj lub usuń obejście, aby utworzyć kopię zapasową.",
                "backup_warning":  "⚠️ Nie udało się utworzyć kopii zapasowej hosts. Przywracanie może być niemożliwe.",
-               "mechanism_hosts":  "hosts (plik hosts)",
-               "mechanism_xbox_dns":  "Xbox DNS (systemowy DNS)",
                "dns_servers_label":  "Serwery DNS: {servers}",
                "dns_install_success":  "Xbox DNS zainstalowany pomyślnie!\nㅤSerwery DNS zmienione na 111.88.96.50 / 111.88.96.51ㅤ",
                "dns_install_error":  "Nie udało się zainstalować Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS usunięty, przywrócono systemowe DNS.",
-               "dns_uninstall_error":  "Nie udało się usunąć Xbox DNS.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Nie udało się usunąć Xbox DNS.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "Serwery DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "es":  {
                "language_name":  "Español",
@@ -729,13 +737,14 @@
                "hosts_backup_none":  "No se encontraron copias de seguridad",
                "hosts_backup_none_info":  "No se encontraron archivos de copia de seguridad.\nInstale o elimine el bypass para crear una copia de seguridad.",
                "backup_warning":  "⚠️ No se pudo crear la copia de seguridad de hosts. La restauración puede ser imposible.",
-               "mechanism_hosts":  "hosts (archivo hosts)",
-               "mechanism_xbox_dns":  "Xbox DNS (DNS del sistema)",
                "dns_servers_label":  "Servidores DNS: {servers}",
                "dns_install_success":  "¡Xbox DNS instalado con éxito!\nㅤServidores DNS cambiados a 111.88.96.50 / 111.88.96.51ㅤ",
                "dns_install_error":  "No se pudo instalar Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS eliminado, DNS del sistema restaurados.",
-               "dns_uninstall_error":  "No se pudo eliminar Xbox DNS.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "No se pudo eliminar Xbox DNS.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "Servidores DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "pt":  {
                "language_name":  "Português",
@@ -811,13 +820,14 @@
                "hosts_backup_none":  "Nenhum backup encontrado",
                "hosts_backup_none_info":  "Nenhum arquivo de backup encontrado.\nInstale ou remova o bypass para criar um backup.",
                "backup_warning":  "⚠️ Falha ao criar backup do hosts. A restauração pode não ser possível.",
-               "mechanism_hosts":  "hosts (arquivo hosts)",
-               "mechanism_xbox_dns":  "Xbox DNS (DNS do sistema)",
                "dns_servers_label":  "Servidores DNS: {servers}",
                "dns_install_success":  "Xbox DNS instalado com sucesso!\nㅤServidores DNS alterados para 111.88.96.50 / 111.88.96.51ㅤ",
                "dns_install_error":  "Falha ao instalar o Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS removido, DNS do sistema restaurados.",
-               "dns_uninstall_error":  "Falha ao remover o Xbox DNS.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Falha ao remover o Xbox DNS.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "Servidores DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "it":  {
                "language_name":  "Italiano",
@@ -893,13 +903,14 @@
                "hosts_backup_none":  "Nessun backup trovato",
                "hosts_backup_none_info":  "Nessun file di backup trovato.\nInstalla o rimuovi il bypass per creare un backup.",
                "backup_warning":  "⚠️ Impossibile creare il backup di hosts. Il ripristino potrebbe non essere possibile.",
-               "mechanism_hosts":  "hosts (file hosts)",
-               "mechanism_xbox_dns":  "Xbox DNS (DNS di sistema)",
                "dns_servers_label":  "Server DNS: {servers}",
                "dns_install_success":  "Xbox DNS installato con successo!\nㅤServer DNS modificati in 111.88.96.50 / 111.88.96.51ㅤ",
                "dns_install_error":  "Impossibile installare Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS rimosso, DNS di sistema ripristinati.",
-               "dns_uninstall_error":  "Impossibile rimuovere Xbox DNS.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Impossibile rimuovere Xbox DNS.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "Server DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "tr":  {
                "language_name":  "Türkçe",
@@ -975,13 +986,14 @@
                "hosts_backup_none":  "Yedek bulunamadı",
                "hosts_backup_none_info":  "Yedek dosyası bulunamadı.\nYedek oluşturmak için atlamayı yükleyin veya kaldırın.",
                "backup_warning":  "⚠️ hosts yedeği oluşturulamadı. Geri yükleme mümkün olmayabilir.",
-               "mechanism_hosts":  "hosts (hosts dosyası)",
-               "mechanism_xbox_dns":  "Xbox DNS (sistem DNS)",
                "dns_servers_label":  "DNS sunucuları: {servers}",
                "dns_install_success":  "Xbox DNS başarıyla kuruldu!\nㅤDNS sunucuları 111.88.96.50 / 111.88.96.51 olarak değiştirildiㅤ",
                "dns_install_error":  "Xbox DNS kurulamadı.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS kaldırıldı, sistem DNS geri yüklendi.",
-               "dns_uninstall_error":  "Xbox DNS kaldırılamadı.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Xbox DNS kaldırılamadı.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "DNS sunucuları ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "zh":  {
                "language_name":  "中文",
@@ -1057,13 +1069,14 @@
                "hosts_backup_none":  "未找到备份",
                "hosts_backup_none_info":  "未找到备份文件。\n请安装或移除绕过以创建备份。",
                "backup_warning":  "⚠️ 无法创建 hosts 备份。可能无法恢复。",
-               "mechanism_hosts":  "hosts（hosts 文件）",
-               "mechanism_xbox_dns":  "Xbox DNS（系统 DNS）",
                "dns_servers_label":  "DNS 服务器：{servers}",
                "dns_install_success":  "Xbox DNS 安装成功！\nㅤDNS 服务器已更改为 111.88.96.50 / 111.88.96.51ㅤ",
                "dns_install_error":  "安装 Xbox DNS 失败。\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "已移除 Xbox DNS，系统 DNS 已恢复。",
-               "dns_uninstall_error":  "移除 Xbox DNS 失败。\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "移除 Xbox DNS 失败。\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "DNS 服务器（{servers}）- \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "ja":  {
                "language_name":  "日本語",
@@ -1139,13 +1152,14 @@
                "hosts_backup_none":  "バックアップが見つかりません",
                "hosts_backup_none_info":  "バックアップファイルが見つかりません。\nバイパスをインストールまたは削除してバックアップを作成してください。",
                "backup_warning":  "⚠️ hosts のバックアップを作成できませんでした。復元できない場合があります。",
-               "mechanism_hosts":  "hosts（hosts ファイル）",
-               "mechanism_xbox_dns":  "Xbox DNS（システム DNS）",
                "dns_servers_label":  "DNS サーバー: {servers}",
                "dns_install_success":  "Xbox DNS のインストールに成功しました！\nㅤDNS サーバーを 111.88.96.50 / 111.88.96.51 に変更しましたㅤ",
                "dns_install_error":  "Xbox DNS のインストールに失敗しました。\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS を削除し、システム DNS を復元しました。",
-               "dns_uninstall_error":  "Xbox DNS の削除に失敗しました。\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Xbox DNS の削除に失敗しました。\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "DNS サーバー（{servers}）- \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "ko":  {
                "language_name":  "한국어",
@@ -1221,13 +1235,14 @@
                "hosts_backup_none":  "백업을 찾을 수 없음",
                "hosts_backup_none_info":  "백업 파일이 없습니다.\n우회를 설치하거나 제거하여 백업을 생성하세요.",
                "backup_warning":  "⚠️ hosts 백업을 만들지 못했습니다. 복원이 불가능할 수 있습니다.",
-               "mechanism_hosts":  "hosts (hosts 파일)",
-               "mechanism_xbox_dns":  "Xbox DNS (시스템 DNS)",
                "dns_servers_label":  "DNS 서버: {servers}",
                "dns_install_success":  "Xbox DNS가 성공적으로 설치되었습니다!\nㅤDNS 서버가 111.88.96.50 / 111.88.96.51로 변경되었습니다ㅤ",
                "dns_install_error":  "Xbox DNS 설치에 실패했습니다.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS가 제거되고 시스템 DNS가 복원되었습니다.",
-               "dns_uninstall_error":  "Xbox DNS 제거에 실패했습니다.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Xbox DNS 제거에 실패했습니다.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "DNS 서버 ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "cs":  {
                "language_name":  "Čeština",
@@ -1303,13 +1318,14 @@
                "hosts_backup_none":  "Žádné zálohy nenalezeny",
                "hosts_backup_none_info":  "Nebyly nalezeny žádné záložní soubory.\nNainstalujte nebo odstraňte obcházení pro vytvoření zálohy.",
                "backup_warning":  "⚠️ Nepodařilo se vytvořit zálohu hosts. Obnovení nemusí být možné.",
-               "mechanism_hosts":  "hosts (soubor hosts)",
-               "mechanism_xbox_dns":  "Xbox DNS (systémový DNS)",
                "dns_servers_label":  "DNS servery: {servers}",
                "dns_install_success":  "Xbox DNS byl úspěšně nainstalován!\nㅤDNS servery změněny na 111.88.96.50 / 111.88.96.51ㅤ",
                "dns_install_error":  "Instalace Xbox DNS se nezdařila.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS odebrán, systémové DNS obnoveny.",
-               "dns_uninstall_error":  "Odebrání Xbox DNS se nezdařilo.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Odebrání Xbox DNS se nezdařilo.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "DNS servery ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "nl":  {
                "language_name":  "Nederlands",
@@ -1385,13 +1401,14 @@
                "hosts_backup_none":  "Geen back-ups gevonden",
                "hosts_backup_none_info":  "Geen back-upbestanden gevonden.\nInstalleer of verwijder de bypass om een back-up te maken.",
                "backup_warning":  "⚠️ Kan geen back-up van hosts maken. Herstel is mogelijk niet mogelijk.",
-               "mechanism_hosts":  "hosts (hosts-bestand)",
-               "mechanism_xbox_dns":  "Xbox DNS (systeem-DNS)",
                "dns_servers_label":  "DNS-servers: {servers}",
                "dns_install_success":  "Xbox DNS succesvol geïnstalleerd!\nㅤDNS-servers gewijzigd naar 111.88.96.50 / 111.88.96.51ㅤ",
                "dns_install_error":  "Kan Xbox DNS niet installeren.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS verwijderd, systeem-DNS hersteld.",
-               "dns_uninstall_error":  "Kan Xbox DNS niet verwijderen.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Kan Xbox DNS niet verwijderen.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "DNS-servers ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            },
     "sv":  {
                "language_name":  "Svenska",
@@ -1467,12 +1484,13 @@
                "hosts_backup_none":  "Inga säkerhetskopior hittades",
                "hosts_backup_none_info":  "Inga säkerhetskopior hittades.\nInstallera eller ta bort förbikopplingen för att skapa en säkerhetskopia.",
                "backup_warning":  "⚠️ Kunde inte skapa säkerhetskopia av hosts. Återställning kanske inte är möjlig.",
-               "mechanism_hosts":  "hosts (hosts-fil)",
-               "mechanism_xbox_dns":  "Xbox DNS (system-DNS)",
                "dns_servers_label":  "DNS-servrar: {servers}",
                "dns_install_success":  "Xbox DNS installerades framgångsrikt!\nㅤDNS-servrar ändrade till 111.88.96.50 / 111.88.96.51ㅤ",
                "dns_install_error":  "Kunde inte installera Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_uninstall_success":  "Xbox DNS borttaget, system-DNS återställd.",
-               "dns_uninstall_error":  "Kunde inte ta bort Xbox DNS.\nㅤ{hint}ㅤ"
+               "dns_uninstall_error":  "Kunde inte ta bort Xbox DNS.\nㅤ{hint}ㅤ",
+               "dns_servers_status_label":  "DNS-servrar ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
+               "mechanism_dns":  "DNS",
+               "mechanism_hosts":  "Hosts"
            }
 }
