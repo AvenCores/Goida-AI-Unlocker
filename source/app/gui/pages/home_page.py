@@ -290,6 +290,33 @@ class HomePage(QWidget):
 
         self.install_button.setProperty("install_mode", mode)
         self.install_button.setText(tr("install_button_update" if mode == "update" else "install_button_install"))
+        # Статус приходит асинхронно (воркер) — после изменения текстов
+        # пересчитываем лейаут, иначе элементы могут перекрываться
+        self._relayout()
+
+    def _relayout(self):
+        """Форсирует полный пересчёт лейаутов и перерисовку.
+
+        Без этого виджеты, скрытые до первого показа окна, остаются
+        с нулевой высотой / перекрываются после смены механизма.
+        """
+        parent = self.status_container
+        while parent is not None:
+            lay = parent.layout()
+            if lay is not None:
+                lay.invalidate()
+                lay.activate()
+            if parent is self or parent.isWindow():
+                break
+            parent = parent.parentWidget()
+        self.status_container.adjustSize()
+        self.updateGeometry()
+        # repaint() синхронно перерисовывает виджеты; update() лишь ставит
+        # событие в очередь, из-за чего возможен артефакт наложения
+        self.repaint()
+        self.status_container.repaint()
+        for child in self.findChildren(QWidget):
+            child.repaint()
 
     def apply_texts(self):
         self.app_title_label.setText(self.styles["about_title_html"])
@@ -379,7 +406,7 @@ class HomePage(QWidget):
     def _update_mechanism_controls_visibility(self):
         """Скрывает hosts-специфичные контролы при DNS-механизме."""
         is_dns = self.current_mechanism == DNS_PROVIDER_ID
-        self.provider_combo.setVisible(not is_dns)
+        self._set_visible_and_restore_height(self.provider_combo, not is_dns)
         self.provider_repo_button.setVisible(not is_dns)
         self.open_hosts_button.setVisible(not is_dns)
         self.backup_hosts_button.setVisible(not is_dns)
@@ -387,6 +414,21 @@ class HomePage(QWidget):
         self.version_label.setVisible(not is_dns)
         if is_dns:
             self.update_date_label.setText("")
+        self._relayout()
+
+    @staticmethod
+    def _set_visible_and_restore_height(widget, visible: bool):
+        """Показывает/скрывает виджет, гарантируя восстановление его высоты.
+
+        Виджеты, скрытые до первого показа окна, могут остаться с нулевой
+        высотой после setVisible(True) — фиксируем минимальную высоту.
+        """
+        if visible:
+            widget.setVisible(True)
+            if widget.minimumHeight() == 0:
+                widget.setMinimumHeight(widget.sizeHint().height())
+        else:
+            widget.setVisible(False)
 
     def _open_provider_repo(self):
         urls = {
