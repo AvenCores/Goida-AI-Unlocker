@@ -180,12 +180,23 @@ class DnsManager:
     # ------------------------------------------------------------------
 
     def _save_original_dns(self):
+        """Сохраняет оригинальные настройки DNS перед установкой.
+
+        Важно различать DHCP и статику: если адрес получен по DHCP,
+        при восстановлении нужно вернуть режим «авто», а не вписывать
+        адрес роутера как статический.
+        """
         try:
             snapshot = {}
             for iface in self._get_active_interfaces():
                 dns = self._get_interface_dns(iface)
-                if dns:
-                    snapshot[iface] = dns
+                if not dns:
+                    # Нет статических записей — DNS по DHCP (или авто)
+                    snapshot[iface] = {"source": "dhcp", "servers": []}
+                    continue
+                static = self._is_interface_dns_static(iface)
+                source = "static" if static else "dhcp"
+                snapshot[iface] = {"source": source, "servers": dns}
             set_setting(_ORIGINAL_DNS_SETTING_KEY, snapshot)
         except Exception:
             logger.exception("Failed to save original DNS servers")
@@ -198,9 +209,11 @@ class DnsManager:
         ok = True
         for iface in active:
             original = snapshot.get(iface)
-            if original:
-                ok = self._set_interface_dns(iface, original, []) and ok
+            if original and original.get("source") == "static" and original.get("servers"):
+                # Статические настройки — восстанавливаем сохранённые адреса
+                ok = self._set_interface_dns(iface, original["servers"], []) and ok
             else:
+                # DHCP/авто — сбрасываем на автоматический режим
                 ok = self._reset_interface_dns(iface) and ok
         return ok
 
@@ -271,6 +284,35 @@ class DnsManager:
         if code != 0:
             return []
         return [line.strip() for line in output.splitlines() if line.strip()]
+
+    def _is_interface_dns_static(self, iface: str) -> bool:
+        """Определяет, задан ли DNS статически (True) или по DHCP/авто (False)."""
+        if IS_WINDOWS:
+            # Тип адресации надёжнее определять через реестр интерфейса:
+            # пустой NameServer = DHCP, непустой = статические адреса
+            ps_script = (
+                "$guid = (Get-NetAdapter -InterfaceAlias '" + iface + "').InterfaceGuid; "
+                "$reg = 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces\\' + $guid; "
+                "(Get-ItemProperty -Path $reg -Name NameServer -ErrorAction SilentlyContinue).NameServer"
+            )
+            code, output = _run_command(
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script]
+            )
+            if code != 0:
+                # Не смогли определить — считаем DHCP (безопаснее: сброс на авто)
+                return False
+            value = output.strip()
+            # Пустая строка = DNS по DHCP; непустая = статические адреса
+            return bool(value)
+        if IS_MACOS:
+            # networksetup: если DNS задан, getdnsservers возвращает адреса,
+            # иначе сообщение "There aren't any DNS Servers set"
+            dns = self._get_interface_dns_macos(iface)
+            return bool(dns)
+        # Linux: resolvectl показывает текущие DNS независимо от источника;
+        # считаем статикой, если записи есть (resolvectl revert вернёт авто)
+        dns = self._get_interface_dns_linux(iface)
+        return bool(dns)
 
     def _get_interface_dns_macos(self, service: str) -> list:
         code, output = _run_command(
