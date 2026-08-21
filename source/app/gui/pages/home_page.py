@@ -2,9 +2,9 @@ from typing import Optional
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox
 )
-from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtCore import Qt, Signal, QSize, QTimer
 from app.core.hosts_manager import HostsManager, HostsStatusResult
-from app.core.dns_manager import DnsManager, DNS_PROVIDER_ID
+from app.core.dns_manager import DnsManager, DNS_PROVIDER_ID, get_dns_providers
 from app.utils.helpers import open_target
 from app.gui.localization import tr, localize_update_date
 from app.gui.icons import get_icon
@@ -20,11 +20,13 @@ class HomePage(QWidget):
     update_check_requested = Signal()
     provider_changed = Signal(str)        # provider id
     mechanism_changed = Signal(str)       # mechanism id: "hosts" | "xbox-dns"
+    dns_provider_changed = Signal(str)    # dns provider id
     open_hosts_requested = Signal()       # open built-in hosts editor
     view_backups_requested = Signal()     # open built-in backup viewer
 
     def __init__(self, hosts_manager: HostsManager, dns_manager: DnsManager, styles: dict,
-                 dark_theme: bool, current_provider: str, current_mechanism: str = "hosts"):
+                 dark_theme: bool, current_provider: str, current_mechanism: str = "hosts",
+                 current_dns_provider: str = DNS_PROVIDER_ID):
         super().__init__()
         self.hosts_manager = hosts_manager
         self.dns_manager = dns_manager
@@ -32,6 +34,7 @@ class HomePage(QWidget):
         self.dark_theme = dark_theme
         self.current_provider = current_provider
         self.current_mechanism = current_mechanism
+        self.current_dns_provider = current_dns_provider
 
         # UI references
         self.app_title_label: Optional[QLabel] = None
@@ -97,7 +100,7 @@ class HomePage(QWidget):
         )
         self.update_date_label = update_date_label
 
-        # Mechanism combo (hosts / Xbox DNS)
+        # Mechanism combo (Hosts / DNS)
         mechanism_combo = QComboBox()
         mechanism_combo.addItem(tr("mechanism_hosts"), "hosts")
         mechanism_combo.addItem(tr("mechanism_dns"), DNS_PROVIDER_ID)
@@ -105,7 +108,15 @@ class HomePage(QWidget):
         mechanism_combo.setCursor(Qt.CursorShape.PointingHandCursor)
         self.mechanism_combo = mechanism_combo
 
-        # Provider combo
+        # DNS provider combo (виден только в режиме DNS)
+        dns_provider_combo = QComboBox()
+        for name, pid in get_dns_providers():
+            dns_provider_combo.addItem(name, pid)
+        dns_provider_combo.setStyleSheet(self.styles["combo"])
+        dns_provider_combo.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.dns_provider_combo = dns_provider_combo
+
+        # Provider combo (виден только в режиме Hosts)
         provider_combo = QComboBox()
         provider_combo.addItem(tr("provider_malw"), "dns.malw.link")
         provider_combo.addItem(tr("provider_geohide"), "geohide")
@@ -142,6 +153,7 @@ class HomePage(QWidget):
         status_vbox.setSpacing(8)
         status_vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
         status_vbox.addWidget(mechanism_combo)
+        status_vbox.addWidget(dns_provider_combo)
         status_vbox.addLayout(provider_hbox)
         status_vbox.addWidget(textinformer)
         status_vbox.addWidget(version_label)
@@ -157,6 +169,10 @@ class HomePage(QWidget):
         mechanism_idx = mechanism_combo.findData(self.current_mechanism)
         mechanism_combo.setCurrentIndex(mechanism_idx if mechanism_idx >= 0 else 0)
         mechanism_combo.currentIndexChanged.connect(self._on_mechanism_changed)
+
+        dns_provider_idx = dns_provider_combo.findData(self.current_dns_provider)
+        dns_provider_combo.setCurrentIndex(dns_provider_idx if dns_provider_idx >= 0 else 0)
+        dns_provider_combo.currentIndexChanged.connect(self._on_dns_provider_changed)
 
         # Action buttons
         install_button = QPushButton(tr("install_button_install"))
@@ -332,6 +348,17 @@ class HomePage(QWidget):
             self.mechanism_combo.setItemText(0, tr("mechanism_hosts"))
             self.mechanism_combo.setItemText(1, tr("mechanism_dns"))
             self.mechanism_combo.blockSignals(False)
+        if self.dns_provider_combo:
+            current = self.dns_provider_combo.currentData()
+            self.dns_provider_combo.blockSignals(True)
+            for i, (name, pid) in enumerate(get_dns_providers()):
+                if i < self.dns_provider_combo.count():
+                    self.dns_provider_combo.setItemText(i, name)
+                else:
+                    self.dns_provider_combo.addItem(name, pid)
+            idx = self.dns_provider_combo.findData(current)
+            self.dns_provider_combo.setCurrentIndex(idx if idx >= 0 else 0)
+            self.dns_provider_combo.blockSignals(False)
         if self.provider_repo_button:
             self.provider_repo_button.setToolTip(tr("provider_repo_tooltip"))
 
@@ -346,7 +373,8 @@ class HomePage(QWidget):
         else:
             if self.current_mechanism == DNS_PROVIDER_ID:
                 self.version_label.hide()
-                self.update_date_label.setText("")
+                # Мгновенный статус DNS без ожидания воркера
+                self._show_instant_dns_status()
             else:
                 self.version_label.show()
                 self.version_label.setText(tr("version_checking"))
@@ -374,6 +402,8 @@ class HomePage(QWidget):
             self.provider_combo.setStyleSheet(self.styles["combo"])
         if self.mechanism_combo:
             self.mechanism_combo.setStyleSheet(self.styles["combo"])
+        if self.dns_provider_combo:
+            self.dns_provider_combo.setStyleSheet(self.styles["combo"])
         self.donate_button.setStyleSheet(self.styles["theme"])
         self.open_hosts_button.setStyleSheet(self.styles["theme"])
         self.backup_hosts_button.setStyleSheet(self.styles["theme"])
@@ -403,18 +433,46 @@ class HomePage(QWidget):
             self.update_status_label()
             self.mechanism_changed.emit(selected)
 
+    def _on_dns_provider_changed(self):
+        selected = self.dns_provider_combo.currentData()
+        if selected:
+            self.current_dns_provider = selected
+            self._show_instant_dns_status()
+            self.update_status_label()
+            self.dns_provider_changed.emit(selected)
+
     def _update_mechanism_controls_visibility(self):
-        """Скрывает hosts-специфичные контролы при DNS-механизме."""
+        """Показывает контролы, соответствующие текущему механизму."""
         is_dns = self.current_mechanism == DNS_PROVIDER_ID
+        self._set_visible_and_restore_height(self.dns_provider_combo, is_dns)
         self._set_visible_and_restore_height(self.provider_combo, not is_dns)
         self.provider_repo_button.setVisible(not is_dns)
         self.open_hosts_button.setVisible(not is_dns)
         self.backup_hosts_button.setVisible(not is_dns)
         # Строка «Версия hosts» имеет смысл только для hosts-механизма
         self.version_label.setVisible(not is_dns)
+        # Мгновенно показываем статус DNS без ожидания воркера
         if is_dns:
-            self.update_date_label.setText("")
+            self._show_instant_dns_status()
         self._relayout()
+        # Повторный пересчёт после обработки Qt событий видимости —
+        # без этого элементы перекрываются при переключении механизма
+        QTimer.singleShot(0, self._relayout)
+
+    def _show_instant_dns_status(self):
+        """Показывает статус DNS-серверов сразу, без ожидания воркера."""
+        try:
+            installed = self.dns_manager.is_installed(self.current_dns_provider)
+        except Exception:
+            installed = False
+        color = "#43b581" if installed else "#e06c75"
+        key = "status_installed" if installed else "status_not_installed"
+        from app.core.dns_manager import get_dns_provider_servers
+        ipv4_servers, _ = get_dns_provider_servers(self.current_dns_provider)
+        self.update_date_label.setText(tr(
+            "dns_servers_status_label",
+            servers=", ".join(ipv4_servers), color=color, status=tr(key),
+        ))
 
     @staticmethod
     def _set_visible_and_restore_height(widget, visible: bool):

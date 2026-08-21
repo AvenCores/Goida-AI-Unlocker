@@ -9,7 +9,7 @@ from PySide6.QtGui import QIcon
 
 from app.core.constants import resource_path
 from app.core.hosts_manager import HostsManager, HostsStatusResult
-from app.core.dns_manager import DnsManager, DNS_PROVIDER_ID
+from app.core.dns_manager import DnsManager, DNS_PROVIDER_ID, DNS_PROVIDERS
 from app.core.settings import get_setting, set_setting
 from app.gui.localization import tr, set_current_language
 from app.gui.styles import get_stylesheet, get_about_toolbutton_style, clear_stylesheet_cache, is_system_dark_theme
@@ -63,6 +63,9 @@ class MainWindow(QMainWindow):
         self.current_mechanism = get_setting("mechanism", "hosts")
         if self.current_mechanism not in ("hosts", DNS_PROVIDER_ID):
             self.current_mechanism = "hosts"
+        self.current_dns_provider = get_setting("dns_provider", DNS_PROVIDER_ID)
+        if self.current_dns_provider not in DNS_PROVIDERS:
+            self.current_dns_provider = DNS_PROVIDER_ID
         self._check_updates_running = False
         self._version_status_check_running = False
         self._processing_widget: Optional[QWidget] = None
@@ -124,7 +127,8 @@ class MainWindow(QMainWindow):
         # Home page
         home_page = HomePage(
             self.hosts_manager, self.dns_manager, self.styles,
-            self.dark_theme, self.current_provider, self.current_mechanism
+            self.dark_theme, self.current_provider, self.current_mechanism,
+            self.current_dns_provider,
         )
         self.home_page = home_page
 
@@ -194,6 +198,7 @@ class MainWindow(QMainWindow):
         home_page.update_check_requested.connect(self.check_for_updates)
         home_page.provider_changed.connect(self._on_provider_changed)
         home_page.mechanism_changed.connect(self._on_mechanism_changed)
+        home_page.dns_provider_changed.connect(self._on_dns_provider_changed)
         home_page.open_hosts_requested.connect(self.show_hosts_editor)
         home_page.view_backups_requested.connect(self.show_hosts_backup_viewer)
 
@@ -356,7 +361,7 @@ class MainWindow(QMainWindow):
             return
         self._processing_widget = self.show_processing(action)
         if self.current_mechanism == DNS_PROVIDER_ID:
-            worker = HostsWorker(action, self.dns_manager, DNS_PROVIDER_ID, self)
+            worker = HostsWorker(action, self.dns_manager, self.current_dns_provider, self)
         else:
             worker = HostsWorker(action, self.hosts_manager, self.current_provider, self)
         worker.signals.finished.connect(self.on_hosts_finished, Qt.ConnectionType.QueuedConnection)
@@ -399,7 +404,7 @@ class MainWindow(QMainWindow):
             return
         self._version_status_check_running = True
         if self.current_mechanism == DNS_PROVIDER_ID:
-            worker = VersionWorker(self.dns_manager, DNS_PROVIDER_ID, self)
+            worker = VersionWorker(self.dns_manager, self.current_dns_provider, self)
         else:
             worker = VersionWorker(self.hosts_manager, self.current_provider, self)
         worker.signals.status_ready.connect(
@@ -426,6 +431,11 @@ class MainWindow(QMainWindow):
     def _on_mechanism_changed(self, mechanism: str):
         self.current_mechanism = mechanism
         set_setting("mechanism", mechanism)
+        self.check_version_status()
+
+    def _on_dns_provider_changed(self, provider: str):
+        self.current_dns_provider = provider
+        set_setting("dns_provider", provider)
         self.check_version_status()
 
     # --- App updates ---

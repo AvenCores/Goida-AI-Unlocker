@@ -24,6 +24,27 @@ _ORIGINAL_DNS_SETTING_KEY = "original_dns_servers"
 # Маркер, который записывается в настройки при установке Xbox DNS
 DNS_PROVIDER_ID = "xbox-dns"
 
+# Реестр DNS-провайдеров: id -> (ключ перевода, IPv4-серверы, IPv6-серверы)
+DNS_PROVIDERS = {
+    "xbox-dns": {
+        "name_key": "provider_xbox_dns",
+        "ipv4": XBOX_DNS_SERVERS,
+        "ipv6": XBOX_DNS_SERVERS_IPV6,
+    },
+}
+
+
+def get_dns_providers() -> list:
+    """Возвращает список (отображаемое имя, id) всех DNS-провайдеров."""
+    from app.gui.localization import tr
+    return [(tr(cfg["name_key"]), pid) for pid, cfg in DNS_PROVIDERS.items()]
+
+
+def get_dns_provider_servers(provider_id: str) -> tuple:
+    """Возвращает (ipv4, ipv6) серверы для указанного провайдера."""
+    cfg = DNS_PROVIDERS.get(provider_id) or DNS_PROVIDERS[DNS_PROVIDER_ID]
+    return cfg["ipv4"], cfg["ipv6"]
+
 # Виртуальные/служебные адаптеры, которые нельзя трогать (VMware, VirtualBox и т.п.)
 _VIRTUAL_ADAPTER_RE = re.compile(
     r"vmware|virtualbox|vbox|hyper-v|wsl|loopback|tap-|tunnel|vpn|"
@@ -76,25 +97,27 @@ class DnsManager:
     # ------------------------------------------------------------------
 
     def is_installed(self, provider: str = DNS_PROVIDER_ID) -> bool:
-        """Проверяет, установлены ли DNS-серверы Xbox DNS на активных интерфейсах."""
-        if provider != DNS_PROVIDER_ID:
+        """Проверяет, установлены ли DNS-серверы выбранного провайдера."""
+        if provider not in DNS_PROVIDERS:
             return False
+        ipv4_servers, _ = get_dns_provider_servers(provider)
         active = self._get_active_interfaces()
         if not active:
             return False
         for iface in active:
             current = self._get_interface_dns(iface)
-            if current and all(server in current for server in XBOX_DNS_SERVERS):
+            if current and all(server in current for server in ipv4_servers):
                 return True
         return False
 
     def update(self, provider: str = DNS_PROVIDER_ID) -> bool:
-        """Устанавливает DNS-серверы Xbox DNS на все активные интерфейсы."""
-        if provider != DNS_PROVIDER_ID:
+        """Устанавливает DNS-серверы выбранного провайдера на все активные интерфейсы."""
+        if provider not in DNS_PROVIDERS:
             raise RuntimeError(f"Unknown DNS provider: {provider}")
+        ipv4_servers, ipv6_servers = get_dns_provider_servers(provider)
         with self.threading_lock:
             self._save_original_dns()
-            ok = self._apply_dns_to_all(XBOX_DNS_SERVERS, XBOX_DNS_SERVERS_IPV6)
+            ok = self._apply_dns_to_all(list(ipv4_servers), list(ipv6_servers))
             if ok:
                 self._flush_dns_cache()
             return ok
@@ -109,9 +132,10 @@ class DnsManager:
             return ok
 
     def check_status(self, provider: str = DNS_PROVIDER_ID) -> DnsStatusResult:
+        ipv4_servers, _ = get_dns_provider_servers(provider)
         if self.is_installed(provider):
-            return DnsStatusResult("installed", "#4caf50", ", ".join(XBOX_DNS_SERVERS))
-        return DnsStatusResult("not_installed", "#9e9e9e", ", ".join(XBOX_DNS_SERVERS))
+            return DnsStatusResult("installed", "#4caf50", ", ".join(ipv4_servers))
+        return DnsStatusResult("not_installed", "#9e9e9e", ", ".join(ipv4_servers))
 
     def apply(self, _content: str) -> bool:
         """Для совместимости с HostsWorker: у DNS-механизма нет контента."""

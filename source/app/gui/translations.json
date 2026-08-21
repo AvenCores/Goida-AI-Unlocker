@@ -80,7 +80,8 @@
                "dns_uninstall_error":  "Не удалось удалить Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "DNS-серверы ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "en":  {
                "language_name":  "English",
@@ -163,7 +164,8 @@
                "dns_uninstall_error":  "Failed to remove Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "DNS servers ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "de":  {
                "language_name":  "Deutsch",
@@ -246,7 +248,8 @@
                "dns_uninstall_error":  "Xbox DNS konnte nicht entfernt werden.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "DNS-Server ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "uk":  {
                "language_name":  "Українська",
@@ -329,7 +332,8 @@
                "dns_uninstall_error":  "Не вдалося видалити Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "DNS-сервери ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "be":  {
                "language_name":  "Беларуская",
@@ -412,7 +416,8 @@
                "dns_uninstall_error":  "Не ўдалося выдаліць Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "DNS-серверы ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "kk":  {
                "language_name":  "Қазақша",
@@ -495,7 +500,8 @@
                "dns_uninstall_error":  "Xbox DNS жою мүмкін болмады.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "DNS-серверлер ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "fr":  {
                "language_name":  "Français",
@@ -578,7 +584,8 @@
                "dns_uninstall_error":  "Échec de la suppression de Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "Serveurs DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "pl":  {
                "language_name":  "Polski",
@@ -661,7 +668,8 @@
                "dns_uninstall_error":  "Nie udało się usunąć Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "Serwery DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "es":  {
                "language_name":  "Español",
@@ -744,7 +752,8 @@
                "dns_uninstall_error":  "No se pudo eliminar Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "Servidores DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "pt":  {
                "language_name":  "Português",
@@ -827,7 +836,8 @@
                "dns_uninstall_error":  "Falha ao remover o Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "Servidores DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "it":  {
                "language_name":  "Italiano",
@@ -910,7 +920,8 @@
                "dns_uninstall_error":  "Impossibile rimuovere Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "Server DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "tr":  {
                "language_name":  "Türkçe",
@@ -993,7 +1004,8 @@
                "dns_uninstall_error":  "Xbox DNS kaldırılamadı.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "DNS sunucuları ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "zh":  {
                "language_name":  "中文",
@@ -1076,7 +1088,8 @@
                "dns_uninstall_error":  "移除 Xbox DNS 失败。\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "DNS 服务器（{servers}）- \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS（xbox-dns.ru）"
            },
     "ja":  {
                "language_name":  "日本語",
@@ -1159,7 +1172,8 @@
                "dns_uninstall_error":  "Xbox DNS の削除に失敗しました。\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "DNS サーバー（{servers}）- \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS（xbox-dns.ru）"
            },
     "ko":  {
                "language_name":  "한국어",
@@ -1242,7 +1256,8 @@
                "dns_uninstall_error":  "Xbox DNS 제거에 실패했습니다.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "DNS 서버 ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "cs":  {
                "language_name":  "Čeština",
@@ -1325,7 +1340,8 @@
                "dns_uninstall_error":  "Odebrání Xbox DNS se nezdařilo.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "DNS servery ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "nl":  {
                "language_name":  "Nederlands",
@@ -1408,7 +1424,8 @@
                "dns_uninstall_error":  "Kan Xbox DNS niet verwijderen.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "DNS-servers ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            },
     "sv":  {
                "language_name":  "Svenska",
@@ -1491,6 +1508,7 @@
                "dns_uninstall_error":  "Kunde inte ta bort Xbox DNS.\nㅤ{hint}ㅤ",
                "dns_servers_status_label":  "DNS-servrar ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
-               "mechanism_hosts":  "Hosts"
+               "mechanism_hosts":  "Hosts",
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
            }
 }
