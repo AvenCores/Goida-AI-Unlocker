@@ -7,6 +7,26 @@ import time as _time
 from pathlib import Path
 from app.core.logger import logger
 
+def get_clean_system_env() -> dict:
+    """Возвращает копию окружения без «мусора» PyInstaller.
+
+    PyInstaller (onefile) задаёт LD_LIBRARY_PATH на свою временную папку,
+    из-за чего системные инструменты (resolvectl, xdg-open и т.п.)
+    подхватывают бандловые библиотеки вроде libcrypto.so.3 и падают с
+    ошибкой вида "version `OPENSSL_3.4.0' not found". Функция восстанавливает
+    оригинальные значения переменных (сохранённые PyInstaller как *_ORIG).
+    """
+    env = os.environ.copy()
+    if getattr(sys, 'frozen', False):
+        for var in ['LD_LIBRARY_PATH', 'PATH', 'PYTHONPATH']:
+            orig_var = var + '_ORIG'
+            if orig_var in env:
+                env[var] = env[orig_var]
+            elif var == 'LD_LIBRARY_PATH':
+                # Если нет оригинального LD_LIBRARY_PATH — безопаснее убрать
+                env.pop(var, None)
+    return env
+
 def open_target(path: str):
     try:
         if sys.platform == "win32":
@@ -15,18 +35,7 @@ def open_target(path: str):
             subprocess.Popen(["open", path], start_new_session=True)
         else:
             # Linux fallbacks
-            env = os.environ.copy()
-            
-            # PyInstaller fix: restore original environment variables
-            # PyInstaller sets LD_LIBRARY_PATH which can break system tools like xdg-open
-            if getattr(sys, 'frozen', False):
-                for var in ['LD_LIBRARY_PATH', 'PATH', 'PYTHONPATH']:
-                    orig_var = var + '_ORIG'
-                    if orig_var in env:
-                        env[var] = env[orig_var]
-                    elif var == 'LD_LIBRARY_PATH':
-                        # If no original LD_LIBRARY_PATH, it's safer to remove it
-                        env.pop(var, None)
+            env = get_clean_system_env()
 
             success = False
             for cmd_name in ["xdg-open", "gio", "kde-open", "gnome-open"]:

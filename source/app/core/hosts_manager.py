@@ -573,7 +573,10 @@ class HostsManager:
                 "/etc/init.d/nscd restart 2>/dev/null || "
                 "killall -HUP dnsmasq 2>/dev/null || true"
             )
-        subprocess.run(flush, shell=True)
+        # PyInstaller (onefile) задаёт LD_LIBRARY_PATH на свою временную папку,
+        # из-за чего resolvectl может упасть из-за бандловой libcrypto.so.3
+        from app.utils.helpers import get_clean_system_env
+        subprocess.run(flush, shell=True, env=get_clean_system_env())
 
     def _apply_macos_elevated(self, temp_path: str) -> bool:
         flush = (

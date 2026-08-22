@@ -89,14 +89,25 @@ class DnsStatusResult:
 
 
 def _run_command(cmd, timeout=30):
-    """Запускает команду и возвращает (returncode, stdout+stderr)."""
+    """Запускает команду и возвращает (returncode, stdout+stderr).
+
+    На Linux/macOS используется очищенное окружение: PyInstaller (onefile)
+    задаёт LD_LIBRARY_PATH на свою временную папку, из-за чего системные
+    инструменты вроде resolvectl падают с ошибкой
+    "libcrypto.so.3: version `OPENSSL_3.4.0' not found".
+    """
     try:
+        kwargs = {}
+        if not IS_WINDOWS:
+            from app.utils.helpers import get_clean_system_env
+            kwargs["env"] = get_clean_system_env()
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             timeout=timeout,
             creationflags=subprocess.CREATE_NO_WINDOW if IS_WINDOWS else 0,
+            **kwargs,
         )
         return result.returncode, (result.stdout or "") + (result.stderr or "")
     except FileNotFoundError:
