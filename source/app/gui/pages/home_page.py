@@ -291,7 +291,9 @@ class HomePage(QWidget):
 
     def update_status_label(self):
         if self.current_mechanism == DNS_PROVIDER_ID:
-            installed = self.dns_manager.is_installed(DNS_PROVIDER_ID)
+            # Неблокирующий вариант: только кэш, без запуска PowerShell.
+            # Свежая проверка выполняется асинхронно через VersionWorker.
+            installed = self.dns_manager.get_cached_install_state(self.current_dns_provider)
         else:
             installed = self.hosts_manager.is_installed(self.current_provider)
         color = "#43b581" if installed else "#e06c75"
@@ -328,8 +330,11 @@ class HomePage(QWidget):
 
         self.install_button.setProperty("install_mode", mode)
         self.install_button.setText(tr("install_button_update" if mode == "update" else "install_button_install"))
-        # Статус приходит асинхронно (воркер) — после изменения текстов
-        # пересчитываем лейаут, иначе элементы могут перекрываться
+        # Статус пришёл асинхронно (воркер) — обновляем и общий статус,
+        # чтобы он соответствовал свежей проверке
+        self.update_status_label()
+        # После изменения текстов пересчитываем лейаут, иначе элементы
+        # могут перекрываться
         self._relayout()
 
     def _relayout(self):
@@ -479,15 +484,16 @@ class HomePage(QWidget):
         QTimer.singleShot(0, self._relayout)
 
     def _show_instant_dns_status(self):
-        """Показывает статус DNS-серверов сразу, без ожидания воркера."""
-        try:
-            installed = self.dns_manager.is_installed(self.current_dns_provider)
-        except Exception:
-            installed = False
-        color = "#43b581" if installed else "#e06c75"
-        key = "status_installed" if installed else "status_not_installed"
+        """Показывает статус DNS-серверов мгновенно, не блокируя UI-поток.
+
+        Использует только кэш (без запуска PowerShell ~0.8с).
+        Свежая проверка выполняется асинхронно через VersionWorker.
+        """
         from app.core.dns_manager import get_dns_provider_servers
         ipv4_servers, _ = get_dns_provider_servers(self.current_dns_provider)
+        installed = self.dns_manager.get_cached_install_state(self.current_dns_provider)
+        color = "#43b581" if installed else "#e06c75"
+        key = "status_installed" if installed else "status_not_installed"
         self.update_date_label.setText(tr(
             "dns_servers_status_label",
             servers=", ".join(ipv4_servers), color=color, status=tr(key),

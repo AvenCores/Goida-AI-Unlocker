@@ -121,7 +121,7 @@ class DnsManager:
         # поэтому без кэша UI «тормозит» при каждом обновлении статуса
         self._install_cache = {}          # provider_id -> bool
         self._install_cache_ts = {}       # provider_id -> timestamp
-        self._install_cache_ttl = 5.0     # секунды
+        self._install_cache_ttl = 30.0    # секунды
 
     # ------------------------------------------------------------------
     # Публичный интерфейс (совместим с HostsManager)
@@ -155,6 +155,15 @@ class DnsManager:
         """Сбрасывает кэш is_installed (после установки/удаления DNS)."""
         self._install_cache.clear()
         self._install_cache_ts.clear()
+
+    def get_cached_install_state(self, provider: str = DNS_PROVIDER_ID) -> bool:
+        """Возвращает последнее известное состояние установки без блокировки.
+
+        В отличие от is_installed() никогда не запускает PowerShell:
+        если кэш пуст, считается, что DNS не установлен (свежее значение
+        придёт асинхронно через VersionWorker).
+        """
+        return bool(self._install_cache.get(provider, False))
 
     def update(self, provider: str = DNS_PROVIDER_ID) -> bool:
         """Устанавливает DNS-серверы выбранного провайдера на все активные интерфейсы."""
