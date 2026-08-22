@@ -90,7 +90,7 @@ MALW_DNS_DOH_URL = "https://dns.malw.link/dns-query"
 MALW_DNS_DOT_HOST = "dns.malw.link"
 MALW_DNS_SITE_URL = "https://info.dns.malw.link"
 
-APP_VERSION = "1.3.4"
+APP_VERSION = "1.3.5"
 
 _LAYOUT_FILLER = "\u3164"
 
