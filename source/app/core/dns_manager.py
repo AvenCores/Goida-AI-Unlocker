@@ -37,16 +37,19 @@ DNS_PROVIDERS = {
         "name_key": "provider_xbox_dns",
         "ipv4": XBOX_DNS_SERVERS,
         "ipv6": XBOX_DNS_SERVERS_IPV6,
+        "site_url": XBOX_DNS_SITE_URL,
     },
     "geohide-dns": {
         "name_key": "provider_geohide_dns",
         "ipv4": GEOHIDE_DNS_SERVERS,
         "ipv6": GEOHIDE_DNS_SERVERS_IPV6,
+        "site_url": GEOHIDE_DNS_SITE_URL,
     },
     "malw-dns": {
         "name_key": "provider_malw_dns",
         "ipv4": MALW_DNS_SERVERS,
         "ipv6": MALW_DNS_SERVERS_IPV6,
+        "site_url": MALW_DNS_SITE_URL,
     },
 }
 
@@ -61,6 +64,12 @@ def get_dns_provider_servers(provider_id: str) -> tuple:
     """Возвращает (ipv4, ipv6) серверы для указанного провайдера."""
     cfg = DNS_PROVIDERS.get(provider_id) or DNS_PROVIDERS[DNS_PROVIDER_ID]
     return cfg["ipv4"], cfg["ipv6"]
+
+
+def get_dns_provider_site_url(provider_id: str) -> str | None:
+    """Возвращает URL сайта DNS-провайдера (или None)."""
+    cfg = DNS_PROVIDERS.get(provider_id)
+    return cfg.get("site_url") if cfg else None
 
 # Виртуальные/служебные адаптеры, которые нельзя трогать (VMware, VirtualBox и т.п.)
 _VIRTUAL_ADAPTER_RE = re.compile(

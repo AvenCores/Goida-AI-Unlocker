@@ -116,6 +116,28 @@ class HomePage(QWidget):
         dns_provider_combo.setCursor(Qt.CursorShape.PointingHandCursor)
         self.dns_provider_combo = dns_provider_combo
 
+        dns_site_button = QPushButton()
+        dns_site_button.setIcon(get_icon("globe.svg", 18, dark_theme=self.dark_theme))
+        dns_site_button.setIconSize(QSize(18, 18))
+        dns_site_button.setProperty("icon_name", "globe.svg")
+        dns_site_button.setProperty("icon_force_dark", False)
+        dns_site_button.setProperty("style_role", "provider_repo")
+        dns_site_button.setFixedSize(32, 32)
+        dns_site_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        dns_site_button.setToolTip(tr("provider_repo_tooltip"))
+        dns_site_button.setStyleSheet(
+            "QPushButton { background: transparent; border: none; padding: 4px; border-radius: 6px; }"
+            "QPushButton:hover { background: rgba(128,128,128,0.15); }"
+        )
+        dns_site_button.clicked.connect(self._open_dns_provider_site)
+        self.dns_site_button = dns_site_button
+
+        dns_provider_hbox = QHBoxLayout()
+        dns_provider_hbox.setSpacing(6)
+        dns_provider_hbox.setContentsMargins(0, 0, 0, 0)
+        dns_provider_hbox.addWidget(dns_provider_combo)
+        dns_provider_hbox.addWidget(dns_site_button)
+
         # Provider combo (виден только в режиме Hosts)
         provider_combo = QComboBox()
         provider_combo.addItem(tr("provider_malw"), "dns.malw.link")
@@ -153,7 +175,7 @@ class HomePage(QWidget):
         status_vbox.setSpacing(8)
         status_vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
         status_vbox.addWidget(mechanism_combo)
-        status_vbox.addWidget(dns_provider_combo)
+        status_vbox.addLayout(dns_provider_hbox)
         status_vbox.addLayout(provider_hbox)
         status_vbox.addWidget(textinformer)
         status_vbox.addWidget(version_label)
@@ -442,6 +464,7 @@ class HomePage(QWidget):
         is_dns = self.current_mechanism == DNS_PROVIDER_ID
         self._set_visible_and_restore_height(self.dns_provider_combo, is_dns)
         self._set_visible_and_restore_height(self.provider_combo, not is_dns)
+        self.dns_site_button.setVisible(is_dns)
         self.provider_repo_button.setVisible(not is_dns)
         self.open_hosts_button.setVisible(not is_dns)
         self.backup_hosts_button.setVisible(not is_dns)
@@ -492,5 +515,12 @@ class HomePage(QWidget):
             "geohide": "https://github.com/Internet-Helper/GeoHideDNS",
         }
         url = urls.get(self.current_provider)
+        if url:
+            open_target(url)
+
+    def _open_dns_provider_site(self):
+        """Открывает сайт выбранного DNS-провайдера."""
+        from app.core.dns_manager import get_dns_provider_site_url
+        url = get_dns_provider_site_url(self.current_dns_provider)
         if url:
             open_target(url)
