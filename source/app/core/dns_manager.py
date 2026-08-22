@@ -11,6 +11,9 @@ from app.core.constants import (
     XBOX_DNS_SERVERS,
     XBOX_DNS_SERVERS_IPV6,
     XBOX_DNS_SITE_URL,
+    GEOHIDE_DNS_SERVERS,
+    GEOHIDE_DNS_SERVERS_IPV6,
+    GEOHIDE_DNS_SITE_URL,
 )
 from app.core.logger import logger
 from app.core.settings import get_setting, set_setting
@@ -31,6 +34,11 @@ DNS_PROVIDERS = {
         "name_key": "provider_xbox_dns",
         "ipv4": XBOX_DNS_SERVERS,
         "ipv6": XBOX_DNS_SERVERS_IPV6,
+    },
+    "geohide-dns": {
+        "name_key": "provider_geohide_dns",
+        "ipv4": GEOHIDE_DNS_SERVERS,
+        "ipv6": GEOHIDE_DNS_SERVERS_IPV6,
     },
 }
 

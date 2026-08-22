@@ -81,7 +81,8 @@
                "dns_servers_status_label":  "DNS-серверы ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "en":  {
                "language_name":  "English",
@@ -165,7 +166,8 @@
                "dns_servers_status_label":  "DNS servers ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "de":  {
                "language_name":  "Deutsch",
@@ -249,7 +251,8 @@
                "dns_servers_status_label":  "DNS-Server ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "uk":  {
                "language_name":  "Українська",
@@ -333,7 +336,8 @@
                "dns_servers_status_label":  "DNS-сервери ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "be":  {
                "language_name":  "Беларуская",
@@ -417,7 +421,8 @@
                "dns_servers_status_label":  "DNS-серверы ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "kk":  {
                "language_name":  "Қазақша",
@@ -501,7 +506,8 @@
                "dns_servers_status_label":  "DNS-серверлер ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "fr":  {
                "language_name":  "Français",
@@ -585,7 +591,8 @@
                "dns_servers_status_label":  "Serveurs DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "pl":  {
                "language_name":  "Polski",
@@ -669,7 +676,8 @@
                "dns_servers_status_label":  "Serwery DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "es":  {
                "language_name":  "Español",
@@ -753,7 +761,8 @@
                "dns_servers_status_label":  "Servidores DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "pt":  {
                "language_name":  "Português",
@@ -837,7 +846,8 @@
                "dns_servers_status_label":  "Servidores DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "it":  {
                "language_name":  "Italiano",
@@ -921,7 +931,8 @@
                "dns_servers_status_label":  "Server DNS ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "tr":  {
                "language_name":  "Türkçe",
@@ -1005,7 +1016,8 @@
                "dns_servers_status_label":  "DNS sunucuları ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "zh":  {
                "language_name":  "中文",
@@ -1089,7 +1101,8 @@
                "dns_servers_status_label":  "DNS 服务器（{servers}）- \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS（xbox-dns.ru）"
+               "provider_xbox_dns":  "Xbox DNS（xbox-dns.ru）",
+               "provider_geohide_dns":  "GeoHide DNS（dns.geohide.ru）"
            },
     "ja":  {
                "language_name":  "日本語",
@@ -1173,7 +1186,8 @@
                "dns_servers_status_label":  "DNS サーバー（{servers}）- \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS（xbox-dns.ru）"
+               "provider_xbox_dns":  "Xbox DNS（xbox-dns.ru）",
+               "provider_geohide_dns":  "GeoHide DNS（dns.geohide.ru）"
            },
     "ko":  {
                "language_name":  "한국어",
@@ -1257,7 +1271,8 @@
                "dns_servers_status_label":  "DNS 서버 ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "cs":  {
                "language_name":  "Čeština",
@@ -1341,7 +1356,8 @@
                "dns_servers_status_label":  "DNS servery ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "nl":  {
                "language_name":  "Nederlands",
@@ -1425,7 +1441,8 @@
                "dns_servers_status_label":  "DNS-servers ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            },
     "sv":  {
                "language_name":  "Svenska",
@@ -1509,6 +1526,7 @@
                "dns_servers_status_label":  "DNS-servrar ({servers}) - \u003cspan style=\u0027color:{color}; font-weight:bold;\u0027\u003e{status}\u003c/span\u003e",
                "mechanism_dns":  "DNS",
                "mechanism_hosts":  "Hosts",
-               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)"
+               "provider_xbox_dns":  "Xbox DNS (xbox-dns.ru)",
+               "provider_geohide_dns":  "GeoHide DNS (dns.geohide.ru)"
            }
 }

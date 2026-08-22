@@ -64,6 +64,21 @@ XBOX_DNS_DOH_URL = "https://xbox-dns.ru/dns-query"
 XBOX_DNS_DOT_HOST = "xbox-dns.ru"
 XBOX_DNS_SITE_URL = "https://xbox-dns.ru"
 
+# GeoHide DNS (https://dns.geohide.ru) — разблокировка через смену системных DNS-серверов
+GEOHIDE_DNS_PRIMARY_IPV4 = "45.155.204.190"
+GEOHIDE_DNS_SECONDARY_IPV4 = "37.230.192.51"
+GEOHIDE_DNS_TERTIARY_IPV4 = "95.182.120.241"
+GEOHIDE_DNS_PRIMARY_IPV6 = "2a0c:9300:0:54::1"
+GEOHIDE_DNS_SERVERS = (
+    GEOHIDE_DNS_PRIMARY_IPV4,
+    GEOHIDE_DNS_SECONDARY_IPV4,
+    GEOHIDE_DNS_TERTIARY_IPV4,
+)
+GEOHIDE_DNS_SERVERS_IPV6 = (GEOHIDE_DNS_PRIMARY_IPV6,)
+GEOHIDE_DNS_DOH_URL = "https://dns.geohide.ru:444/dns-query"
+GEOHIDE_DNS_DOT_HOST = "dns.geohide.ru"
+GEOHIDE_DNS_SITE_URL = "https://dns.geohide.ru"
+
 APP_VERSION = "1.3.4"
 
 _LAYOUT_FILLER = "\u3164"
