@@ -79,6 +79,17 @@ GEOHIDE_DNS_DOH_URL = "https://dns.geohide.ru:444/dns-query"
 GEOHIDE_DNS_DOT_HOST = "dns.geohide.ru"
 GEOHIDE_DNS_SITE_URL = "https://dns.geohide.ru"
 
+# dns.malw.link (https://info.dns.malw.link) — разблокировка через смену системных DNS-серверов
+MALW_DNS_PRIMARY_IPV4 = "95.216.204.218"
+MALW_DNS_SECONDARY_IPV4 = "80.253.249.40"
+MALW_DNS_PRIMARY_IPV6 = "2a01:4f9:c014:6dac::1"
+MALW_DNS_SECONDARY_IPV6 = "2a12:bec4:1460:5b7::2"
+MALW_DNS_SERVERS = (MALW_DNS_PRIMARY_IPV4, MALW_DNS_SECONDARY_IPV4)
+MALW_DNS_SERVERS_IPV6 = (MALW_DNS_PRIMARY_IPV6, MALW_DNS_SECONDARY_IPV6)
+MALW_DNS_DOH_URL = "https://dns.malw.link/dns-query"
+MALW_DNS_DOT_HOST = "dns.malw.link"
+MALW_DNS_SITE_URL = "https://info.dns.malw.link"
+
 APP_VERSION = "1.3.4"
 
 _LAYOUT_FILLER = "\u3164"

@@ -14,6 +14,9 @@ from app.core.constants import (
     GEOHIDE_DNS_SERVERS,
     GEOHIDE_DNS_SERVERS_IPV6,
     GEOHIDE_DNS_SITE_URL,
+    MALW_DNS_SERVERS,
+    MALW_DNS_SERVERS_IPV6,
+    MALW_DNS_SITE_URL,
 )
 from app.core.logger import logger
 from app.core.settings import get_setting, set_setting
@@ -39,6 +42,11 @@ DNS_PROVIDERS = {
         "name_key": "provider_geohide_dns",
         "ipv4": GEOHIDE_DNS_SERVERS,
         "ipv6": GEOHIDE_DNS_SERVERS_IPV6,
+    },
+    "malw-dns": {
+        "name_key": "provider_malw_dns",
+        "ipv4": MALW_DNS_SERVERS,
+        "ipv6": MALW_DNS_SERVERS_IPV6,
     },
 }
 
