@@ -78,16 +78,20 @@ class ProcessingPage(CardPage):
         self.spinner = BusySpinner("#2d7dff" if dark_theme else "#0078d4", diameter=40)
         self.card_layout.addWidget(self.spinner, 0, Qt.AlignmentFlag.AlignHCenter)
 
-        for raw_line in tr(self._message_key()).split("\n"):
-            line = clean_message_line(raw_line)
-            if not line:
-                continue
-            self.add_message(line)
+        self._fill_messages()
 
         self.apply_theme(styles, dark_theme)
 
     def _message_key(self) -> str:
         return self._ACTION_KEYS.get(self._action, "processing_uninstall")
+
+    def _fill_messages(self):
+        for raw_line in tr(self._message_key()).split("\n"):
+            line = clean_message_line(raw_line)
+            if not line:
+                continue
+            # Блоки-подложки — как на страницах результата
+            self.add_message(line, block=True)
 
     def apply_theme(self, styles: dict, dark_theme: bool):
         super().apply_theme(styles, dark_theme)
@@ -95,11 +99,7 @@ class ProcessingPage(CardPage):
 
     def apply_texts(self):
         self.clear_messages()
-        for raw_line in tr(self._message_key()).split("\n"):
-            line = clean_message_line(raw_line)
-            if not line:
-                continue
-            self.add_message(line)
+        self._fill_messages()
 
 
 class UpdateAvailablePage(CardPage):
