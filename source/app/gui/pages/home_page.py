@@ -34,6 +34,8 @@ class HomePage(QWidget):
     dns_provider_changed = Signal(str)    # id DNS-провайдера
     open_hosts_requested = Signal()       # открыть редактор hosts
     view_backups_requested = Signal()     # открыть просмотрщик бэкапов
+    # Текст статуса изменился — высоте окна может потребоваться пересчёт
+    home_content_changed = Signal()
 
     def __init__(self, hosts_manager: HostsManager, dns_manager: DnsManager,
                  styles: dict, dark_theme: bool, current_provider: str,
@@ -107,10 +109,14 @@ class HomePage(QWidget):
         self.version_label = QLabel(tr("version_checking"))
         self.version_label.setTextFormat(Qt.TextFormat.RichText)
         self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.version_label.setWordWrap(True)
 
         self.update_date_label = QLabel(tr("update_date_checking"))
         self.update_date_label.setTextFormat(Qt.TextFormat.RichText)
         self.update_date_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Длинные строки (например, список DNS-серверов) переносятся,
+        # а не обрезаются границей карточки
+        self.update_date_label.setWordWrap(True)
 
         self.status_container = QWidget()
         status_vbox = QVBoxLayout(self.status_container)
@@ -246,6 +252,29 @@ class HomePage(QWidget):
     # Публичный API
     # ------------------------------------------------------------------
 
+    def sync_status_label_heights(self):
+        """Фиксирует минимальную высоту статусных меток под реальный перенос.
+
+        sizeHint у QLabel с wordWrap завышен, а minimumSizeHint занижен:
+        при нехватке высоты лейаут сжимает метки ниже размера текста и
+        глифы обрезаются. Явный минимум = heightForWidth() по фактической
+        ширине метки делает такое сжатие невозможным.
+
+        Вызывается при смене текста статусов и из MainWindow
+        перед замером высоты окна (метрики шрифтов актуальны только
+        после полировки стилей при показе).
+        """
+        for lbl in (self.textinformer, self.version_label, self.update_date_label):
+            lbl.setMinimumHeight(0)
+            if not lbl.isVisibleTo(self):
+                continue
+            width = lbl.width()
+            if width < 50:
+                # Лейаут ещё не выполнен — ширина колонки минус её поля
+                width = COLUMN_MAX_WIDTH - 72
+            need = lbl.heightForWidth(width) if lbl.wordWrap() else lbl.sizeHint().height()
+            lbl.setMinimumHeight(need)
+
     def update_status_label(self):
         if self.current_mechanism == DNS_PROVIDER_ID:
             # Неблокирующий вариант: только кэш, без запуска PowerShell.
@@ -256,6 +285,8 @@ class HomePage(QWidget):
         color = COLOR_SUCCESS if installed else COLOR_ERROR
         key = "status_installed" if installed else "status_not_installed"
         self.textinformer.setText(tr("unlock_status", status=tr(key), color=color))
+        self.sync_status_label_heights()
+        self.home_content_changed.emit()
 
     def apply_hosts_version_status(self, status: HostsStatusResult):
         self._status = status
@@ -422,6 +453,8 @@ class HomePage(QWidget):
         self.version_label.setVisible(not is_dns)
         if is_dns:
             self._show_instant_dns_status()
+        else:
+            self.sync_status_label_heights()
 
     def _show_instant_dns_status(self):
         """Мгновенно показывает статус DNS-серверов из кэша (без PowerShell)."""
@@ -435,6 +468,8 @@ class HomePage(QWidget):
             "dns_servers_status_label",
             servers=", ".join(ipv4_servers), color=color, status=tr(key),
         ))
+        self.sync_status_label_heights()
+        self.home_content_changed.emit()
 
     def _open_provider_repo(self):
         urls = {

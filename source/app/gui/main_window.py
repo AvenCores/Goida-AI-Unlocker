@@ -129,6 +129,11 @@ class MainWindow(QMainWindow):
         home_page.provider_changed.connect(self._on_provider_changed)
         home_page.mechanism_changed.connect(self._on_mechanism_changed)
         home_page.dns_provider_changed.connect(self._on_dns_provider_changed)
+        # Текст статуса (например, список DNS-серверов) может стать длиннее —
+        # окно подстраивается, чтобы карточка статуса не обрезалась
+        home_page.home_content_changed.connect(
+            lambda: QTimer.singleShot(0, self._adjust_window_to_content)
+        )
         home_page.open_hosts_requested.connect(self.show_hosts_editor)
         home_page.view_backups_requested.connect(self.show_hosts_backup_viewer)
 
@@ -182,12 +187,28 @@ class MainWindow(QMainWindow):
         применяются стили — шрифты и отступы). Поэтому замер выполняется
         через QTimer.singleShot(0) из showEvent, а не в конструкторе.
         К высоте обёртки (страница + футер) добавляется заголовок окна.
+
+        minimumSizeHint, а не heightForWidth: цепочка hfw через вложенные
+        выровненные лейауты считает высоту меток не по той ширине и занижает
+        окно, из-за чего карточка статуса сжимается и обрезает текст.
+        minimumSizeHint включает явные минимумы статусных меток (см.
+        HomePage._sync_status_label_heights) и потому точен.
         """
         if self.home_wrapper is None:
             return
-        self.home_wrapper.ensurePolished()
-        content_h = self.home_wrapper.sizeHint().height() + DraggableTitleBar.TITLE_BAR_HEIGHT
-        target_h = max(MIN_WINDOW_HEIGHT, content_h)
+        wrapper = self.home_wrapper
+        wrapper.ensurePolished()
+        # Актуальные минимумы статусных меток: при показе окна стили
+        # полируются, и минимумы, посчитанные в конструкторе, устаревают
+        self.home_page.sync_status_label_heights()
+        layout = wrapper.layout()
+        if layout is not None:
+            # Сбрасываем кэш геометрии лейаута, иначе minimumSizeHint
+            # вернёт заниженную высоту до следующей раскладки
+            layout.invalidate()
+            layout.activate()
+        content_h = wrapper.minimumSizeHint().height()
+        target_h = max(MIN_WINDOW_HEIGHT, content_h + DraggableTitleBar.TITLE_BAR_HEIGHT)
         if abs(self.height() - target_h) > 4:
             self.resize(WINDOW_WIDTH, target_h)
 
