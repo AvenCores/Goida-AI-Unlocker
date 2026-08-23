@@ -1,5 +1,4 @@
 import base64
-import json
 import platform
 import re
 import subprocess
@@ -8,15 +7,17 @@ import time
 from dataclasses import dataclass
 
 from app.core.constants import (
-    XBOX_DNS_SERVERS,
-    XBOX_DNS_SERVERS_IPV6,
-    XBOX_DNS_SITE_URL,
+    COLOR_ERROR,
+    COLOR_SUCCESS,
     GEOHIDE_DNS_SERVERS,
     GEOHIDE_DNS_SERVERS_IPV6,
     GEOHIDE_DNS_SITE_URL,
     MALW_DNS_SERVERS,
     MALW_DNS_SERVERS_IPV6,
     MALW_DNS_SITE_URL,
+    XBOX_DNS_SERVERS,
+    XBOX_DNS_SERVERS_IPV6,
+    XBOX_DNS_SITE_URL,
 )
 from app.core.logger import logger
 from app.core.settings import get_setting, set_setting
@@ -28,10 +29,10 @@ IS_LINUX = platform.system() == "Linux"
 
 # Ключ настроек, в котором хранятся оригинальные DNS-серверы для восстановления
 _ORIGINAL_DNS_SETTING_KEY = "original_dns_servers"
-# Маркер, который записывается в настройки при установке Xbox DNS
+# Идентификатор DNS-механизма (используется как «механизм» в настройках)
 DNS_PROVIDER_ID = "xbox-dns"
 
-# Реестр DNS-провайдеров: id -> (ключ перевода, IPv4-серверы, IPv6-серверы)
+# Реестр DNS-провайдеров: id -> конфигурация
 DNS_PROVIDERS = {
     "xbox-dns": {
         "name_key": "provider_xbox_dns",
@@ -57,6 +58,7 @@ DNS_PROVIDERS = {
 def get_dns_providers() -> list:
     """Возвращает список (отображаемое имя, id) всех DNS-провайдеров."""
     from app.gui.localization import tr
+
     return [(tr(cfg["name_key"]), pid) for pid, cfg in DNS_PROVIDERS.items()]
 
 
@@ -71,6 +73,7 @@ def get_dns_provider_site_url(provider_id: str) -> str | None:
     cfg = DNS_PROVIDERS.get(provider_id)
     return cfg.get("site_url") if cfg else None
 
+
 # Виртуальные/служебные адаптеры, которые нельзя трогать (VMware, VirtualBox и т.п.)
 _VIRTUAL_ADAPTER_RE = re.compile(
     r"vmware|virtualbox|vbox|hyper-v|wsl|loopback|tap-|tunnel|vpn|"
@@ -79,6 +82,23 @@ _VIRTUAL_ADAPTER_RE = re.compile(
 )
 # Код возврата UAC при отказе пользователя
 _UAC_CANCELLED_EXIT_CODE = 1223
+
+# Шаблон PowerShell-лаунчера с UAC-элевацией (скрытое окно).
+# {cmd} — команда в base64 (UTF-16LE); {{...}} — экранированные фигурные скобки.
+_UAC_LAUNCHER_TEMPLATE = (
+    "$ErrorActionPreference = 'Stop'; "
+    "try { "
+    "$p = Start-Process powershell -Verb runAs -WindowStyle Hidden "
+    "-ArgumentList '-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand {cmd}' "
+    "-Wait -PassThru -ErrorAction Stop; "
+    "if ($null -eq $p) {{ exit 1 }}; "
+    "exit $p.ExitCode "
+    "} catch [System.OperationCanceledException] {{ "
+    f"exit {_UAC_CANCELLED_EXIT_CODE} "
+    "}} catch {{ "
+    "exit 1 "
+    "}}"
+)
 
 
 @dataclass(frozen=True)
@@ -100,6 +120,7 @@ def _run_command(cmd, timeout=30):
         kwargs = {}
         if not IS_WINDOWS:
             from app.utils.helpers import get_clean_system_env
+
             kwargs["env"] = get_clean_system_env()
         result = subprocess.run(
             cmd,
@@ -118,8 +139,32 @@ def _run_command(cmd, timeout=30):
         return -1, str(e)
 
 
+def _run_elevated_ps(ps_command: str, iface: str, timeout: int = 120) -> bool:
+    """Выполняет ps_command с UAC-элевацией через скрытое окно.
+
+    Возвращает True при успехе; PermissionError при отказе пользователя в UAC;
+    False при иной ошибке.
+    """
+    encoded = base64.b64encode(ps_command.encode("utf-16-le")).decode("ascii")
+    launcher = _UAC_LAUNCHER_TEMPLATE.format(cmd=encoded)
+    code, output = _run_command(
+        [
+            "powershell", "-WindowStyle", "Hidden", "-NoProfile",
+            "-NonInteractive", "-Command", launcher,
+        ],
+        timeout=timeout,
+    )
+    if code == 0:
+        return True
+    if code == _UAC_CANCELLED_EXIT_CODE:
+        raise PermissionError("UAC elevation cancelled by user")
+    logger.error("Elevated PowerShell command failed on %s (code=%s): %s",
+                 iface, code, output.strip())
+    return False
+
+
 class DnsManager:
-    """Менеджер разблокировки через смену системных DNS-серверов (Xbox DNS).
+    """Менеджер разблокировки через смену системных DNS-серверов.
 
     Повторяет интерфейс HostsManager (update/restore/is_installed/check_status),
     чтобы воркеры и GUI могли работать с обоими менеджерами полиморфно.
@@ -130,9 +175,9 @@ class DnsManager:
         self.backup_failed = False
         # Кэш результата is_installed: каждый вызов запускает PowerShell (~1 сек),
         # поэтому без кэша UI «тормозит» при каждом обновлении статуса
-        self._install_cache = {}          # provider_id -> bool
-        self._install_cache_ts = {}       # provider_id -> timestamp
-        self._install_cache_ttl = 30.0    # секунды
+        self._install_cache: dict[str, bool] = {}
+        self._install_cache_ts: dict[str, float] = {}
+        self._install_cache_ttl = 30.0  # секунды
 
     # ------------------------------------------------------------------
     # Публичный интерфейс (совместим с HostsManager)
@@ -201,9 +246,10 @@ class DnsManager:
 
     def check_status(self, provider: str = DNS_PROVIDER_ID) -> DnsStatusResult:
         ipv4_servers, _ = get_dns_provider_servers(provider)
+        servers_text = ", ".join(ipv4_servers)
         if self.is_installed(provider):
-            return DnsStatusResult("installed", "#4caf50", ", ".join(ipv4_servers))
-        return DnsStatusResult("not_installed", "#9e9e9e", ", ".join(ipv4_servers))
+            return DnsStatusResult("installed", COLOR_SUCCESS, servers_text)
+        return DnsStatusResult("not_installed", COLOR_ERROR, servers_text)
 
     def apply(self, _content: str) -> bool:
         """Для совместимости с HostsWorker: у DNS-механизма нет контента."""
@@ -214,7 +260,7 @@ class DnsManager:
 
     def read(self) -> str:
         """Для совместимости: возвращает текущее состояние DNS в текстовом виде."""
-        lines = [f"# Xbox DNS status ({XBOX_DNS_SITE_URL})"]
+        lines = [f"# System DNS status"]
         for iface in self._get_active_interfaces():
             dns = self._get_interface_dns(iface)
             lines.append(f"{iface}: {', '.join(dns) if dns else 'auto (DHCP)'}")
@@ -346,23 +392,16 @@ class DnsManager:
             if code != 0:
                 # Не смогли определить — считаем DHCP (безопаснее: сброс на авто)
                 return False
-            value = output.strip()
             # Пустая строка = DNS по DHCP; непустая = статические адреса
-            return bool(value)
+            return bool(output.strip())
         if IS_MACOS:
-            # networksetup: если DNS задан, getdnsservers возвращает адреса,
-            # иначе сообщение "There aren't any DNS Servers set"
-            dns = self._get_interface_dns_macos(iface)
-            return bool(dns)
+            return bool(self._get_interface_dns_macos(iface))
         # Linux: resolvectl показывает текущие DNS независимо от источника;
         # считаем статикой, если записи есть (resolvectl revert вернёт авто)
-        dns = self._get_interface_dns_linux(iface)
-        return bool(dns)
+        return bool(self._get_interface_dns_linux(iface))
 
     def _get_interface_dns_macos(self, service: str) -> list:
-        code, output = _run_command(
-            ["networksetup", "-getdnsservers", service]
-        )
+        code, output = _run_command(["networksetup", "-getdnsservers", service])
         if code != 0:
             return []
         lines = [line.strip() for line in output.splitlines() if line.strip()]
@@ -418,81 +457,13 @@ class DnsManager:
         # Если мы не админ — сразу элевация через UAC (скрытое окно),
         # чтобы не тратить время на заведомо бесполезные попытки.
         if not is_windows_admin():
-            return self._set_interface_dns_elevated(iface, servers)
+            return _run_elevated_ps(ps_script, iface)
 
         logger.warning("Direct Set-DnsClientServerAddress failed on %s: %s", iface, output.strip())
         # Мы уже админ — пробуем netsh как альтернативу
         if self._set_interface_dns_netsh(iface, ipv4):
             return True
         logger.error("Failed to set DNS on %s even with admin rights", iface)
-        return False
-
-    def _set_interface_dns_elevated(self, iface: str, servers: list) -> bool:
-        """Устанавливает DNS через UAC-элевацию (скрытое окно, как в hosts_manager)."""
-        quoted_servers = ", ".join(f"'{s}'" for s in servers)
-        inner = (
-            f"Set-DnsClientServerAddress -InterfaceAlias '{iface}' "
-            f"-ServerAddresses ({quoted_servers})"
-        )
-        encoded = base64.b64encode(inner.encode("utf-16-le")).decode("ascii")
-        launcher = (
-            "$ErrorActionPreference = 'Stop'; "
-            "try { "
-            "$p = Start-Process powershell -Verb runAs -WindowStyle Hidden "
-            f"-ArgumentList '-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand {encoded}' "
-            "-Wait -PassThru -ErrorAction Stop; "
-            "if ($null -eq $p) { exit 1 }; "
-            "exit $p.ExitCode "
-            "} catch [System.OperationCanceledException] { "
-            "exit 1223 "
-            "} catch { "
-            "exit 1 "
-            "}"
-        )
-        code, output = _run_command(
-            ["powershell", "-WindowStyle", "Hidden", "-NoProfile", "-NonInteractive",
-             "-Command", launcher],
-            timeout=120,
-        )
-        if code == 0:
-            return True
-        if code == _UAC_CANCELLED_EXIT_CODE:
-            raise PermissionError("UAC elevation cancelled by user")
-        logger.error("Elevated Set-DnsClientServerAddress failed on %s (code=%s): %s",
-                     iface, code, output.strip())
-        return False
-
-    def _reset_interface_dns_elevated(self, iface: str) -> bool:
-        """Сбрасывает DNS через UAC-элевацию (скрытое окно)."""
-        inner = (
-            f"Set-DnsClientServerAddress -InterfaceAlias '{iface}' -ResetServerAddresses"
-        )
-        encoded = base64.b64encode(inner.encode("utf-16-le")).decode("ascii")
-        launcher = (
-            "$ErrorActionPreference = 'Stop'; "
-            "try { "
-            "$p = Start-Process powershell -Verb runAs -WindowStyle Hidden "
-            f"-ArgumentList '-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand {encoded}' "
-            "-Wait -PassThru -ErrorAction Stop; "
-            "if ($null -eq $p) { exit 1 }; "
-            "exit $p.ExitCode "
-            "} catch [System.OperationCanceledException] { "
-            "exit 1223 "
-            "} catch { "
-            "exit 1 "
-            "}"
-        )
-        code, output = _run_command(
-            ["powershell", "-WindowStyle", "Hidden", "-NoProfile", "-NonInteractive",
-             "-Command", launcher],
-            timeout=120,
-        )
-        if code == 0:
-            return True
-        if code == _UAC_CANCELLED_EXIT_CODE:
-            raise PermissionError("UAC elevation cancelled by user")
-        logger.error("Elevated DNS reset failed on %s (code=%s): %s",
-                     iface, code, output.strip())
         return False
 
     def _set_interface_dns_netsh(self, iface: str, ipv4: list) -> bool:
@@ -506,11 +477,11 @@ class DnsManager:
                 ]
             )
             ok = code == 0 and ok
-            for extra in ipv4[1:]:
+            for index, extra in enumerate(ipv4[1:], start=2):
                 code, output = _run_command(
                     [
                         "netsh", "interface", "ip", "add", "dns",
-                        f"name={iface}", f"addr={extra}", "index=2", "validate=no",
+                        f"name={iface}", f"addr={extra}", f"index={index}", "validate=no",
                     ]
                 )
                 ok = code == 0 and ok
@@ -519,9 +490,7 @@ class DnsManager:
         return ok
 
     def _set_interface_dns_macos(self, service: str, servers: list) -> bool:
-        code, output = _run_command(
-            ["networksetup", "-setdnsservers", service, *servers]
-        )
+        code, output = _run_command(["networksetup", "-setdnsservers", service, *servers])
         if code != 0:
             logger.error("Failed to set DNS on %s: %s", service, output.strip())
             return False
@@ -547,7 +516,10 @@ class DnsManager:
                 return True
             logger.warning("Direct netsh reset failed on %s: %s", iface, output.strip())
             if not is_windows_admin():
-                return self._reset_interface_dns_elevated(iface)
+                return _run_elevated_ps(
+                    f"Set-DnsClientServerAddress -InterfaceAlias '{iface}' -ResetServerAddresses",
+                    iface,
+                )
             logger.error("Failed to reset DNS on %s even with admin rights", iface)
             return False
         if IS_MACOS:

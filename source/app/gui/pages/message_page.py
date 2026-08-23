@@ -1,185 +1,195 @@
-from typing import Callable
-from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QSizePolicy
+from PySide6.QtWidgets import QPushButton
 from PySide6.QtCore import Qt
+
 from app.gui.localization import tr, clean_message_line
-from app.gui.components.card import build_card
+from app.gui.components.card import CardPage
+from app.gui.components.busy_spinner import BusySpinner
 from app.utils.helpers import open_target
 
 
-def build_message_page(
-    msg: str,
-    success: bool,
-    word_wrap: bool,
-    styles: dict,
-    dark_theme: bool,
-    fix_size_fn: Callable[[QWidget], None] | None = None,
-    ok_callback: Callable[[], None] | None = None,
-) -> QWidget:
-    """Build a message result page (success or error).
+class MessagePage(CardPage):
+    """Страница результата (успех/ошибка). Enter или кнопка «Окей» возвращает назад."""
 
-    Returns:
-        The message page QWidget.
-    """
-    icon = "check-circle.svg" if success else "x-circle.svg"
-    widget, card_layout, card = build_card(icon, dark_theme, styles, fix_size_fn=fix_size_fn)
+    def __init__(self, msg: str, success: bool, word_wrap: bool,
+                 styles: dict, dark_theme: bool, ok_callback=None):
+        super().__init__(styles, dark_theme)
+        self._msg = msg
+        self._word_wrap = word_wrap
 
-    if word_wrap:
-        for raw_line in msg.split("\n"):
+        icon_name = "check-circle.svg" if success else "x-circle.svg"
+        self.icon_label = self.add_icon(icon_name)
+
+        self._fill_messages()
+
+        self.ok_button = QPushButton(tr("ok"))
+        self.ok_button.setProperty("style_role", "button1")
+        self.ok_button.setDefault(True)
+        self.ok_button.setFocus()
+        self.card_layout.addWidget(self.ok_button)
+
+        if ok_callback:
+            self.ok_button.clicked.connect(ok_callback)
+
+        self.apply_theme(styles, dark_theme)
+
+    def _fill_messages(self):
+        for raw_line in self._msg.split("\n"):
             line = clean_message_line(raw_line)
             if not line:
                 continue
-            lbl = QLabel(line)
-            lbl.setObjectName("message_block_label")
-            lbl.setTextFormat(Qt.TextFormat.PlainText)
-            lbl.setWordWrap(True)
-            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-            card_layout.addWidget(lbl)
-    else:
-        for raw_line in msg.split("\n"):
+            self.add_message(line, block=self._word_wrap)
+
+    def apply_texts(self):
+        self.clear_messages()
+        self._fill_messages()
+        self.ok_button.setText(tr("ok"))
+
+    def apply_theme(self, styles: dict, dark_theme: bool):
+        super().apply_theme(styles, dark_theme)
+        self.ok_button.setStyleSheet(styles["button1"])
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if self.ok_button.isEnabled():
+                self.ok_button.click()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+
+class ProcessingPage(CardPage):
+    """Страница выполнения операции с анимированным индикатором занятости."""
+
+    _ACTION_KEYS = {
+        "install": "processing_install",
+        "update": "processing_update",
+        "uninstall": "processing_uninstall",
+        "save": "processing_save",
+        "open": "processing_open",
+        "check_updates": "processing_check_updates",
+    }
+
+    def __init__(self, action: str, styles: dict, dark_theme: bool):
+        super().__init__(styles, dark_theme)
+        self._action = action
+
+        # Индикатор занятости вместо статичной иконки (центрируется явно:
+        # виджет фиксированного размера в layout растягивается влево)
+        self.spinner = BusySpinner("#2d7dff" if dark_theme else "#0078d4", diameter=40)
+        self.card_layout.addWidget(self.spinner, 0, Qt.AlignmentFlag.AlignHCenter)
+
+        for raw_line in tr(self._message_key()).split("\n"):
             line = clean_message_line(raw_line)
-            if not line.strip():
+            if not line:
                 continue
-            lbl = QLabel(line)
-            lbl.setObjectName("message_label")
-            lbl.setTextFormat(Qt.TextFormat.PlainText)
-            lbl.setWordWrap(True)
-            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-            card_layout.addWidget(lbl)
+            self.add_message(line)
 
-    ok_btn = QPushButton(tr("ok"))
-    ok_btn.setProperty("style_role", "button1")
-    card_layout.addWidget(ok_btn)
+        self.apply_theme(styles, dark_theme)
 
-    if ok_callback:
-        ok_btn.clicked.connect(ok_callback)
+    def _message_key(self) -> str:
+        return self._ACTION_KEYS.get(self._action, "processing_uninstall")
 
-    return widget
+    def apply_theme(self, styles: dict, dark_theme: bool):
+        super().apply_theme(styles, dark_theme)
+        self.spinner.set_color("#2d7dff" if dark_theme else "#0078d4")
 
-
-def build_processing_page(
-    action: str,
-    styles: dict,
-    dark_theme: bool,
-    fix_size_fn: Callable[[QWidget], None] | None = None,
-) -> QWidget:
-    """Build a processing/in-progress page.
-
-    Returns:
-        The processing page QWidget.
-    """
-    if action == "install":
-        msg = tr("processing_install")
-    elif action == "update":
-        msg = tr("processing_update")
-    elif action == "save":
-        msg = tr("processing_save")
-    elif action == "open":
-        msg = tr("processing_open")
-    else:
-        msg = tr("processing_uninstall")
-
-    widget, card_layout, card = build_card("clock.svg", dark_theme, styles, fix_size_fn=fix_size_fn)
-    for raw_line in msg.split("\n"):
-        line = clean_message_line(raw_line)
-        if not line:
-            continue
-        lbl = QLabel(line)
-        lbl.setObjectName("message_label")
-        lbl.setTextFormat(Qt.TextFormat.PlainText)
-        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl.setWordWrap(True)
-        lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        card_layout.addWidget(lbl)
-
-    return widget
+    def apply_texts(self):
+        self.clear_messages()
+        for raw_line in tr(self._message_key()).split("\n"):
+            line = clean_message_line(raw_line)
+            if not line:
+                continue
+            self.add_message(line)
 
 
-def build_update_available_page(
-    local_ver: str,
-    latest_ver: str,
-    dl_url: str,
-    styles: dict,
-    dark_theme: bool,
-    fix_size_fn: Callable[[QWidget], None] | None = None,
-    ok_callback: Callable[[], None] | None = None,
-) -> QWidget:
-    """Build the 'update available' page.
+class UpdateAvailablePage(CardPage):
+    """Сообщение о доступном обновлении приложения."""
 
-    Returns:
-        The update-available page QWidget.
-    """
-    widget, card_layout, card = build_card("alert.svg", dark_theme, styles, max_width=600, fix_size_fn=fix_size_fn)
-    card.setMinimumWidth(420)
+    def __init__(self, local_ver: str, latest_ver: str, dl_url: str,
+                 styles: dict, dark_theme: bool, ok_callback=None):
+        super().__init__(styles, dark_theme, max_width=460)
+        self._local_ver = local_ver
+        self._latest_ver = latest_ver
+        self._dl_url = dl_url
+        self.card.setMinimumWidth(420)
 
-    for text in (
-        tr("installed_version", version=local_ver),
-        tr("latest_version", version=latest_ver),
-        tr("new_version_available")
-    ):
-        line = clean_message_line(text)
-        if not line:
-            continue
-        lbl = QLabel(line)
-        lbl.setObjectName("message_block_label")
-        lbl.setTextFormat(Qt.TextFormat.RichText)
-        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl.setWordWrap(False)
-        card_layout.addWidget(lbl)
+        self.icon_label = self.add_icon("alert.svg")
+        self.info_labels = [
+            self.add_message("", rich=True, block=True, wrap=False),
+            self.add_message("", rich=True, block=True, wrap=False),
+            self.add_message("", block=True, wrap=False),
+        ]
+        self._fill_texts()
 
-    dl_btn = QPushButton(tr("download"))
-    dl_btn.setProperty("style_role", "button1")
-    card_layout.addWidget(dl_btn)
+        self.download_button = QPushButton(tr("download"))
+        self.download_button.setProperty("style_role", "button1")
+        self.download_button.clicked.connect(lambda: open_target(dl_url))
+        self.card_layout.addWidget(self.download_button)
 
-    ok_btn = QPushButton(tr("ok"))
-    ok_btn.setProperty("style_role", "button1")
-    card_layout.addWidget(ok_btn)
+        self.ok_button = QPushButton(tr("ok"))
+        self.ok_button.setProperty("style_role", "button1")
+        self.ok_button.setDefault(True)
+        self.ok_button.clicked.connect(ok_callback)
+        self.card_layout.addWidget(self.ok_button)
 
-    dl_btn.clicked.connect(lambda: open_target(dl_url))
-    if ok_callback:
-        ok_btn.clicked.connect(ok_callback)
+        self.apply_theme(styles, dark_theme)
 
-    return widget
+    def _fill_texts(self):
+        texts = (
+            tr("installed_version", version=self._local_ver),
+            tr("latest_version", version=self._latest_ver),
+            tr("new_version_available"),
+        )
+        for label, text in zip(self.info_labels, texts):
+            label.setText(clean_message_line(text))
+
+    def apply_texts(self):
+        self._fill_texts()
+
+    def apply_theme(self, styles: dict, dark_theme: bool):
+        super().apply_theme(styles, dark_theme)
+        self.download_button.setStyleSheet(styles["button1"])
+        self.ok_button.setStyleSheet(styles["button1"])
 
 
-def build_no_update_page(
-    local_ver: str,
-    latest_ver: str,
-    styles: dict,
-    dark_theme: bool,
-    fix_size_fn: Callable[[QWidget], None] | None = None,
-    ok_callback: Callable[[], None] | None = None,
-) -> QWidget:
-    """Build the 'already up to date' page.
+class NoUpdatePage(CardPage):
+    """Сообщение «обновления нет»."""
 
-    Returns:
-        The no-update page QWidget.
-    """
-    widget, card_layout, card = build_card("check-circle.svg", dark_theme, styles, max_width=600, fix_size_fn=fix_size_fn)
-    card.setMinimumWidth(420)
+    def __init__(self, local_ver: str, latest_ver: str,
+                 styles: dict, dark_theme: bool, ok_callback=None):
+        super().__init__(styles, dark_theme, max_width=460)
+        self._local_ver = local_ver
+        self._latest_ver = latest_ver
+        self.card.setMinimumWidth(420)
 
-    for text in (
-        tr("installed_version", version=local_ver),
-        tr("latest_version_padded", version=latest_ver),
-        tr("latest_version_installed")
-    ):
-        line = clean_message_line(text)
-        if not line:
-            continue
-        lbl = QLabel(line)
-        lbl.setObjectName("message_block_label")
-        if "version" in text:
-            lbl.setTextFormat(Qt.TextFormat.RichText)
-        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl.setWordWrap(False)
-        card_layout.addWidget(lbl)
+        self.icon_label = self.add_icon("check-circle.svg")
+        self.info_labels = [
+            self.add_message("", rich=True, block=True, wrap=False),
+            self.add_message("", rich=True, block=True, wrap=False),
+            self.add_message("", block=True, wrap=False),
+        ]
+        self._fill_texts()
 
-    ok_btn = QPushButton(tr("ok"))
-    ok_btn.setProperty("style_role", "button1")
-    card_layout.addWidget(ok_btn)
+        self.ok_button = QPushButton(tr("ok"))
+        self.ok_button.setProperty("style_role", "button1")
+        self.ok_button.setDefault(True)
+        self.ok_button.clicked.connect(ok_callback)
+        self.card_layout.addWidget(self.ok_button)
 
-    if ok_callback:
-        ok_btn.clicked.connect(ok_callback)
+        self.apply_theme(styles, dark_theme)
 
-    return widget
+    def _fill_texts(self):
+        texts = (
+            tr("installed_version", version=self._local_ver),
+            tr("latest_version_padded", version=self._latest_ver),
+            tr("latest_version_installed"),
+        )
+        for label, text in zip(self.info_labels, texts):
+            label.setText(clean_message_line(text))
+
+    def apply_texts(self):
+        self._fill_texts()
+
+    def apply_theme(self, styles: dict, dark_theme: bool):
+        super().apply_theme(styles, dark_theme)
+        self.ok_button.setStyleSheet(styles["button1"])

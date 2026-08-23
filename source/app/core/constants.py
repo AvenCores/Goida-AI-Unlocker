@@ -53,6 +53,12 @@ SETTINGS_PATH = _get_settings_path()
 GITHUB_RELEASES_API_URL = "https://api.github.com/repos/AvenCores/Goida-AI-Unlocker/releases/latest"
 GITHUB_RELEASES_PAGE_URL = "https://github.com/AvenCores/Goida-AI-Unlocker/releases/latest"
 
+# Источники готовых hosts-файлов для механизма Hosts
+HOSTS_SOURCE_URLS = {
+    "dns.malw.link": "https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts",
+    "geohide": "https://github.com/Internet-Helper/GeoHideDNS/raw/refs/heads/main/hosts/hosts",
+}
+
 # Xbox DNS (https://xbox-dns.ru) — разблокировка через смену системных DNS-серверов
 XBOX_DNS_PRIMARY_IPV4 = "111.88.96.50"
 XBOX_DNS_SECONDARY_IPV4 = "111.88.96.51"
@@ -91,6 +97,10 @@ MALW_DNS_DOT_HOST = "dns.malw.link"
 MALW_DNS_SITE_URL = "https://info.dns.malw.link"
 
 APP_VERSION = "1.3.5"
+
+# Общие цвета статусов (GUI + менеджеры), чтобы статусы Hosts и DNS выглядели одинаково
+COLOR_SUCCESS = "#43b581"
+COLOR_ERROR = "#e06c75"
 
 _LAYOUT_FILLER = "\u3164"
 

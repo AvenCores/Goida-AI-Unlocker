@@ -1,124 +1,120 @@
-from typing import Callable
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QToolButton, QGridLayout, QPushButton
 )
-from PySide6.QtCore import Qt, QTimer, QSize
+from PySide6.QtCore import Qt, QSize
+
 from app.gui.localization import tr
-from app.gui.icons import get_icon, create_icon_label
+from app.gui.icons import get_icon
 from app.utils.helpers import open_target
 
 
-def build_about_page(
-    styles: dict,
-    dark_theme: bool,
-    return_callback: Callable[[], None],
-) -> QWidget:
-    """Build the About page widget.
+class AboutPage(QWidget):
+    """Страница «О программе»: версия, автор и ссылки."""
 
-    Args:
-        styles: Current stylesheet dict.
-        dark_theme: Whether dark theme is active.
-        return_callback: Called when user clicks "Back to menu".
-
-    Returns:
-        The about page QWidget.
-    """
-    about = QWidget()
-    vbox = QVBoxLayout(about)
-    vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    vbox.setSpacing(8)
-    vbox.setContentsMargins(12, 12, 12, 12)
-
-    icon_label = create_icon_label("bulb.svg", size=32, dark_theme=dark_theme)
-    vbox.addWidget(icon_label)
-
-    label_ver = QLabel()
-    label_ver.setObjectName("about_title")
-    label_ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    vbox.addWidget(label_ver)
-
-    info = QLabel()
-    info.setObjectName("about_info")
-    info.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    vbox.addWidget(info)
-
-    github_btn = QToolButton()
-    github_btn.setText("GitHub")
-    github_btn.setIcon(get_icon("github.svg", 24, dark_theme=dark_theme, force_dark=True))
-    github_btn.setIconSize(QSize(24, 24))
-    github_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-    github_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    github_btn.setProperty("style_role", "about_tool")
-    github_btn.setProperty("icon_name", "github.svg")
-    github_btn.setProperty("icon_force_dark", True)
-    github_btn.clicked.connect(lambda: open_target("https://github.com/AvenCores"))
-
-    repo_btn = QToolButton()
-    repo_btn.setText(tr("repository"))
-    repo_btn.setIcon(get_icon("github.svg", 24, dark_theme=dark_theme, force_dark=True))
-    repo_btn.setIconSize(QSize(24, 24))
-    repo_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-    repo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    repo_btn.setProperty("style_role", "about_tool")
-    repo_btn.setProperty("icon_name", "github.svg")
-    repo_btn.setProperty("icon_force_dark", True)
-    repo_btn.clicked.connect(lambda: open_target("https://github.com/AvenCores/Goida-AI-Unlocker"))
-
-    grid = QGridLayout()
-    grid.setHorizontalSpacing(12)
-    grid.setVerticalSpacing(8)
-    grid.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-    grid.addWidget(github_btn, 0, 0, alignment=Qt.AlignmentFlag.AlignHCenter)
-
-    social = [
+    _SOCIAL_LINKS = [
         ("Telegram", "https://t.me/avencoresyt", "send.svg"),
         ("YouTube", "https://youtube.com/@avencores", "play.svg"),
         ("RuTube", "https://rutube.ru/channel/34072414", "video.svg"),
         ("Dzen", "https://dzen.ru/avencores", "book-open.svg"),
         ("VK", "https://vk.com/avencoresreuploads", "users.svg"),
     ]
-    buttons = [github_btn, repo_btn]
-    col_count = 3
-    row, col = 0, 1
-    for label, url, icon in social:
+
+    def __init__(self, styles: dict, dark_theme: bool, return_callback):
+        super().__init__()
+        self.styles = styles
+        self.dark_theme = dark_theme
+        self._icon_buttons: list[tuple[QToolButton, str]] = []
+
+        vbox = QVBoxLayout(self)
+        vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        vbox.setSpacing(8)
+        vbox.setContentsMargins(12, 12, 12, 12)
+
+        self.icon_label = QLabel()
+        self.icon_label.setPixmap(get_icon("bulb.svg", 32, dark_theme=dark_theme).pixmap(32, 32))
+        self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        vbox.addWidget(self.icon_label)
+
+        self.title_label = QLabel()
+        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        vbox.addWidget(self.title_label)
+
+        self.info_label = QLabel()
+        self.info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        vbox.addWidget(self.info_label)
+
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(12)
+        grid.setVerticalSpacing(8)
+        grid.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
+        self._tool_buttons: list[QToolButton] = []
+        self.repo_button = self._make_tool_button(tr("repository"), "github.svg")
+        self.repo_button.clicked.connect(
+            lambda: open_target("https://github.com/AvenCores/Goida-AI-Unlocker")
+        )
+
+        entries = [
+            ("GitHub", "https://github.com/AvenCores", "github.svg"),
+            *self._SOCIAL_LINKS,
+        ]
+        for index, (label, url, icon) in enumerate(entries):
+            btn = self._make_tool_button(label, icon)
+            btn.clicked.connect(lambda checked=False, u=url: open_target(u))
+            grid.addWidget(btn, index // 3, index % 3, alignment=Qt.AlignmentFlag.AlignHCenter)
+
+        vbox.addLayout(grid)
+        vbox.addSpacing(8)
+        vbox.addWidget(self.repo_button, alignment=Qt.AlignmentFlag.AlignHCenter)
+        vbox.addSpacing(8)
+
+        self.back_button = QPushButton(f"  {tr('back_to_menu')}  ")
+        self.back_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.back_button.clicked.connect(return_callback)
+        vbox.addWidget(self.back_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.apply_theme(styles, dark_theme)
+
+    def _make_tool_button(self, text: str, icon_name: str) -> QToolButton:
         btn = QToolButton()
-        btn.setText(label)
-        btn.setIcon(get_icon(icon, 24, dark_theme=dark_theme, force_dark=True))
+        btn.setText(text)
+        btn.setIcon(get_icon(icon_name, 24, dark_theme=self.dark_theme, force_dark=True))
         btn.setIconSize(QSize(24, 24))
         btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-        btn.setProperty("style_role", "about_tool")
-        btn.setProperty("icon_name", icon)
-        btn.setProperty("icon_force_dark", True)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.clicked.connect(lambda checked=False, u=url: open_target(u))
-        grid.addWidget(btn, row, col, alignment=Qt.AlignmentFlag.AlignHCenter)
-        buttons.append(btn)
-        col += 1
-        if col >= col_count:
-            row += 1
-            col = 0
+        self._tool_buttons.append(btn)
+        self._icon_buttons.append((btn, icon_name))
+        return btn
 
-    vbox.addLayout(grid)
-    vbox.addSpacing(8)
-    vbox.addWidget(repo_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
-    vbox.addSpacing(8)
+    def _equalize_button_widths(self):
+        # sizeHint доступен сразу после задания текста/иконки — таймер не нужен
+        widths = [b.sizeHint().width() for b in self._tool_buttons]
+        ref = max((w for w in widths if w > 0), default=0)
+        for b in self._tool_buttons:
+            b.setFixedWidth(ref)
 
-    def equalize():
-        if not buttons:
-            return
-        try:
-            ref = max(b.sizeHint().width() for b in buttons if b.sizeHint().width() > 0)
-            for b in buttons:
-                b.setFixedWidth(ref)
-        except Exception:
-            pass
+    def apply_texts(self):
+        labels = ["GitHub"] + [name for name, _, _ in self._SOCIAL_LINKS]
+        for btn, label in zip(self._tool_buttons, labels):
+            btn.setText(label)
+            btn.ensurePolished()
+        self.repo_button.setText(tr("repository"))
+        self.back_button.setText(f"  {tr('back_to_menu')}  ")
+        self._equalize_button_widths()
+        self._fill_html()
 
-    back_btn = QPushButton(f"  {tr('back_to_menu')}  ")
-    back_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    back_btn.setProperty("style_role", "theme")
-    back_btn.setStyleSheet(styles["theme"])
-    back_btn.clicked.connect(return_callback)
-    vbox.addWidget(back_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+    def apply_theme(self, styles: dict, dark_theme: bool):
+        self.styles = styles
+        self.dark_theme = dark_theme
+        self.title_label.setStyleSheet(styles["about_title_style"])
+        self.back_button.setStyleSheet(styles["theme"])
+        self.repo_button.setStyleSheet(styles["tool_button"])
+        for btn, icon_name in self._icon_buttons:
+            btn.setStyleSheet(styles["tool_button"])
+            btn.setIcon(get_icon(icon_name, 24, dark_theme=dark_theme, force_dark=True))
+        self._fill_html()
+        self._equalize_button_widths()
 
-    QTimer.singleShot(150, equalize)
-    return about
+    def _fill_html(self):
+        self.title_label.setText(self.styles["about_title_html"])
+        self.info_label.setText(self.styles["about_info_html"])

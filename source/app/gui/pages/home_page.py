@@ -1,31 +1,43 @@
-from typing import Optional
+from typing import Callable, Optional
+
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox
 )
-from PySide6.QtCore import Qt, Signal, QSize, QTimer
+from PySide6.QtCore import Qt, Signal, QSize
+
+from app.core.constants import COLOR_ERROR, COLOR_SUCCESS
 from app.core.hosts_manager import HostsManager, HostsStatusResult
-from app.core.dns_manager import DnsManager, DNS_PROVIDER_ID, get_dns_providers
+from app.core.dns_manager import (
+    DNS_PROVIDER_ID,
+    DnsManager,
+    get_dns_provider_site_url,
+    get_dns_providers,
+)
 from app.utils.helpers import open_target
-from app.gui.localization import tr, localize_update_date
+from app.gui.localization import localize_update_date, tr
 from app.gui.icons import get_icon
+
+# Ширина колонки контента главной страницы (карточка статуса + кнопки)
+COLUMN_MAX_WIDTH = 420
 
 
 class HomePage(QWidget):
-    """Main application home page with status, provider selection, and action buttons."""
+    """Главная страница: статус обхода, выбор механизма/провайдера и действия."""
 
-    # Signals emitted to MainWindow for orchestration
+    # Сигналы для MainWindow (оркестрация)
     install_requested = Signal(str)       # action: "install" | "update" | "uninstall"
     donate_requested = Signal()
     about_requested = Signal()
     update_check_requested = Signal()
-    provider_changed = Signal(str)        # provider id
-    mechanism_changed = Signal(str)       # mechanism id: "hosts" | "xbox-dns"
-    dns_provider_changed = Signal(str)    # dns provider id
-    open_hosts_requested = Signal()       # open built-in hosts editor
-    view_backups_requested = Signal()     # open built-in backup viewer
+    provider_changed = Signal(str)        # id hosts-провайдера
+    mechanism_changed = Signal(str)       # "hosts" | "xbox-dns"
+    dns_provider_changed = Signal(str)    # id DNS-провайдера
+    open_hosts_requested = Signal()       # открыть редактор hosts
+    view_backups_requested = Signal()     # открыть просмотрщик бэкапов
 
-    def __init__(self, hosts_manager: HostsManager, dns_manager: DnsManager, styles: dict,
-                 dark_theme: bool, current_provider: str, current_mechanism: str = "hosts",
+    def __init__(self, hosts_manager: HostsManager, dns_manager: DnsManager,
+                 styles: dict, dark_theme: bool, current_provider: str,
+                 current_mechanism: str = "hosts",
                  current_dns_provider: str = DNS_PROVIDER_ID):
         super().__init__()
         self.hosts_manager = hosts_manager
@@ -36,258 +48,203 @@ class HomePage(QWidget):
         self.current_mechanism = current_mechanism
         self.current_dns_provider = current_dns_provider
 
-        # UI references
-        self.app_title_label: Optional[QLabel] = None
-        self.textinformer: Optional[QLabel] = None
-        self.version_label: Optional[QLabel] = None
-        self.update_date_label: Optional[QLabel] = None
-        self.status_container: Optional[QWidget] = None
-        self.install_button: Optional[QPushButton] = None
-        self.uninstall_button: Optional[QPushButton] = None
-        self.donate_button: Optional[QPushButton] = None
-        self.about_button: Optional[QPushButton] = None
-        self.update_button: Optional[QPushButton] = None
-        self.open_hosts_button: Optional[QPushButton] = None
-        self.backup_hosts_button: Optional[QPushButton] = None
-        self.provider_combo: Optional[QComboBox] = None
-        self.provider_repo_button: Optional[QPushButton] = None
-        self.mechanism_combo: Optional[QComboBox] = None
+        # Последний полученный асинхронно статус (вместо свойств на QLabel)
+        self._status: Optional[HostsStatusResult] = None
+        # (кнопка, имя_иконки, force_white, force_dark) для перетемизации иконок
+        self._icon_buttons: list[tuple[QPushButton, str, bool, bool]] = []
 
         self._build_ui()
+
+    # ------------------------------------------------------------------
+    # Построение интерфейса
+    # ------------------------------------------------------------------
 
     def _build_ui(self):
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.setSpacing(0)
-        outer_layout.addStretch()
 
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setSpacing(24)
         layout.setContentsMargins(20, 20, 20, 20)
-        outer_layout.addLayout(layout)
-        outer_layout.addStretch()
 
-        # App title
-        app_title_label = QLabel()
-        app_title_label.setObjectName("main_title")
-        app_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        app_title_label.setTextFormat(Qt.TextFormat.RichText)
-        app_title_label.setText(self.styles["about_title_html"])
-        app_title_label.setStyleSheet(self.styles["about_title_style"])
-        layout.addWidget(app_title_label)
-        self.app_title_label = app_title_label
+        # Колонка контента ограничена по ширине: rich-text QLabel'ы дают
+        # завышенный sizeHint, из-за чего без ограничения колонка
+        # растягивается на всю ширину окна
+        column = QWidget()
+        column.setMaximumWidth(COLUMN_MAX_WIDTH)
+        column.setLayout(layout)
 
-        # Status labels
-        textinformer = QLabel(tr("unlock_status", status=tr("version_checking"), color="#666666"))
-        textinformer.setTextFormat(Qt.TextFormat.RichText)
-        textinformer.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        textinformer.setStyleSheet(self.styles["label"])
-        self.textinformer = textinformer
+        # Заголовок приложения
+        self.app_title_label = QLabel()
+        self.app_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.app_title_label.setTextFormat(Qt.TextFormat.RichText)
+        layout.addWidget(self.app_title_label)
 
-        version_label = QLabel(tr("version_checking"))
-        version_label.setTextFormat(Qt.TextFormat.RichText)
-        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        version_label.setStyleSheet(self.styles["label"])
-        self.version_label = version_label
+        # Статусная карточка: механизм + провайдеры + статусы
+        self.mechanism_combo = QComboBox()
+        self.mechanism_combo.addItem(tr("mechanism_hosts"), "hosts")
+        self.mechanism_combo.addItem(tr("mechanism_dns"), DNS_PROVIDER_ID)
+        self.mechanism_combo.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.mechanism_combo.currentIndexChanged.connect(self._on_mechanism_changed)
 
-        update_date_label = QLabel(tr("update_date_checking"))
-        update_date_label.setTextFormat(Qt.TextFormat.RichText)
-        update_date_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        text_color = "#ffffff" if self.dark_theme else "#1a1a1a"
-        update_date_label.setStyleSheet(
-            f"font-size: 14px; color: {text_color}; border-radius: 8px; padding: 4px 8px; margin: 2px;"
+        self.provider_combo, self.provider_repo_button = self._make_provider_row(
+            [(tr("provider_malw"), "dns.malw.link"), (tr("provider_geohide"), "geohide")],
+            self._open_provider_repo,
         )
-        self.update_date_label = update_date_label
+        self.provider_combo.currentIndexChanged.connect(self._on_provider_changed)
 
-        # Mechanism combo (Hosts / DNS)
-        mechanism_combo = QComboBox()
-        mechanism_combo.addItem(tr("mechanism_hosts"), "hosts")
-        mechanism_combo.addItem(tr("mechanism_dns"), DNS_PROVIDER_ID)
-        mechanism_combo.setStyleSheet(self.styles["combo"])
-        mechanism_combo.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.mechanism_combo = mechanism_combo
-
-        # DNS provider combo (виден только в режиме DNS)
-        dns_provider_combo = QComboBox()
-        for name, pid in get_dns_providers():
-            dns_provider_combo.addItem(name, pid)
-        dns_provider_combo.setStyleSheet(self.styles["combo"])
-        dns_provider_combo.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.dns_provider_combo = dns_provider_combo
-
-        dns_site_button = QPushButton()
-        dns_site_button.setIcon(get_icon("globe.svg", 18, dark_theme=self.dark_theme))
-        dns_site_button.setIconSize(QSize(18, 18))
-        dns_site_button.setProperty("icon_name", "globe.svg")
-        dns_site_button.setProperty("icon_force_dark", False)
-        dns_site_button.setProperty("style_role", "provider_repo")
-        dns_site_button.setFixedSize(32, 32)
-        dns_site_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        dns_site_button.setToolTip(tr("provider_repo_tooltip"))
-        dns_site_button.setStyleSheet(
-            "QPushButton { background: transparent; border: none; padding: 4px; border-radius: 6px; }"
-            "QPushButton:hover { background: rgba(128,128,128,0.15); }"
+        self.dns_provider_combo, self.dns_site_button = self._make_provider_row(
+            get_dns_providers(), self._open_dns_provider_site,
         )
-        dns_site_button.clicked.connect(self._open_dns_provider_site)
-        self.dns_site_button = dns_site_button
+        self.dns_provider_combo.currentIndexChanged.connect(self._on_dns_provider_changed)
 
-        dns_provider_hbox = QHBoxLayout()
-        dns_provider_hbox.setSpacing(6)
-        dns_provider_hbox.setContentsMargins(0, 0, 0, 0)
-        dns_provider_hbox.addWidget(dns_provider_combo)
-        dns_provider_hbox.addWidget(dns_site_button)
+        self.textinformer = QLabel()
+        self.textinformer.setTextFormat(Qt.TextFormat.RichText)
+        self.textinformer.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Provider combo (виден только в режиме Hosts)
-        provider_combo = QComboBox()
-        provider_combo.addItem(tr("provider_malw"), "dns.malw.link")
-        provider_combo.addItem(tr("provider_geohide"), "geohide")
-        provider_combo.setStyleSheet(self.styles["combo"])
-        provider_combo.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.provider_combo = provider_combo
+        self.version_label = QLabel(tr("version_checking"))
+        self.version_label.setTextFormat(Qt.TextFormat.RichText)
+        self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        provider_repo_button = QPushButton()
-        provider_repo_button.setIcon(get_icon("globe.svg", 18, dark_theme=self.dark_theme))
-        provider_repo_button.setIconSize(QSize(18, 18))
-        provider_repo_button.setProperty("icon_name", "globe.svg")
-        provider_repo_button.setProperty("icon_force_dark", False)
-        provider_repo_button.setProperty("style_role", "provider_repo")
-        provider_repo_button.setFixedSize(32, 32)
-        provider_repo_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        provider_repo_button.setToolTip(tr("provider_repo_tooltip"))
-        provider_repo_button.setStyleSheet(
-            "QPushButton { background: transparent; border: none; padding: 4px; border-radius: 6px; }"
-            "QPushButton:hover { background: rgba(128,128,128,0.15); }"
-        )
-        provider_repo_button.clicked.connect(self._open_provider_repo)
-        self.provider_repo_button = provider_repo_button
+        self.update_date_label = QLabel(tr("update_date_checking"))
+        self.update_date_label.setTextFormat(Qt.TextFormat.RichText)
+        self.update_date_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        provider_hbox = QHBoxLayout()
-        provider_hbox.setSpacing(6)
-        provider_hbox.setContentsMargins(0, 0, 0, 0)
-        provider_hbox.addWidget(provider_combo)
-        provider_hbox.addWidget(provider_repo_button)
-
-        # Status container
-        status_container = QWidget()
-        status_vbox = QVBoxLayout(status_container)
+        self.status_container = QWidget()
+        status_vbox = QVBoxLayout(self.status_container)
         status_vbox.setContentsMargins(16, 12, 16, 12)
         status_vbox.setSpacing(8)
         status_vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        status_vbox.addWidget(mechanism_combo)
-        status_vbox.addLayout(dns_provider_hbox)
-        status_vbox.addLayout(provider_hbox)
-        status_vbox.addWidget(textinformer)
-        status_vbox.addWidget(version_label)
-        status_vbox.addWidget(update_date_label)
-        self.status_container = status_container
-        self.refresh_status_container_style()
-        layout.addWidget(status_container)
+        status_vbox.addWidget(self.mechanism_combo)
+        # Кнопка открытия сайта/репозитория — справа от комбобокса провайдера
+        status_vbox.addLayout(self._row_with_button(self.provider_combo, self.provider_repo_button))
+        status_vbox.addLayout(self._row_with_button(self.dns_provider_combo, self.dns_site_button))
+        status_vbox.addWidget(self.textinformer)
+        status_vbox.addWidget(self.version_label)
+        status_vbox.addWidget(self.update_date_label)
 
-        initial_idx = 1 if self.current_provider == "geohide" else 0
-        provider_combo.setCurrentIndex(initial_idx)
-        provider_combo.currentIndexChanged.connect(self._on_provider_changed)
+        layout.addWidget(self.status_container)
 
-        mechanism_idx = mechanism_combo.findData(self.current_mechanism)
-        mechanism_combo.setCurrentIndex(mechanism_idx if mechanism_idx >= 0 else 0)
-        mechanism_combo.currentIndexChanged.connect(self._on_mechanism_changed)
+        # Действия
+        self.install_button = self._make_action_button(
+            "settings.svg", force_white=True,
+            clicked=lambda: self.install_requested.emit(
+                self.install_button.property("install_mode") or "install"
+            ),
+        )
+        self.install_button.setProperty("install_mode", "install")
+        self.install_button.setText(tr("install_button_install"))
+        self.uninstall_button = self._make_action_button(
+            "trash.svg", force_white=True,
+            clicked=lambda: self.install_requested.emit("uninstall"),
+        )
+        self.uninstall_button.setText(tr("uninstall_button"))
+        self.open_hosts_button = self._make_tool_button(
+            "book-open.svg", tr("open_hosts_button"), self.open_hosts_requested.emit
+        )
+        self.backup_hosts_button = self._make_tool_button(
+            "clock.svg", tr("backup_hosts_button"), self.view_backups_requested.emit
+        )
 
-        dns_provider_idx = dns_provider_combo.findData(self.current_dns_provider)
-        dns_provider_combo.setCurrentIndex(dns_provider_idx if dns_provider_idx >= 0 else 0)
-        dns_provider_combo.currentIndexChanged.connect(self._on_dns_provider_changed)
-
-        # Action buttons
-        install_button = QPushButton(tr("install_button_install"))
-        install_button.setIcon(get_icon("settings.svg", 18, dark_theme=self.dark_theme, force_white=True))
-        install_button.setIconSize(QSize(18, 18))
-        install_button.setProperty("icon_name", "settings.svg")
-        install_button.setProperty("icon_force_white", True)
-        install_button.setProperty("style_role", "button1")
-        install_button.setProperty("install_mode", "install")
-        install_button.setStyleSheet(self.styles["button1"])
-        self.install_button = install_button
-
-        uninstall_button = QPushButton(tr("uninstall_button"))
-        uninstall_button.setIcon(get_icon("trash.svg", 18, dark_theme=self.dark_theme, force_white=True))
-        uninstall_button.setIconSize(QSize(18, 18))
-        uninstall_button.setProperty("icon_name", "trash.svg")
-        uninstall_button.setProperty("icon_force_white", True)
-        uninstall_button.setProperty("style_role", "button2")
-        uninstall_button.setStyleSheet(self.styles["button2"])
-        self.uninstall_button = uninstall_button
-
-        donate_button = QPushButton(tr("donate_button"))
-        donate_button.setIcon(get_icon("heart.svg", 18, dark_theme=self.dark_theme, force_dark=True))
-        donate_button.setIconSize(QSize(18, 18))
-        donate_button.setProperty("icon_name", "heart.svg")
-        donate_button.setProperty("icon_force_dark", True)
-        donate_button.setProperty("style_role", "theme")
-        donate_button.setStyleSheet(self.styles["theme"])
-        self.donate_button = donate_button
-
-        about_button = QPushButton(tr("about_button"))
-        about_button.setIcon(get_icon("info.svg", 18, dark_theme=self.dark_theme, force_dark=True))
-        about_button.setIconSize(QSize(18, 18))
-        about_button.setProperty("icon_name", "info.svg")
-        about_button.setProperty("icon_force_dark", True)
-        about_button.setProperty("style_role", "theme")
-        about_button.setStyleSheet(self.styles["theme"])
-        self.about_button = about_button
-
-        update_button = QPushButton(tr("update_button"))
-        update_button.setIcon(get_icon("refresh.svg", 18, dark_theme=self.dark_theme, force_dark=True))
-        update_button.setIconSize(QSize(18, 18))
-        update_button.setProperty("icon_name", "refresh.svg")
-        update_button.setProperty("icon_force_dark", True)
-        update_button.setProperty("style_role", "theme")
-        update_button.setStyleSheet(self.styles["theme"])
-        self.update_button = update_button
-
-        open_hosts_button = QPushButton(tr("open_hosts_button"))
-        open_hosts_button.setIcon(get_icon("book-open.svg", 18, dark_theme=self.dark_theme, force_dark=True))
-        open_hosts_button.setIconSize(QSize(18, 18))
-        open_hosts_button.setProperty("icon_name", "book-open.svg")
-        open_hosts_button.setProperty("icon_force_dark", True)
-        open_hosts_button.setProperty("style_role", "theme")
-        open_hosts_button.setStyleSheet(self.styles["theme"])
-        self.open_hosts_button = open_hosts_button
-
-        backup_hosts_button = QPushButton(tr("backup_hosts_button"))
-        backup_hosts_button.setIcon(get_icon("clock.svg", 18, dark_theme=self.dark_theme, force_dark=True))
-        backup_hosts_button.setIconSize(QSize(18, 18))
-        backup_hosts_button.setProperty("icon_name", "clock.svg")
-        backup_hosts_button.setProperty("icon_force_dark", True)
-        backup_hosts_button.setProperty("style_role", "theme")
-        backup_hosts_button.setStyleSheet(self.styles["theme"])
-        self.backup_hosts_button = backup_hosts_button
-
-        # Connect signals
-        install_button.clicked.connect(lambda: self.install_requested.emit(install_button.property("install_mode") or "install"))
-        uninstall_button.clicked.connect(lambda: self.install_requested.emit("uninstall"))
-        donate_button.clicked.connect(self.donate_requested.emit)
-        about_button.clicked.connect(self.about_requested.emit)
-        update_button.clicked.connect(self.update_check_requested.emit)
-        open_hosts_button.clicked.connect(self.open_hosts_requested.emit)
-        backup_hosts_button.clicked.connect(self.view_backups_requested.emit)
-
-        # Layout
-        layout.addWidget(install_button)
-        layout.addWidget(uninstall_button)
-        layout.addWidget(open_hosts_button)
-        layout.addWidget(backup_hosts_button)
-
-        controls_hbox = QHBoxLayout()
-        controls_hbox.setSpacing(12)
-        controls_hbox.addWidget(donate_button)
-        layout.addLayout(controls_hbox)
+        layout.addWidget(self.install_button)
+        layout.addWidget(self.uninstall_button)
+        layout.addWidget(self.open_hosts_button)
+        layout.addWidget(self.backup_hosts_button)
         layout.addStretch()
-        layout.addWidget(update_button)
-        layout.addWidget(about_button)
 
-        # Применяем видимость hosts-контролов для стартового механизма без эмита сигнала
+        self.donate_button = self._make_tool_button(
+            "heart.svg", tr("donate_button"), self.donate_requested.emit
+        )
+        layout.addWidget(self.donate_button)
+        layout.addStretch()
+
+        self.update_button = self._make_tool_button(
+            "refresh.svg", tr("update_button"), self.update_check_requested.emit
+        )
+        self.about_button = self._make_tool_button(
+            "info.svg", tr("about_button"), self.about_requested.emit
+        )
+        layout.addWidget(self.update_button)
+        layout.addWidget(self.about_button)
+
+        outer_layout.addStretch()
+        outer_layout.addWidget(column, 0, Qt.AlignmentFlag.AlignHCenter)
+        outer_layout.addStretch()
+
+        # Начальные значения без эмита сигналов
+        self.provider_combo.blockSignals(True)
+        self.provider_combo.setCurrentIndex(1 if self.current_provider == "geohide" else 0)
+        self.provider_combo.blockSignals(False)
+
+        self.mechanism_combo.blockSignals(True)
+        idx = self.mechanism_combo.findData(self.current_mechanism)
+        self.mechanism_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        self.mechanism_combo.blockSignals(False)
+
+        self.dns_provider_combo.blockSignals(True)
+        idx = self.dns_provider_combo.findData(self.current_dns_provider)
+        self.dns_provider_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        self.dns_provider_combo.blockSignals(False)
+
         self._update_mechanism_controls_visibility()
 
-    # --- Public API ---
+        # Применяем стили и тексты после сборки всех виджетов
+        self.apply_theme_styles()
+        self.apply_texts()
+
+    @staticmethod
+    def _row_with_button(combo: QComboBox, button: QPushButton) -> QHBoxLayout:
+        """Строка «комбобокс провайдера + кнопка открытия сайта справа».
+
+        Без stretch-фактора у комбобокса: stretch делает строку expanding,
+        и тогда растягивается вся колонка главной страницы.
+        """
+        row = QHBoxLayout()
+        row.setSpacing(6)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.addWidget(combo)
+        row.addWidget(button)
+        return row
+
+    def _make_provider_row(self, items: list, open_callback: Callable) -> tuple[QComboBox, QPushButton]:
+        """Комбобокс выбора провайдера + кнопка открытия сайта/репозитория."""
+        combo = QComboBox()
+        for name, data in items:
+            combo.addItem(name, data)
+        combo.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        site_button = QPushButton()
+        site_button.setIcon(get_icon("globe.svg", 18, dark_theme=self.dark_theme))
+        site_button.setIconSize(QSize(18, 18))
+        site_button.setFixedSize(32, 32)
+        site_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        site_button.setToolTip(tr("provider_repo_tooltip"))
+        site_button.clicked.connect(open_callback)
+        self._icon_buttons.append((site_button, "globe.svg", False, False))
+        return combo, site_button
+
+    def _make_action_button(self, icon_name: str, *, force_white: bool,
+                            clicked: Callable) -> QPushButton:
+        button = QPushButton()
+        button.setIconSize(QSize(18, 18))
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.clicked.connect(clicked)
+        self._icon_buttons.append((button, icon_name, force_white, False))
+        return button
+
+    def _make_tool_button(self, icon_name: str, text: str, slot: Callable) -> QPushButton:
+        button = QPushButton(text)
+        button.setIconSize(QSize(18, 18))
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.clicked.connect(slot)
+        self._icon_buttons.append((button, icon_name, False, True))
+        return button
+
+    # ------------------------------------------------------------------
+    # Публичный API
+    # ------------------------------------------------------------------
 
     def update_status_label(self):
         if self.current_mechanism == DNS_PROVIDER_ID:
@@ -296,25 +253,20 @@ class HomePage(QWidget):
             installed = self.dns_manager.get_cached_install_state(self.current_dns_provider)
         else:
             installed = self.hosts_manager.is_installed(self.current_provider)
-        color = "#43b581" if installed else "#e06c75"
+        color = COLOR_SUCCESS if installed else COLOR_ERROR
         key = "status_installed" if installed else "status_not_installed"
         self.textinformer.setText(tr("unlock_status", status=tr(key), color=color))
 
-    def apply_hosts_version_status(self, status):
-        self.version_label.setProperty("status_key", status.key)
-        self.version_label.setProperty("status_color", status.color)
-        self.version_label.setProperty("update_date_value", status.date)
+    def apply_hosts_version_status(self, status: HostsStatusResult):
+        self._status = status
 
         if self.current_mechanism == DNS_PROVIDER_ID:
-            # Для DNS-механизма строка версии hosts не нужна — скрываем её
+            # Для DNS-механизма строка версии hosts не нужна
             self.version_label.hide()
-            # Показываем статус установки DNS-серверов
-            installed = status.key == "installed"
-            color = "#43b581" if installed else "#e06c75"
-            key = "status_installed" if installed else "status_not_installed"
             self.update_date_label.setText(tr(
                 "dns_servers_status_label",
-                servers=status.date, color=color, status=tr(key),
+                servers=status.date, color=COLOR_SUCCESS if status.key == "installed" else COLOR_ERROR,
+                status=tr("status_installed" if status.key == "installed" else "status_not_installed"),
             ))
             mode = "install"
         else:
@@ -323,86 +275,59 @@ class HomePage(QWidget):
                 tr("hosts_version_status", color=status.color, status=tr(f"hosts_status_{status.key}"))
             )
             if status.date:
-                self.update_date_label.setText(tr("hosts_update_date", date=localize_update_date(status.date)))
+                self.update_date_label.setText(
+                    tr("hosts_update_date", date=localize_update_date(status.date))
+                )
             else:
                 self.update_date_label.setText(tr("hosts_update_date_unknown"))
             mode = "update" if status.key == "outdated" else "install"
 
         self.install_button.setProperty("install_mode", mode)
-        self.install_button.setText(tr("install_button_update" if mode == "update" else "install_button_install"))
-        # Статус пришёл асинхронно (воркер) — обновляем и общий статус,
-        # чтобы он соответствовал свежей проверке
+        self.install_button.setText(
+            tr("install_button_update" if mode == "update" else "install_button_install")
+        )
+        # Статус пришёл асинхронно — обновляем общий статус свежим значением
         self.update_status_label()
-        # После изменения текстов пересчитываем лейаут, иначе элементы
-        # могут перекрываться
-        self._relayout()
-
-    def _relayout(self):
-        """Форсирует пересчёт лейаутов всей цепочки родителей.
-
-        Без этого виджеты, скрытые до первого показа окна, остаются
-        с нулевой высотой / перекрываются после смены механизма.
-        ВАЖНО: без синхронных repaint() — они перерисовывают каждый
-        виджет и вызывают тормоза; Qt сам перерисует изменённые области.
-        """
-        parent = self.status_container
-        while parent is not None:
-            lay = parent.layout()
-            if lay is not None:
-                lay.invalidate()
-                lay.activate()
-            if parent is self or parent.isWindow():
-                break
-            parent = parent.parentWidget()
-        self.status_container.adjustSize()
-        self.updateGeometry()
 
     def apply_texts(self):
         self.app_title_label.setText(self.styles["about_title_html"])
         self.update_status_label()
 
-        if self.provider_combo:
-            self.provider_combo.blockSignals(True)
-            self.provider_combo.setItemText(0, tr("provider_malw"))
-            self.provider_combo.setItemText(1, tr("provider_geohide"))
-            self.provider_combo.blockSignals(False)
-        if self.mechanism_combo:
-            self.mechanism_combo.blockSignals(True)
-            self.mechanism_combo.setItemText(0, tr("mechanism_hosts"))
-            self.mechanism_combo.setItemText(1, tr("mechanism_dns"))
-            self.mechanism_combo.blockSignals(False)
-        if self.dns_provider_combo:
-            current = self.dns_provider_combo.currentData()
-            self.dns_provider_combo.blockSignals(True)
-            for i, (name, pid) in enumerate(get_dns_providers()):
-                if i < self.dns_provider_combo.count():
-                    self.dns_provider_combo.setItemText(i, name)
-                else:
-                    self.dns_provider_combo.addItem(name, pid)
-            idx = self.dns_provider_combo.findData(current)
-            self.dns_provider_combo.setCurrentIndex(idx if idx >= 0 else 0)
-            self.dns_provider_combo.blockSignals(False)
-        if self.provider_repo_button:
-            self.provider_repo_button.setToolTip(tr("provider_repo_tooltip"))
+        self._set_combo_items(self.provider_combo, [
+            (tr("provider_malw"), "dns.malw.link"),
+            (tr("provider_geohide"), "geohide"),
+        ])
+        self._set_combo_items(self.mechanism_combo, [
+            (tr("mechanism_hosts"), "hosts"),
+            (tr("mechanism_dns"), DNS_PROVIDER_ID),
+        ])
 
-        stored_key = self.version_label.property("status_key")
-        if stored_key:
-            status = HostsStatusResult(
-                stored_key,
-                self.version_label.property("status_color") or "#e06c75",
-                self.version_label.property("update_date_value") or ""
-            )
-            self.apply_hosts_version_status(status)
+        current_dns = self.dns_provider_combo.currentData()
+        self.provider_combo.blockSignals(True)
+        self.mechanism_combo.blockSignals(True)
+        self.dns_provider_combo.blockSignals(True)
+        while self.dns_provider_combo.count():
+            self.dns_provider_combo.removeItem(0)
+        for name, pid in get_dns_providers():
+            self.dns_provider_combo.addItem(name, pid)
+        idx = self.dns_provider_combo.findData(current_dns)
+        self.dns_provider_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        self.dns_provider_combo.blockSignals(False)
+        self.mechanism_combo.blockSignals(False)
+        self.provider_combo.blockSignals(False)
+
+        self.provider_repo_button.setToolTip(tr("provider_repo_tooltip"))
+        self.dns_site_button.setToolTip(tr("provider_repo_tooltip"))
+
+        if self._status is not None:
+            self.apply_hosts_version_status(self._status)
+        elif self.current_mechanism == DNS_PROVIDER_ID:
+            self.version_label.hide()
+            self._show_instant_dns_status()
         else:
-            if self.current_mechanism == DNS_PROVIDER_ID:
-                self.version_label.hide()
-                # Мгновенный статус DNS без ожидания воркера
-                self._show_instant_dns_status()
-            else:
-                self.version_label.show()
-                self.version_label.setText(tr("version_checking"))
-                self.update_date_label.setText(tr("update_date_checking"))
-            self.install_button.setProperty("install_mode", self.install_button.property("install_mode") or "install")
+            self.version_label.show()
+            self.version_label.setText(tr("version_checking"))
+            self.update_date_label.setText(tr("update_date_checking"))
 
         self.uninstall_button.setText(tr("uninstall_button"))
         self.donate_button.setText(tr("donate_button"))
@@ -413,40 +338,56 @@ class HomePage(QWidget):
 
     def apply_theme_styles(self):
         self.app_title_label.setStyleSheet(self.styles["about_title_style"])
+        self.app_title_label.setText(self.styles["about_title_html"])
         self.textinformer.setStyleSheet(self.styles["label"])
         self.version_label.setStyleSheet(self.styles["label"])
-        text_color = "#ffffff" if self.dark_theme else "#1a1a1a"
-        self.update_date_label.setStyleSheet(
-            f"font-size: 14px; color: {text_color}; border-radius: 8px; padding: 4px 8px; margin: 2px;"
-        )
-        self.install_button.setStyleSheet(self.styles["button1"])
-        self.uninstall_button.setStyleSheet(self.styles["button2"])
-        if self.provider_combo:
-            self.provider_combo.setStyleSheet(self.styles["combo"])
-        if self.mechanism_combo:
-            self.mechanism_combo.setStyleSheet(self.styles["combo"])
-        if self.dns_provider_combo:
-            self.dns_provider_combo.setStyleSheet(self.styles["combo"])
-        self.donate_button.setStyleSheet(self.styles["theme"])
-        self.open_hosts_button.setStyleSheet(self.styles["theme"])
-        self.backup_hosts_button.setStyleSheet(self.styles["theme"])
-        self.update_button.setStyleSheet(self.styles["theme"])
-        self.about_button.setStyleSheet(self.styles["theme"])
-        self.refresh_status_container_style()
+        self.update_date_label.setStyleSheet(self.styles["update_date_label"])
+        self.status_container.setStyleSheet(self.styles["status_card"])
 
-    def refresh_status_container_style(self):
-        light = "background:#f3f4f7; border:1.5px solid #cfd4db; border-radius:12px;"
-        dark = "background:#2d333b; border:1.5px solid #3c434d; border-radius:12px;"
-        self.status_container.setStyleSheet(dark if self.dark_theme else light)
+        for combo in (self.mechanism_combo, self.provider_combo, self.dns_provider_combo):
+            combo.setStyleSheet(self.styles["combo"])
 
-    # --- Private ---
+        for button, icon_name, force_white, force_dark in self._icon_buttons:
+            if button is self.provider_repo_button or button is self.dns_site_button:
+                button.setStyleSheet(self.styles["icon_button"])
+            elif button is self.install_button:
+                button.setStyleSheet(self.styles["button1"])
+            elif button is self.uninstall_button:
+                button.setStyleSheet(self.styles["button2"])
+            else:
+                button.setStyleSheet(self.styles["theme"])
+            button.setIcon(get_icon(
+                icon_name, 18,
+                dark_theme=self.dark_theme,
+                force_white=force_white,
+                force_dark=force_dark,
+            ))
+
+    @staticmethod
+    def _set_combo_items(combo: QComboBox, items: list):
+        """Обновляет подписи элементов, сохраняя выбранные данные."""
+        current = combo.currentData()
+        combo.blockSignals(True)
+        for i, (name, data) in enumerate(items):
+            if i < combo.count():
+                combo.setItemText(i, name)
+                combo.setItemData(i, data)
+            else:
+                combo.addItem(name, data)
+        idx = combo.findData(current)
+        combo.setCurrentIndex(idx if idx >= 0 else 0)
+        combo.blockSignals(False)
+
+    # ------------------------------------------------------------------
+    # Обработчики
+    # ------------------------------------------------------------------
 
     def _on_provider_changed(self):
-        selected_provider = self.provider_combo.currentData()
-        if selected_provider:
-            self.current_provider = selected_provider
+        selected = self.provider_combo.currentData()
+        if selected:
+            self.current_provider = selected
             self.update_status_label()
-            self.provider_changed.emit(selected_provider)
+            self.provider_changed.emit(selected)
 
     def _on_mechanism_changed(self):
         selected = self.mechanism_combo.currentData()
@@ -465,55 +406,35 @@ class HomePage(QWidget):
             self.dns_provider_changed.emit(selected)
 
     def _update_mechanism_controls_visibility(self):
-        """Показывает контролы, соответствующие текущему механизму."""
+        """Показывает контролы, соответствующие текущему механизму.
+
+        Обычный setVisible достаточен: у страницы корректные size policy,
+        и лейаут сам пересчитывается без ручных хаков с высотой.
+        """
         is_dns = self.current_mechanism == DNS_PROVIDER_ID
-        self._set_visible_and_restore_height(self.dns_provider_combo, is_dns)
-        self._set_visible_and_restore_height(self.provider_combo, not is_dns)
-        self.dns_site_button.setVisible(is_dns)
+        self.provider_combo.setVisible(not is_dns)
         self.provider_repo_button.setVisible(not is_dns)
+        self.dns_provider_combo.setVisible(is_dns)
+        self.dns_site_button.setVisible(is_dns)
         self.open_hosts_button.setVisible(not is_dns)
         self.backup_hosts_button.setVisible(not is_dns)
         # Строка «Версия hosts» имеет смысл только для hosts-механизма
         self.version_label.setVisible(not is_dns)
-        # Мгновенно показываем статус DNS без ожидания воркера
         if is_dns:
             self._show_instant_dns_status()
-        self._relayout()
-        # Повторный пересчёт после обработки Qt событий видимости —
-        # без этого элементы перекрываются при переключении механизма
-        QTimer.singleShot(0, self._relayout)
 
     def _show_instant_dns_status(self):
-        """Показывает статус DNS-серверов мгновенно, не блокируя UI-поток.
-
-        Использует только кэш (без запуска PowerShell ~0.8с).
-        Свежая проверка выполняется асинхронно через VersionWorker.
-        """
+        """Мгновенно показывает статус DNS-серверов из кэша (без PowerShell)."""
         from app.core.dns_manager import get_dns_provider_servers
+
         ipv4_servers, _ = get_dns_provider_servers(self.current_dns_provider)
         installed = self.dns_manager.get_cached_install_state(self.current_dns_provider)
-        color = "#43b581" if installed else "#e06c75"
+        color = COLOR_SUCCESS if installed else COLOR_ERROR
         key = "status_installed" if installed else "status_not_installed"
         self.update_date_label.setText(tr(
             "dns_servers_status_label",
             servers=", ".join(ipv4_servers), color=color, status=tr(key),
         ))
-
-    @staticmethod
-    def _set_visible_and_restore_height(widget, visible: bool):
-        """Показывает/скрывает виджет, гарантируя корректный размер.
-
-        Виджеты, скрытые до первого показа окна, могут остаться с нулевой
-        высотой после setVisible(True) — фиксируем минимальную высоту из
-        sizeHint. Геометрию скрытого виджета НЕ трогаем: сброс через
-        setGeometry(0,0,0,0) ломает отрисовку соседних RichText-меток.
-        """
-        if visible:
-            widget.setVisible(True)
-            if widget.minimumHeight() == 0:
-                widget.setMinimumHeight(widget.sizeHint().height())
-        else:
-            widget.setVisible(False)
 
     def _open_provider_repo(self):
         urls = {
@@ -525,8 +446,6 @@ class HomePage(QWidget):
             open_target(url)
 
     def _open_dns_provider_site(self):
-        """Открывает сайт выбранного DNS-провайдера."""
-        from app.core.dns_manager import get_dns_provider_site_url
         url = get_dns_provider_site_url(self.current_dns_provider)
         if url:
             open_target(url)

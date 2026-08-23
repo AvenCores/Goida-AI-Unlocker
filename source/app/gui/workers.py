@@ -1,14 +1,19 @@
 import json
+
 from PySide6.QtCore import QObject, Signal, QRunnable
+
 from app.core.logger import logger
-from app.core.hosts_manager import HostsManager
-from app.core.dns_manager import DnsManager
+from app.core.constants import (
+    APP_VERSION,
+    GITHUB_RELEASES_API_URL,
+    GITHUB_RELEASES_PAGE_URL,
+)
 from app.core.http_client import HttpClient
-from app.core.constants import APP_VERSION, GITHUB_RELEASES_API_URL, GITHUB_RELEASES_PAGE_URL
 from app.gui.localization import tr
 
+
 class WorkerSignals(QObject):
-    finished = Signal(str, bool, str, bool)
+    finished = Signal(str, bool, str, bool)   # action, ok, error, backup_failed
     status_ready = Signal(object)
     update_ready = Signal(str, str, str)
     no_update = Signal(str, str)
@@ -17,7 +22,10 @@ class WorkerSignals(QObject):
     def __init__(self, parent=None):
         super().__init__(None)
 
+
 class HostsWorker(QRunnable):
+    """Выполняет операцию менеджера (install/update/uninstall/save) в фоне."""
+
     def __init__(self, action: str, manager, provider: str = "dns.malw.link", parent=None):
         super().__init__()
         self.action = action
@@ -37,14 +45,14 @@ class HostsWorker(QRunnable):
             else:
                 result = False
             self.signals.finished.emit(self.action, result, "", self.manager.backup_failed)
-        except (PermissionError, RuntimeError) as e:
-            logger.exception("Unlock operation failed")
-            self.signals.finished.emit(self.action, False, str(e), self.manager.backup_failed)
         except Exception as e:
             logger.exception("Unlock operation failed")
             self.signals.finished.emit(self.action, False, str(e), self.manager.backup_failed)
 
+
 class VersionWorker(QRunnable):
+    """Асинхронная проверка статуса hosts/DNS (не блокирует UI)."""
+
     def __init__(self, manager, provider: str = "dns.malw.link", parent=None):
         super().__init__()
         self.manager = manager
@@ -55,7 +63,14 @@ class VersionWorker(QRunnable):
         status = self.manager.check_status(self.provider)
         self.signals.status_ready.emit(status)
 
+
+def _parse_version(version: str) -> tuple:
+    return tuple(int(x) for x in version.strip("vV").split(".") if x.isdigit())
+
+
 class AppUpdateWorker(QRunnable):
+    """Проверка обновлений приложения через GitHub API."""
+
     def __init__(self, parent=None):
         super().__init__()
         self.signals = WorkerSignals()
@@ -72,10 +87,7 @@ class AppUpdateWorker(QRunnable):
                 raise RuntimeError(tr("update_info_unavailable"))
             download_url = remote_data.get("html_url", GITHUB_RELEASES_PAGE_URL)
 
-            def parse(v):
-                return tuple(int(x) for x in v.strip("vV").split(".") if x.isdigit())
-
-            if parse(remote_ver) > parse(local_ver):
+            if _parse_version(remote_ver) > _parse_version(local_ver):
                 self.signals.update_ready.emit(local_ver, remote_ver, download_url)
             else:
                 self.signals.no_update.emit(local_ver, remote_ver)

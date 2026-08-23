@@ -1,8 +1,11 @@
 import threading
 import time as _time
 import urllib.request
+
+from app.core.constants import HOSTS_SOURCE_URLS
 from app.core.logger import logger
 from app.utils.helpers import extract_update_line
+
 
 class HttpClient:
     _lock = threading.Lock()
@@ -23,7 +26,7 @@ class HttpClient:
         try:
             req = urllib.request.Request(
                 f"{url}?t={int(now)}" if bypass_cache else url,
-                headers={"User-Agent": "GoidaUnlocker/1.0"}
+                headers={"User-Agent": "GoidaUnlocker/1.0"},
             )
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 data = resp.read().decode("utf-8", errors="ignore")
@@ -36,6 +39,7 @@ class HttpClient:
 
     @classmethod
     def get_remote_main_line_cached(cls, provider: str = "dns.malw.link") -> tuple[str, str]:
+        """Возвращает (строка_обновления, дата) из удалённого hosts с коротким кэшем."""
         now = _time.time()
         with cls._lock:
             if provider in cls._remote_main_line_cache:
@@ -43,13 +47,10 @@ class HttpClient:
                 if now - ts < cls.REMOTE_CACHE_TTL:
                     return val
         try:
-            if provider == "geohide":
-                url = f"https://github.com/Internet-Helper/GeoHideDNS/raw/refs/heads/main/hosts/hosts?t={int(now)}"
-            else:
-                url = f"https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/refs/heads/master/hosts?t={int(now)}"
+            url = HOSTS_SOURCE_URLS.get(provider) or HOSTS_SOURCE_URLS["dns.malw.link"]
             req = urllib.request.Request(
-                url,
-                headers={"User-Agent": "GoidaUnlocker/1.0", "Range": "bytes=0-1024"}
+                f"{url}?t={int(now)}",
+                headers={"User-Agent": "GoidaUnlocker/1.0", "Range": "bytes=0-1024"},
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
                 data = resp.read()
