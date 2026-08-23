@@ -84,20 +84,21 @@ _VIRTUAL_ADAPTER_RE = re.compile(
 _UAC_CANCELLED_EXIT_CODE = 1223
 
 # Шаблон PowerShell-лаунчера с UAC-элевацией (скрытое окно).
-# {cmd} — команда в base64 (UTF-16LE); {{...}} — экранированные фигурные скобки.
+# %CMD% — команда в base64 (UTF-16LE). Подстановка через replace(), а не
+# str.format(): фигурные скобки PowerShell конфликтуют с синтаксисом format.
 _UAC_LAUNCHER_TEMPLATE = (
     "$ErrorActionPreference = 'Stop'; "
     "try { "
     "$p = Start-Process powershell -Verb runAs -WindowStyle Hidden "
-    "-ArgumentList '-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand {cmd}' "
+    "-ArgumentList '-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand %CMD%' "
     "-Wait -PassThru -ErrorAction Stop; "
-    "if ($null -eq $p) {{ exit 1 }}; "
+    "if ($null -eq $p) { exit 1 }; "
     "exit $p.ExitCode "
-    "} catch [System.OperationCanceledException] {{ "
+    "} catch [System.OperationCanceledException] { "
     f"exit {_UAC_CANCELLED_EXIT_CODE} "
-    "}} catch {{ "
+    "} catch { "
     "exit 1 "
-    "}}"
+    "}"
 )
 
 
@@ -146,7 +147,7 @@ def _run_elevated_ps(ps_command: str, iface: str, timeout: int = 120) -> bool:
     False при иной ошибке.
     """
     encoded = base64.b64encode(ps_command.encode("utf-16-le")).decode("ascii")
-    launcher = _UAC_LAUNCHER_TEMPLATE.format(cmd=encoded)
+    launcher = _UAC_LAUNCHER_TEMPLATE.replace("%CMD%", encoded)
     code, output = _run_command(
         [
             "powershell", "-WindowStyle", "Hidden", "-NoProfile",
