@@ -33,7 +33,6 @@ class DonatePage(QWidget):
 
         self.title_label = QLabel(tr("donate_title"))
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.title_label.setStyleSheet("font-size:22px; font-weight:600;")
         cl.addWidget(self.title_label)
 
         sber_icon_lbl = QLabel()
@@ -46,7 +45,6 @@ class DonatePage(QWidget):
 
         self.card_number_label = QLabel(f"\u3164SBER: <b>{SBER_CARD_NUMBER}</b>\u3164")
         self.card_number_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.card_number_label.setStyleSheet("font-size:16px;")
         cl.addWidget(self.card_number_label)
 
         self.copy_button = QPushButton(tr("copy_card"))
@@ -118,6 +116,8 @@ class DonatePage(QWidget):
         self.styles = styles
         self.dark_theme = dark_theme
         self.card.setStyleSheet(styles["message_card"])
+        self.title_label.setStyleSheet(styles["donate_title"])
+        self.card_number_label.setStyleSheet(styles["donate_card_number"])
         self.copy_button.setStyleSheet(styles["button1"])
         self.back_button.setStyleSheet(styles["theme"])
         self.sber_icon_label.setPixmap(

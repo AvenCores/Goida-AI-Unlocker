@@ -231,6 +231,13 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
             f"font-size: 11px; color: {p['text_muted']}; background: transparent;"
         ),
         "page_text": f"font-size: 13px; color: {p['text']}; background: transparent;",
+        "donate_title": (
+            f"font-size: 22px; font-weight: 600; color: {p['text']};"
+            " background: transparent;"
+        ),
+        "donate_card_number": (
+            f"font-size: 16px; color: {p['text']}; background: transparent;"
+        ),
         "about_title_style": "font-size:25px; margin-bottom:4px;",
         "about_title_html": (
             f"<b style='color:{p['text']};'>Goida AI Unlocker</b>"
