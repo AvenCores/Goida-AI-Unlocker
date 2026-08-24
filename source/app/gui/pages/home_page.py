@@ -257,8 +257,16 @@ class HomePage(QWidget):
 
         sizeHint у QLabel с wordWrap завышен, а minimumSizeHint занижен:
         при нехватке высоты лейаут сжимает метки ниже размера текста и
-        глифы обрезаются. Явный минимум = heightForWidth() по фактической
-        ширине метки делает такое сжатие невозможным.
+        глифы обрезаются. Явный минимум = heightForWidth() делает такое
+        сжатие невозможным.
+
+        Ширина для замера берётся детерминированная (колонка минус поля
+        страницы и карточки), а не фактическая lbl.width(): при раннем
+        замере (showEvent на Wayland/X11) ширины ещё не устоялись, и
+        heightForWidth по «широкой» метке считает на строку меньше — окно
+        открывается заниженным и растягивается позже, когда приходит
+        асинхронный статус. Итоговая ширина метки всегда одна и та же:
+        ширина окна фиксирована, колонка ограничена COLUMN_MAX_WIDTH.
 
         Вызывается при смене текста статусов и из MainWindow
         перед замером высоты окна (метрики шрифтов актуальны только
@@ -268,10 +276,7 @@ class HomePage(QWidget):
             lbl.setMinimumHeight(0)
             if not lbl.isVisibleTo(self):
                 continue
-            width = lbl.width()
-            if width < 50:
-                # Лейаут ещё не выполнен — ширина колонки минус её поля
-                width = COLUMN_MAX_WIDTH - 72
+            width = COLUMN_MAX_WIDTH - 72
             need = lbl.heightForWidth(width) if lbl.wordWrap() else lbl.sizeHint().height()
             lbl.setMinimumHeight(need)
 

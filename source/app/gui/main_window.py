@@ -201,12 +201,15 @@ class MainWindow(QMainWindow):
         # Актуальные минимумы статусных меток: при показе окна стили
         # полируются, и минимумы, посчитанные в конструкторе, устаревают
         self.home_page.sync_status_label_heights()
-        layout = wrapper.layout()
-        if layout is not None:
-            # Сбрасываем кэш геометрии лейаута, иначе minimumSizeHint
-            # вернёт заниженную высоту до следующей раскладки
-            layout.invalidate()
-            layout.activate()
+        # Сбрасываем кэш геометрии по всей цепочке лейаутов (карточка →
+        # страница → обёртка): если sync только что изменил минимумы
+        # меток, один invalidate/activate на обёртке вернёт минимумы,
+        # посчитанные со старыми значениями, и окно откроется заниженным
+        for wdg in (self.home_page.status_container, self.home_page, wrapper):
+            inner = wdg.layout()
+            if inner is not None:
+                inner.invalidate()
+                inner.activate()
         content_h = wrapper.minimumSizeHint().height()
         target_h = max(MIN_WINDOW_HEIGHT, content_h + DraggableTitleBar.TITLE_BAR_HEIGHT)
         if abs(self.height() - target_h) > 4:
