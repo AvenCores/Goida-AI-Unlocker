@@ -30,7 +30,7 @@ def get_icon(file_name: str, size_px: int | None = None, *,
              force_dark: bool = False,
              force_white: bool = False) -> QIcon:
     """Загружает SVG-иконку, окрашенную под тему (с кэшированием)."""
-    path = resource_path(os.path.join("icons", file_name))
+    path = resource_path(os.path.join("assets", "icons", file_name))
     render_size = size_px or 48
     if force_white:
         tint = QColor("#ffffff")

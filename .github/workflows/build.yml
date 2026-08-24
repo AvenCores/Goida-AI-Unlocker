@@ -29,11 +29,10 @@ jobs:
           pyinstaller main.py
           --onefile
           --noconsole
-          --icon=icon.ico
+          --icon=assets/icon.ico
           --name="Goida_AI_Unlocker_Windows"
-          --version-file=version.txt
-          --add-data "icon.ico;."
-          --add-data "icons;icons"
+          --version-file=packaging/version.txt
+          --add-data "assets;assets"
           --add-data "app;app"
         working-directory: source
 
@@ -66,11 +65,10 @@ jobs:
           pyinstaller main.py
           --onefile
           --noconsole
-          --icon=icon.ico
+          --icon=assets/icon.ico
           --name="Goida_AI_Unlocker_Windows_ARM64"
-          --version-file=version.txt
-          --add-data "icon.ico;."
-          --add-data "icons;icons"
+          --version-file=packaging/version.txt
+          --add-data "assets;assets"
           --add-data "app;app"
         working-directory: source
 
@@ -103,10 +101,9 @@ jobs:
           pyinstaller main.py
           --onefile
           --noconsole
-          --icon=icon.ico
+          --icon=assets/icon.ico
           --name="Goida_AI_Unlocker_Linux"
-          --add-data "icon.ico:."
-          --add-data "icons:icons"
+          --add-data "assets:assets"
           --add-data "app:app"
         working-directory: source
 
@@ -139,10 +136,9 @@ jobs:
           pyinstaller main.py
           --onefile
           --noconsole
-          --icon=icon.ico
+          --icon=assets/icon.ico
           --name="Goida_AI_Unlocker_Linux_ARM64"
-          --add-data "icon.ico:."
-          --add-data "icons:icons"
+          --add-data "assets:assets"
           --add-data "app:app"
         working-directory: source
 
@@ -178,11 +174,9 @@ jobs:
           --windowed
           --target-arch x86_64
           --osx-bundle-identifier=com.avencores.goida-ai-unlocker
-          --icon=icon.icns
+          --icon=assets/icon.icns
           --name="Goida_AI_Unlocker_macOS_x86_64"
-          --add-data "icon.icns:."
-          --add-data "icon.ico:."
-          --add-data "icons:icons"
+          --add-data "assets:assets"
           --add-data "app:app"
         working-directory: source
 
@@ -217,11 +211,9 @@ jobs:
           --onedir
           --windowed
           --osx-bundle-identifier=com.avencores.goida-ai-unlocker
-          --icon=icon.icns
+          --icon=assets/icon.icns
           --name="Goida_AI_Unlocker_macOS_arm64"
-          --add-data "icon.icns:."
-          --add-data "icon.ico:."
-          --add-data "icons:icons"
+          --add-data "assets:assets"
           --add-data "app:app"
         working-directory: source
 

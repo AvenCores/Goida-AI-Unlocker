@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        icon_file = "icon.icns" if sys.platform == "darwin" else "icon.ico"
+        icon_file = "assets/icon.icns" if sys.platform == "darwin" else "assets/icon.ico"
         self.setWindowIcon(QIcon(resource_path(icon_file)))
         self.setWindowTitle(WINDOW_TITLE)
         self.setMinimumSize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)

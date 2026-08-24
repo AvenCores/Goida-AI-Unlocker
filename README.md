@@ -121,17 +121,17 @@ python main.py
 
 Для создания портативного файла используется [PyInstaller](https://pyinstaller.org/). Все команды выполняются из директории <code>source/</code>:
 
-**Windows (x64):** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --name="Goida_AI_Unlocker_Windows" --version-file=version.txt --add-data "icon.ico;." --add-data "icons;icons" --add-data "app;app"```
+**Windows (x64):** ```pyinstaller main.py --onefile --noconsole --icon=assets/icon.ico --name="Goida_AI_Unlocker_Windows" --version-file=packaging/version.txt --add-data "assets;assets" --add-data "app;app"```
 
-**Windows (ARM64):** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --name="Goida_AI_Unlocker_Windows_ARM64" --version-file=version.txt --add-data "icon.ico;." --add-data "icons;icons" --add-data "app;app"```
+**Windows (ARM64):** ```pyinstaller main.py --onefile --noconsole --icon=assets/icon.ico --name="Goida_AI_Unlocker_Windows_ARM64" --version-file=packaging/version.txt --add-data "assets;assets" --add-data "app;app"```
 
-**Linux (x64):** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --name="Goida_AI_Unlocker_Linux" --add-data "icon.ico:." --add-data "icons:icons" --add-data "app:app"```
+**Linux (x64):** ```pyinstaller main.py --onefile --noconsole --icon=assets/icon.ico --name="Goida_AI_Unlocker_Linux" --add-data "assets:assets" --add-data "app:app"```
 
-**Linux (ARM64):** ```pyinstaller main.py --onefile --noconsole --icon=icon.ico --name="Goida_AI_Unlocker_Linux_ARM64" --add-data "icon.ico:." --add-data "icons:icons" --add-data "app:app"```
+**Linux (ARM64):** ```pyinstaller main.py --onefile --noconsole --icon=assets/icon.ico --name="Goida_AI_Unlocker_Linux_ARM64" --add-data "assets:assets" --add-data "app:app"```
 
-**macOS Intel (.app, x86_64):** ```pyinstaller main.py --onedir --windowed --target-arch x86_64 --icon=icon.icns --name="Goida_AI_Unlocker_macOS_x86_64" --add-data "icon.icns:." --add-data "icon.ico:." --add-data "icons:icons" --add-data "app:app"```
+**macOS Intel (.app, x86_64):** ```pyinstaller main.py --onedir --windowed --target-arch x86_64 --icon=assets/icon.icns --name="Goida_AI_Unlocker_macOS_x86_64" --add-data "assets:assets" --add-data "app:app"```
 
-**macOS Apple Silicon (.app, arm64):** ```pyinstaller main.py --onedir --windowed --icon=icon.icns --name="Goida_AI_Unlocker_macOS_arm64" --add-data "icon.icns:." --add-data "icon.ico:." --add-data "icons:icons" --add-data "app:app"```
+**macOS Apple Silicon (.app, arm64):** ```pyinstaller main.py --onedir --windowed --icon=assets/icon.icns --name="Goida_AI_Unlocker_macOS_arm64" --add-data "assets:assets" --add-data "app:app"```
 
 Скомпилированный файл появится в директории <code>dist/</code>.
 
@@ -213,10 +213,12 @@ python main.py
 source/
 ├── main.py                  # Точка входа
 ├── requirements.txt         # Зависимости (PySide6, PyInstaller)
-├── version.txt              # Версия для Windows PE-ресурсов
-├── build.txt                # Команды сборки для всех платформ
-├── icon.ico / icon.icns     # Иконки приложения
-├── icons/                   # SVG-иконки интерфейса
+├── assets/                  # Ресурсы приложения
+│   ├── icon.ico / icon.icns # Иконки приложения
+│   └── icons/               # SVG-иконки интерфейса
+├── packaging/               # Материалы сборки
+│   ├── version.txt          # Версия для Windows PE-ресурсов
+│   └── build.txt            # Команды сборки для всех платформ
 └── app/
     ├── core/                # Ядро: настройки, константы, hosts/DNS-менеджеры, HTTP-клиент, логгер
     ├── gui/                 # GUI: главное окно, страницы, компоненты, стили, локализация

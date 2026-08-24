@@ -16,7 +16,7 @@ def main():
     app.setApplicationDisplayName("Goida AI Unlocker")
     app.setOrganizationName("AvenCores")
     app.setApplicationVersion(APP_VERSION)
-    icon_file = "icon.icns" if sys.platform == "darwin" else "icon.ico"
+    icon_file = "assets/icon.icns" if sys.platform == "darwin" else "assets/icon.ico"
     app.setWindowIcon(QIcon(resource_path(icon_file)))
     app.setStyleSheet(get_stylesheet(False)["outline_reset"])
 
