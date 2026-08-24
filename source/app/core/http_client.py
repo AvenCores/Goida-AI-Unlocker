@@ -1,10 +1,30 @@
+import ssl
 import threading
 import time as _time
 import urllib.request
+from functools import lru_cache
 
 from app.core.constants import HOSTS_SOURCE_URLS
 from app.core.logger import logger
 from app.utils.helpers import extract_update_line
+
+
+@lru_cache(maxsize=1)
+def _ssl_context() -> ssl.SSLContext:
+    """Контекст с гарантированным набором корневых сертификатов.
+
+    В frozen-сборке (PyInstaller onefile) бандловый OpenSSL может не найти
+    системное хранилище CA (особенно на Fedora/OpenSUSE), из-за чего HTTPS
+    падает с CERTIFICATE_VERIFY_FAILED. Используем certifi как основной
+    источник и системный контекст как запасной.
+    """
+    try:
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        logger.debug("certifi unavailable, falling back to system CA store")
+        return ssl.create_default_context()
 
 
 class HttpClient:
@@ -28,7 +48,7 @@ class HttpClient:
                 f"{url}?t={int(now)}" if bypass_cache else url,
                 headers={"User-Agent": "GoidaUnlocker/1.0"},
             )
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with urllib.request.urlopen(req, timeout=timeout, context=_ssl_context()) as resp:
                 data = resp.read().decode("utf-8", errors="ignore")
             with cls._lock:
                 cls._cache[key] = (now, data)
@@ -52,7 +72,7 @@ class HttpClient:
                 f"{url}?t={int(now)}",
                 headers={"User-Agent": "GoidaUnlocker/1.0", "Range": "bytes=0-1024"},
             )
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10, context=_ssl_context()) as resp:
                 data = resp.read()
             remote_line, remote_date = extract_update_line(data)
         except Exception:
