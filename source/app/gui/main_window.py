@@ -76,6 +76,9 @@ class MainWindow(QMainWindow):
         self._check_updates_running = False
         self._version_status_check_running = False
         self._processing_widget: Optional[QWidget] = None
+        # Последнее содержимое, отправленное в hosts через «Сохранить»
+        # (нужно для кнопки «Повторить попытку»)
+        self._last_save_content = ""
 
         self.title_bar: Optional[DraggableTitleBar] = None
         self.home_page: Optional[HomePage] = None
@@ -247,12 +250,27 @@ class MainWindow(QMainWindow):
     # Страницы
     # ------------------------------------------------------------------
 
-    def show_message(self, msg: str, success: bool = True, word_wrap: bool = False):
+    def show_message(self, msg: str, success: bool = True, word_wrap: bool = False,
+                     retry_action: str = ""):
         widget = MessagePage(
             msg, success, word_wrap, self.styles, self.dark_theme,
             ok_callback=lambda: self._return_to_main(widget),
+            retry_callback=(
+                (lambda: self._retry_action(retry_action))
+                if retry_action and not success else None
+            ),
         )
         self._add_and_switch(widget)
+
+    def _retry_action(self, action: str):
+        """Повторяет неудавшуюся операцию (кнопка «Повторить попытку»)."""
+        if action in ("install", "update", "uninstall"):
+            self.start_installation(action)
+        elif action == "save":
+            if self._last_save_content:
+                self._begin_hosts_save(self._last_save_content)
+        elif action == "check_updates":
+            self.check_for_updates()
 
     def show_processing(self, action: str) -> QWidget:
         widget = ProcessingPage(action, self.styles, self.dark_theme)
@@ -297,11 +315,7 @@ class MainWindow(QMainWindow):
 
     def show_hosts_editor(self):
         def on_save(content: str):
-            self._processing_widget = self.show_processing("save")
-            worker = HostsWorker("save", self.hosts_manager, self.current_provider, self)
-            worker.save_content = content
-            worker.signals.finished.connect(self._on_hosts_save_finished, Qt.ConnectionType.QueuedConnection)
-            QThreadPool.globalInstance().start(worker)
+            self._begin_hosts_save(content)
 
         widget = HostsEditorPage(
             self.hosts_manager, self.styles, self.dark_theme,
@@ -318,14 +332,20 @@ class MainWindow(QMainWindow):
         )
         self._add_and_switch(widget)
 
-    def _restore_hosts_backup(self, content: str):
-        """Записывает содержимое выбранного бэкапа в hosts (с бэкапом текущего)."""
+    def _begin_hosts_save(self, content: str, pre_backup: bool = False):
+        """Записывает content в hosts в фоне (сохранение из редактора
+        и восстановление бэкапа)."""
+        self._last_save_content = content
         self._processing_widget = self.show_processing("save")
         worker = HostsWorker("save", self.hosts_manager, self.current_provider, self)
         worker.save_content = content
-        worker.pre_backup = True
+        worker.pre_backup = pre_backup
         worker.signals.finished.connect(self._on_hosts_save_finished, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(worker)
+
+    def _restore_hosts_backup(self, content: str):
+        """Записывает содержимое выбранного бэкапа в hosts (с бэкапом текущего)."""
+        self._begin_hosts_save(content, pre_backup=True)
 
     @Slot(str, bool, str, bool)
     def _on_hosts_save_finished(self, action: str, ok: bool, error: str, backup_failed: bool = False):
@@ -334,7 +354,10 @@ class MainWindow(QMainWindow):
             self.show_message(tr("hosts_editor_save_success"), success=True, word_wrap=True)
         else:
             hint = self._get_error_hint(error)
-            self.show_message(tr("hosts_editor_save_error", hint=hint), success=False, word_wrap=True)
+            self.show_message(
+                tr("hosts_editor_save_error", hint=hint),
+                success=False, word_wrap=True, retry_action="save",
+            )
 
         self.home_page.update_status_label()
         self.check_version_status()
@@ -423,7 +446,7 @@ class MainWindow(QMainWindow):
                 msg = tr("dns_install_error" if is_dns else "update_error", hint=hint)
             else:
                 msg = tr("dns_uninstall_error" if is_dns else "uninstall_error", hint=hint)
-            self.show_message(msg, success=False, word_wrap=True)
+            self.show_message(msg, success=False, word_wrap=True, retry_action=action)
 
         self._dismiss_processing()
         self.home_page.update_status_label()
@@ -506,7 +529,10 @@ class MainWindow(QMainWindow):
     @Slot(str, bool, bool)
     def on_app_update_message(self, msg: str, success: bool, word_wrap: bool):
         self._dismiss_processing()
-        self.show_message(msg, success, word_wrap)
+        self.show_message(
+            msg, success, word_wrap,
+            retry_action="check_updates" if not success else "",
+        )
         self._check_updates_running = False
 
     # ------------------------------------------------------------------

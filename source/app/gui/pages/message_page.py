@@ -8,27 +8,39 @@ from app.utils.helpers import open_target
 
 
 class MessagePage(CardPage):
-    """Страница результата (успех/ошибка). Enter или кнопка «Окей» возвращает назад."""
+    """Страница результата (успех/ошибка). Enter или кнопка «Окей» возвращает назад.
+
+    Для ошибок с известным действием (retry_callback) добавляется кнопка
+    «Повторить попытку» — она становится основной, «Вернуться в главное
+    меню» — вторичной.
+    """
 
     def __init__(self, msg: str, success: bool, word_wrap: bool,
-                 styles: dict, dark_theme: bool, ok_callback=None):
+                 styles: dict, dark_theme: bool, ok_callback=None,
+                 retry_callback=None):
         super().__init__(styles, dark_theme)
         self._msg = msg
         self._word_wrap = word_wrap
+        # Повтор показываем только для ошибок с известным действием
+        self._retry_callback = retry_callback if (retry_callback and not success) else None
 
         icon_name = "check-circle.svg" if success else "x-circle.svg"
         self.icon_label = self.add_icon(icon_name)
 
         self._fill_messages()
 
-        self.ok_button = QPushButton(tr("ok"))
-        self.ok_button.setProperty("style_role", "button1")
-        self.ok_button.setDefault(True)
-        self.ok_button.setFocus()
-        self.card_layout.addWidget(self.ok_button)
+        if self._retry_callback:
+            self.retry_button = QPushButton(tr("retry"))
+            self.retry_button.setProperty("style_role", "button1")
+            self.retry_button.setDefault(True)
+            self.retry_button.setFocus()
+            self.retry_button.clicked.connect(self._retry_callback)
+            self.card_layout.addWidget(self.retry_button)
 
-        if ok_callback:
-            self.ok_button.clicked.connect(ok_callback)
+        self.ok_button = QPushButton(tr("back_to_main_menu"))
+        self.ok_button.setProperty("style_role", "theme" if self._retry_callback else "button1")
+        self.ok_button.clicked.connect(ok_callback)
+        self.card_layout.addWidget(self.ok_button)
 
         self.apply_theme(styles, dark_theme)
 
@@ -42,15 +54,23 @@ class MessagePage(CardPage):
     def apply_texts(self):
         self.clear_messages()
         self._fill_messages()
-        self.ok_button.setText(tr("ok"))
+        if self._retry_callback:
+            self.retry_button.setText(tr("retry"))
+        self.ok_button.setText(tr("back_to_main_menu"))
 
     def apply_theme(self, styles: dict, dark_theme: bool):
         super().apply_theme(styles, dark_theme)
-        self.ok_button.setStyleSheet(styles["button1"])
+        if self._retry_callback:
+            self.retry_button.setStyleSheet(styles["button1"])
+            self.ok_button.setStyleSheet(styles["theme"])
+        else:
+            self.ok_button.setStyleSheet(styles["button1"])
 
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
-            if self.ok_button.isEnabled():
+            if self._retry_callback:
+                self.retry_button.click()
+            elif self.ok_button.isEnabled():
                 self.ok_button.click()
             event.accept()
             return
@@ -178,7 +198,7 @@ class UpdateAvailablePage(CardPage):
         self.download_button.clicked.connect(lambda: open_target(dl_url))
         self.card_layout.addWidget(self.download_button)
 
-        self.ok_button = QPushButton(tr("ok"))
+        self.ok_button = QPushButton(tr("back_to_main_menu"))
         self.ok_button.setProperty("style_role", "button1")
         self.ok_button.setDefault(True)
         self.ok_button.clicked.connect(ok_callback)
@@ -222,7 +242,7 @@ class NoUpdatePage(CardPage):
         ]
         self._fill_texts()
 
-        self.ok_button = QPushButton(tr("ok"))
+        self.ok_button = QPushButton(tr("back_to_main_menu"))
         self.ok_button.setProperty("style_role", "button1")
         self.ok_button.setDefault(True)
         self.ok_button.clicked.connect(ok_callback)
