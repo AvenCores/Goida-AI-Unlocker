@@ -82,8 +82,8 @@
     "dns_servers_status_label": "DNS-серверы ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "en": {
@@ -169,8 +169,8 @@
     "dns_servers_status_label": "DNS servers ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "de": {
@@ -256,8 +256,8 @@
     "dns_servers_status_label": "DNS-Server ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "uk": {
@@ -343,8 +343,8 @@
     "dns_servers_status_label": "DNS-сервери ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "be": {
@@ -430,8 +430,8 @@
     "dns_servers_status_label": "DNS-серверы ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "kk": {
@@ -517,8 +517,8 @@
     "dns_servers_status_label": "DNS-серверлер ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "fr": {
@@ -604,8 +604,8 @@
     "dns_servers_status_label": "Serveurs DNS ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "pl": {
@@ -691,8 +691,8 @@
     "dns_servers_status_label": "Serwery DNS ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "es": {
@@ -778,8 +778,8 @@
     "dns_servers_status_label": "Servidores DNS ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "pt": {
@@ -865,8 +865,8 @@
     "dns_servers_status_label": "Servidores DNS ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "it": {
@@ -952,8 +952,8 @@
     "dns_servers_status_label": "Server DNS ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "tr": {
@@ -1039,8 +1039,8 @@
     "dns_servers_status_label": "DNS sunucuları ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "zh": {
@@ -1126,8 +1126,8 @@
     "dns_servers_status_label": "DNS 服务器（{servers}）- <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS（xbox-dns.ru）",
-    "provider_geohide_dns": "GeoHide DNS（dns.geohide.ru）",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "ja": {
@@ -1213,8 +1213,8 @@
     "dns_servers_status_label": "DNS サーバー（{servers}）- <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS（xbox-dns.ru）",
-    "provider_geohide_dns": "GeoHide DNS（dns.geohide.ru）",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "ko": {
@@ -1300,8 +1300,8 @@
     "dns_servers_status_label": "DNS 서버 ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "cs": {
@@ -1387,8 +1387,8 @@
     "dns_servers_status_label": "DNS servery ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "nl": {
@@ -1474,8 +1474,8 @@
     "dns_servers_status_label": "DNS-servers ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   },
   "sv": {
@@ -1561,8 +1561,8 @@
     "dns_servers_status_label": "DNS-servrar ({servers}) - <span style='color:{color}; font-weight:bold;'>{status}</span>",
     "mechanism_dns": "DNS",
     "mechanism_hosts": "Hosts",
-    "provider_xbox_dns": "Xbox DNS (xbox-dns.ru)",
-    "provider_geohide_dns": "GeoHide DNS (dns.geohide.ru)",
+    "provider_xbox_dns": "Xbox DNS",
+    "provider_geohide_dns": "GeoHide DNS",
     "provider_malw_dns": "dns.malw.link"
   }
 }
