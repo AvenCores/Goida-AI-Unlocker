@@ -96,7 +96,7 @@ MALW_DNS_DOH_URL = "https://dns.malw.link/dns-query"
 MALW_DNS_DOT_HOST = "dns.malw.link"
 MALW_DNS_SITE_URL = "https://info.dns.malw.link"
 
-APP_VERSION = "1.3.6"
+APP_VERSION = "1.3.7"
 
 # Общие цвета статусов (GUI + менеджеры), чтобы статусы Hosts и DNS выглядели одинаково
 COLOR_SUCCESS = "#43b581"
