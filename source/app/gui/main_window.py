@@ -314,8 +314,18 @@ class MainWindow(QMainWindow):
         widget = HostsBackupViewerPage(
             self.hosts_manager, self.styles, self.dark_theme,
             return_callback=lambda: self._return_to_main(widget),
+            restore_callback=self._restore_hosts_backup,
         )
         self._add_and_switch(widget)
+
+    def _restore_hosts_backup(self, content: str):
+        """Записывает содержимое выбранного бэкапа в hosts (с бэкапом текущего)."""
+        self._processing_widget = self.show_processing("save")
+        worker = HostsWorker("save", self.hosts_manager, self.current_provider, self)
+        worker.save_content = content
+        worker.pre_backup = True
+        worker.signals.finished.connect(self._on_hosts_save_finished, Qt.ConnectionType.QueuedConnection)
+        QThreadPool.globalInstance().start(worker)
 
     @Slot(str, bool, str, bool)
     def _on_hosts_save_finished(self, action: str, ok: bool, error: str, backup_failed: bool = False):

@@ -36,6 +36,8 @@ class HostsWorker(QRunnable):
         # Способ восстановления hosts при uninstall: "" | "backup" | "clean"
         # (актуально только для HostsManager; DnsManager его игнорирует)
         self.restore_mode: str = ""
+        # Сохранить текущий hosts в бэкап перед записью save_content
+        self.pre_backup: bool = False
 
     def run(self):
         try:
@@ -47,6 +49,11 @@ class HostsWorker(QRunnable):
                 else:
                     result = self.manager.restore()
             elif self.action == "save":
+                if self.pre_backup:
+                    try:
+                        self.manager.backup("manual")
+                    except Exception as e:
+                        logger.warning("Pre-save backup failed: %s", e)
                 result = self.manager.apply(self.save_content)
             else:
                 result = False
