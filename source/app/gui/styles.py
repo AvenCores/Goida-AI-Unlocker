@@ -109,19 +109,19 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
     """
 
     button1 = f"""
-        QPushButton {{ background: {_grad(p['accent_start'], p['accent_end'])}; color: white; border: none; border-radius: 8px; padding: 12px 0; font-size: 16px; font-weight: 600; }}
+        QPushButton {{ background: {_grad(p['accent_start'], p['accent_end'])}; color: white; border: none; border-radius: 8px; padding: 12px 22px; font-size: 16px; font-weight: 600; }}
         QPushButton:hover {{ background: {_grad(p['accent_hover_start'], p['accent_hover_end'])}; }}
-        QPushButton:pressed {{ background: {_grad(p['accent_pressed_start'], p['accent_pressed_end'])}; padding: 14px 0 10px 0; }}
+        QPushButton:pressed {{ background: {_grad(p['accent_pressed_start'], p['accent_pressed_end'])}; padding: 14px 22px 10px 22px; }}
     """
     button2 = f"""
-        QPushButton {{ background: {_grad(_DANGER_START, _DANGER_END)}; color: white; border: none; border-radius: 8px; padding: 12px 0; font-size: 16px; font-weight: 600; }}
+        QPushButton {{ background: {_grad(_DANGER_START, _DANGER_END)}; color: white; border: none; border-radius: 8px; padding: 12px 22px; font-size: 16px; font-weight: 600; }}
         QPushButton:hover {{ background: {_grad(_DANGER_HOVER_START, _DANGER_HOVER_END)}; }}
-        QPushButton:pressed {{ background: {_grad(_DANGER_PRESSED_START, _DANGER_PRESSED_END)}; padding: 14px 0 10px 0; }}
+        QPushButton:pressed {{ background: {_grad(_DANGER_PRESSED_START, _DANGER_PRESSED_END)}; padding: 14px 22px 10px 22px; }}
     """
     theme = f"""
-        QPushButton, QToolButton {{ background: {p['btn_bg']}; color: {p['btn_text']}; border: 1.5px solid {p['btn_border']}; border-radius: 8px; padding: 10px 0; font-size: 15px; font-weight: 500; }}
+        QPushButton, QToolButton {{ background: {p['btn_bg']}; color: {p['btn_text']}; border: 1.5px solid {p['btn_border']}; border-radius: 8px; padding: 10px 16px; font-size: 15px; font-weight: 500; }}
         QPushButton:hover, QToolButton:hover {{ background: {p['btn_hover']}; }}
-        QPushButton:pressed, QToolButton:pressed {{ background: {p['btn_pressed']}; padding: 12px 0 8px 0; }}
+        QPushButton:pressed, QToolButton:pressed {{ background: {p['btn_pressed']}; padding: 12px 16px 8px 16px; }}
     """
     combo = f"""
         QComboBox {{
@@ -215,6 +215,8 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
         "button1": button1,
         "button2": button2,
         "theme": theme,
+        # Компактная кнопка для маленьких фиксированных размеров (крестик поиска)
+        "small_button": theme + "\nQPushButton { padding: 4px 6px; font-size: 13px; }",
         "tool_button": theme + "\nQToolButton { font-size: 10pt; padding: 6px 12px; }",
         "footer_button": footer_button,
         "icon_button": icon_button,

@@ -369,7 +369,7 @@ class _SearchablePage(_HeaderedPage):
     def _search_apply_theme(self, styles: dict):
         self.search_edit.setStyleSheet(styles["combo"])
         self.search_count_label.setStyleSheet(styles["page_subtitle"])
-        self.search_close_button.setStyleSheet(styles["theme"])
+        self.search_close_button.setStyleSheet(styles["small_button"])
 
 
 class HostsEditorPage(_SearchablePage):
