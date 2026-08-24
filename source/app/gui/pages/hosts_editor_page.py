@@ -11,6 +11,7 @@ from PySide6.QtGui import QFont, QKeySequence, QShortcut
 
 from app.core.hosts_manager import HostsManager
 from app.core.constants import HOSTS_PATH
+from app.core.logger import logger
 from app.gui.localization import tr
 from app.gui.icons import get_icon
 
@@ -140,6 +141,7 @@ class HostsBackupViewerPage(_HeaderedPage):
     def __init__(self, hosts_manager: HostsManager, styles: dict, dark_theme: bool,
                  return_callback: Callable[[], None]):
         super().__init__(styles, dark_theme, "clock.svg", return_callback)
+        self._hosts_manager = hosts_manager
 
         selector = QHBoxLayout()
         selector.setSpacing(8)
@@ -161,29 +163,48 @@ class HostsBackupViewerPage(_HeaderedPage):
         buttons.setSpacing(12)
         buttons.addWidget(self.back_button)
         buttons.addStretch()
+
+        self.delete_button = QPushButton()
+        self.delete_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.delete_button.clicked.connect(self._delete_selected_backup)
+        buttons.addWidget(self.delete_button)
         self._vbox.addLayout(buttons)
 
+        self.backup_combo.currentIndexChanged.connect(self._load_selected_backup)
         self._populate(hosts_manager)
         self.apply_theme(styles, dark_theme)
         self.apply_texts()
 
     def _populate(self, hosts_manager: HostsManager):
+        self.backup_combo.blockSignals(True)
+        self.backup_combo.clear()
         backups: list[Path] = hosts_manager.get_backups_list()
         if not backups:
             self.backup_combo.addItem(tr("hosts_backup_none"), None)
             self.viewer.setPlainText(tr("hosts_backup_none_info"))
+            self.delete_button.setEnabled(False)
+        else:
+            for bp in backups:
+                try:
+                    mtime = bp.stat().st_mtime
+                    date_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime))
+                except Exception:
+                    date_str = bp.name
+                self.backup_combo.addItem(f"{date_str}  ({bp.name})", str(bp))
+            self.delete_button.setEnabled(True)
+        self.backup_combo.blockSignals(False)
+        self._load_selected_backup(self.backup_combo.currentIndex())
+
+    def _delete_selected_backup(self):
+        path_str = self.backup_combo.currentData()
+        if not path_str:
             return
-
-        for bp in backups:
-            try:
-                mtime = bp.stat().st_mtime
-                date_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime))
-            except Exception:
-                date_str = bp.name
-            self.backup_combo.addItem(f"{date_str}  ({bp.name})", str(bp))
-
-        self.backup_combo.currentIndexChanged.connect(self._load_selected_backup)
-        self._load_selected_backup(0)
+        try:
+            Path(path_str).unlink()
+            logger.info("Deleted hosts backup: %s", path_str)
+        except Exception as e:
+            logger.error("Failed to delete hosts backup %s: %s", path_str, e)
+        self._populate(self._hosts_manager)
 
     def _load_selected_backup(self, index: int):
         path_str = self.backup_combo.itemData(index)
@@ -200,12 +221,14 @@ class HostsBackupViewerPage(_HeaderedPage):
         self.title_label.setText(tr("hosts_backup_viewer_title"))
         self.select_label.setText(tr("hosts_backup_select"))
         self.back_button.setText(tr("back_to_menu"))
+        self.delete_button.setText(tr("hosts_backup_delete"))
 
     def apply_theme(self, styles: dict, dark_theme: bool):
         super().apply_theme(styles, dark_theme)
         self.viewer.setStyleSheet(styles["editor"])
         self.backup_combo.setStyleSheet(styles["combo"])
         self.select_label.setStyleSheet(styles["page_text"])
+        self.delete_button.setStyleSheet(styles["button2"])
         self.icon_label.setPixmap(
             get_icon("clock.svg", 24, dark_theme=dark_theme).pixmap(24, 24)
         )
