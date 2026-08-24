@@ -33,13 +33,19 @@ class HostsWorker(QRunnable):
         self.provider = provider
         self.signals = WorkerSignals()
         self.save_content: str = ""
+        # Способ восстановления hosts при uninstall: "" | "backup" | "clean"
+        # (актуально только для HostsManager; DnsManager его игнорирует)
+        self.restore_mode: str = ""
 
     def run(self):
         try:
             if self.action in ("install", "update"):
                 result = self.manager.update(self.provider)
             elif self.action == "uninstall":
-                result = self.manager.restore()
+                if self.restore_mode in ("backup", "clean"):
+                    result = self.manager.restore(self.restore_mode)
+                else:
+                    result = self.manager.restore()
             elif self.action == "save":
                 result = self.manager.apply(self.save_content)
             else:

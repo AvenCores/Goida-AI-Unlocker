@@ -57,6 +57,58 @@ class MessagePage(CardPage):
         super().keyPressEvent(event)
 
 
+class UninstallChoicePage(CardPage):
+    """Страница выбора способа восстановления hosts при удалении обхода."""
+
+    def __init__(self, styles: dict, dark_theme: bool,
+                 backup_callback=None, clean_callback=None, cancel_callback=None):
+        super().__init__(styles, dark_theme)
+
+        self.icon_label = self.add_icon("trash.svg")
+
+        self.title_label = self.add_message("", rich=True, block=True, wrap=False)
+        self.info_label = self.add_message("", block=True)
+        self._fill_texts()
+
+        self.backup_button = QPushButton(tr("uninstall_choice_backup"))
+        self.backup_button.setProperty("style_role", "button1")
+        self.backup_button.setDefault(True)
+        self.backup_button.setFocus()
+        if backup_callback:
+            self.backup_button.clicked.connect(backup_callback)
+        self.card_layout.addWidget(self.backup_button)
+
+        self.clean_button = QPushButton(tr("uninstall_choice_clean"))
+        self.clean_button.setProperty("style_role", "button2")
+        if clean_callback:
+            self.clean_button.clicked.connect(clean_callback)
+        self.card_layout.addWidget(self.clean_button)
+
+        self.cancel_button = QPushButton(tr("cancel"))
+        self.cancel_button.setProperty("style_role", "theme")
+        if cancel_callback:
+            self.cancel_button.clicked.connect(cancel_callback)
+        self.card_layout.addWidget(self.cancel_button)
+
+        self.apply_theme(styles, dark_theme)
+
+    def _fill_texts(self):
+        self.title_label.setText(f"<b>{clean_message_line(tr('uninstall_choice_title'))}</b>")
+        self.info_label.setText(clean_message_line(tr("uninstall_choice_info")))
+
+    def apply_texts(self):
+        self._fill_texts()
+        self.backup_button.setText(tr("uninstall_choice_backup"))
+        self.clean_button.setText(tr("uninstall_choice_clean"))
+        self.cancel_button.setText(tr("cancel"))
+
+    def apply_theme(self, styles: dict, dark_theme: bool):
+        super().apply_theme(styles, dark_theme)
+        self.backup_button.setStyleSheet(styles["button1"])
+        self.clean_button.setStyleSheet(styles["button2"])
+        self.cancel_button.setStyleSheet(styles["theme"])
+
+
 class ProcessingPage(CardPage):
     """Страница выполнения операции с анимированным индикатором занятости."""
 

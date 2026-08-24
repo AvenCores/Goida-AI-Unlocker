@@ -25,6 +25,7 @@ from app.gui.pages.message_page import (
     MessagePage,
     NoUpdatePage,
     ProcessingPage,
+    UninstallChoicePage,
     UpdateAvailablePage,
 )
 from app.gui.pages.hosts_editor_page import HostsBackupViewerPage, HostsEditorPage
@@ -356,11 +357,40 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def start_installation(self, action: str):
+        # Для удаления обхода через hosts сначала показываем встроенную
+        # страницу выбора способа восстановления: из бэкапа или чистый hosts
+        if action == "uninstall" and self.current_mechanism != DNS_PROVIDER_ID:
+            self.show_uninstall_choice()
+            return
+
         self._processing_widget = self.show_processing(action)
         if self.current_mechanism == DNS_PROVIDER_ID:
             worker = HostsWorker(action, self.dns_manager, self.current_dns_provider, self)
         else:
             worker = HostsWorker(action, self.hosts_manager, self.current_provider, self)
+        worker.signals.finished.connect(self.on_hosts_finished, Qt.ConnectionType.QueuedConnection)
+        QThreadPool.globalInstance().start(worker)
+
+    def show_uninstall_choice(self):
+        widget = UninstallChoicePage(
+            self.styles, self.dark_theme,
+            backup_callback=lambda: self._begin_uninstall(widget, "backup"),
+            clean_callback=lambda: self._begin_uninstall(widget, "clean"),
+            cancel_callback=lambda: self._return_to_main(widget),
+        )
+        self._add_and_switch(widget)
+
+    def _begin_uninstall(self, choice_widget: QWidget, restore_mode: str):
+        proc = ProcessingPage("uninstall", self.styles, self.dark_theme)
+        self._processing_widget = proc
+        self._navigator.add_page(proc)
+        # Переключаемся на страницу обработки и убираем страницу выбора
+        # после завершения анимации
+        self._navigator.animate_switch(
+            proc, on_finish=lambda: self._navigator.remove_widget(choice_widget)
+        )
+        worker = HostsWorker("uninstall", self.hosts_manager, self.current_provider, self)
+        worker.restore_mode = restore_mode
         worker.signals.finished.connect(self.on_hosts_finished, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(worker)
 

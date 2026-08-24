@@ -652,10 +652,18 @@ class HostsManager:
 
         return self.apply(content)
 
-    def restore(self) -> bool:
+    def restore(self, mode: str = "backup") -> bool:
+        """Удаляет обход, восстанавливая hosts.
+
+        mode: "backup" — восстановить из чистого бэкапа (fallback — дефолт);
+        "clean" — записать полностью чистый hosts, игнорируя бэкапы.
+        """
         self.backup_failed = not self.backup("uninstall")
         if self.backup_failed:
             logger.warning("Failed to create hosts backup before uninstall, proceeding anyway")
+
+        if mode == "clean":
+            return self.apply(self._default_hosts_content())
 
         original_content = self._find_clean_original_backup()
 
