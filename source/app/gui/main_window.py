@@ -17,6 +17,7 @@ from app.gui.localization import CURRENT_LANGUAGE, set_current_language, tr
 from app.gui.scaling import (
     MAX_SCALE,
     MIN_SCALE,
+    SCALE_AUTO,
     SCALE_STEP,
     apply_ui_scale_setting,
     get_ui_scale,
@@ -80,6 +81,9 @@ class MainWindow(QMainWindow):
         )
         self.setMinimumSize(ui_scaled(MIN_WINDOW_WIDTH), min_height)
         self._fit_rebuild_started = False
+        # Высота окна по замеру контента (без капа) — для фильтрации
+        # вариантов масштаба, не помещающихся на экран
+        self._measured_window_height = 0
 
         # Тема: сохранённая или системная
         saved_theme = get_setting("theme")
@@ -281,7 +285,9 @@ class MainWindow(QMainWindow):
                 inner.activate()
         content_h = wrapper.minimumSizeHint().height()
         title_h = self.title_bar.bar_height
-        target_h = max(self.min_window_height, content_h + title_h)
+        window_h = content_h + title_h
+        self._measured_window_height = window_h
+        target_h = max(self.min_window_height, window_h)
 
         # Окно никогда не должно быть выше экрана: иначе футер с кнопкой
         # масштаба становится недостижим. Сначала ужимаем саму высоту,
@@ -682,8 +688,38 @@ class MainWindow(QMainWindow):
         self._popup_position_above_settings(popup)
         popup.show()
 
+    def _scale_options_for_screen(self) -> list[tuple[str, str]]:
+        """Пункты меню масштаба: варианты, не влезающие в экран, скрыты.
+
+        Высота окна при факторе f оценивается линейно по замеру при
+        текущем факторе (шрифты и отступы масштабируются пропорционально).
+        «Авто» показывается всегда; если не помещается ни один вариант,
+        остаётся только «Авто» (оно ограничено минимумом).
+        """
+        options = get_scale_options()
+        available_h = self._available_screen_height()
+        measured = self._measured_window_height
+        if available_h <= 0 or measured <= 0:
+            return options
+        current = get_ui_scale()
+        if current <= 0:
+            return options
+        base_window_h = max(MIN_WINDOW_HEIGHT, measured / current)
+        margin = ui_scaled(12)
+        fitting = [
+            (value, label) for value, label in options
+            if value == SCALE_AUTO
+            or base_window_h * float(value) <= available_h - margin
+        ]
+        return fitting or options[:1]
+
     def _open_scale_popup(self):
-        popup = ScalePopup(get_scale_options(), get_ui_scale_setting(), self.dark_theme, self)
+        popup = ScalePopup(
+            self._scale_options_for_screen(),
+            get_ui_scale_setting(),
+            self.dark_theme,
+            self,
+        )
         popup.scale_selected.connect(self._change_ui_scale)
         self._popup_position_above_settings(popup)
         popup.show()
