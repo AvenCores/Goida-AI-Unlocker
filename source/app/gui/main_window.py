@@ -30,6 +30,7 @@ from app.gui.workers import HostsWorker, VersionWorker, AppUpdateWorker
 from app.gui.components.title_bar import DraggableTitleBar, WINDOW_TITLE
 from app.gui.components.page_navigator import PageNavigator
 from app.gui.components.scale_popup import ScalePopup, get_scale_options
+from app.gui.components.settings_menu import SettingsPopup
 from app.gui.pages.home_page import HomePage
 from app.gui.pages.about_page import AboutPage
 from app.gui.pages.donate_page import DonatePage
@@ -112,9 +113,7 @@ class MainWindow(QMainWindow):
 
         self.title_bar: Optional[DraggableTitleBar] = None
         self.home_page: Optional[HomePage] = None
-        self.theme_button: Optional[QPushButton] = None
-        self.language_button: Optional[QPushButton] = None
-        self.scale_button: Optional[QPushButton] = None
+        self.settings_button: Optional[QPushButton] = None
 
         self._setup_ui()
         self._apply_theme_styles()
@@ -223,33 +222,20 @@ class MainWindow(QMainWindow):
         return button
 
     def _wrap_with_footer(self, page: QWidget) -> QWidget:
-        """Главная страница + футер с кнопками языка/темы."""
+        """Главная страница + футер с кнопкой настроек (тема/язык/масштаб)."""
         footer = QHBoxLayout()
         footer.setContentsMargins(ui_scaled(20), 0, ui_scaled(20), ui_scaled(20))
         footer.setSpacing(0)
 
         self._footer_buttons: list[tuple[QPushButton, str]] = []
 
-        self.language_button = self._make_footer_button("language.svg", self.switch_language)
-        self.scale_button = self._make_footer_button("settings.svg", self.switch_ui_scale)
-        self.theme_button = self._make_footer_button(
-            "sun.svg" if self.dark_theme else "moon.svg", self.switch_theme
-        )
+        self.settings_button = self._make_footer_button("settings.svg", self._open_settings_menu)
 
         footer.addWidget(
-            self.language_button,
+            self.settings_button,
             alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom,
         )
         footer.addStretch()
-        footer.addWidget(
-            self.scale_button,
-            alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom,
-        )
-        footer.addSpacing(ui_scaled(8))
-        footer.addWidget(
-            self.theme_button,
-            alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom,
-        )
 
         wrapper = QWidget()
         wrapper_layout = QVBoxLayout(wrapper)
@@ -662,19 +648,53 @@ class MainWindow(QMainWindow):
             self._apply_texts()
         self._animate_transition(update)
 
-    def switch_language(self):
+    def _popup_position_above_settings(self, popup: QWidget):
+        """Левый край кнопки настроек: попап раскрывается вправо-вверх."""
+        pos = self.settings_button.mapToGlobal(self.settings_button.rect().topLeft())
+        pos.setX(pos.x() - ui_scaled(10))
+        pos.setY(pos.y() - popup.height() + ui_scaled(6))
+        popup.move(pos)
+
+    def _open_settings_menu(self):
+        popup = SettingsPopup(self.dark_theme, self)
+        popup.action_selected.connect(self._on_settings_action)
+        self._popup_position_above_settings(popup)
+        popup.show()
+
+    def _on_settings_action(self, action: str):
+        # Отложенный показ: меню настроек должно полностью закрыться до
+        # открытия вложенного попапа, иначе popup-grab Qt закрывает его
+        # сразу после показа (пункт «просто закрывается и ничего не происходит»)
+        if action == SettingsPopup.THEME:
+            QTimer.singleShot(0, self.switch_theme)
+        elif action == SettingsPopup.LANGUAGE:
+            QTimer.singleShot(0, self._open_language_popup)
+        elif action == SettingsPopup.SCALE:
+            QTimer.singleShot(0, self._open_scale_popup)
+
+    def _open_language_popup(self):
         from app.gui.localization import get_supported_languages
         from app.gui.components.language_popup import LanguagePopup
 
         supported = get_supported_languages()
         popup = LanguagePopup(supported, self.language, self.dark_theme, self)
         popup.language_selected.connect(self.change_language_to)
-
-        pos = self.language_button.mapToGlobal(self.language_button.rect().topLeft())
-        pos.setX(pos.x() - ui_scaled(14))
-        pos.setY(pos.y() - popup.height() + ui_scaled(6))
-        popup.move(pos)
+        self._popup_position_above_settings(popup)
         popup.show()
+
+    def _open_scale_popup(self):
+        popup = ScalePopup(get_scale_options(), get_ui_scale_setting(), self.dark_theme, self)
+        popup.scale_selected.connect(self._change_ui_scale)
+        self._popup_position_above_settings(popup)
+        popup.show()
+
+    def _change_ui_scale(self, value: str):
+        """Сохраняет выбор и просит владельца пересобрать окно с новым масштабом."""
+        if value == get_ui_scale_setting():
+            return
+        apply_ui_scale_setting(value)
+        clear_stylesheet_cache()
+        self.restart_requested.emit()
 
     def change_language_to(self, new_lang: str):
         if new_lang == self.language or self.is_animating:
@@ -688,24 +708,6 @@ class MainWindow(QMainWindow):
             self._apply_texts()
         self._animate_transition(update)
 
-    def switch_ui_scale(self):
-        popup = ScalePopup(get_scale_options(), get_ui_scale_setting(), self.dark_theme, self)
-        popup.scale_selected.connect(self._change_ui_scale)
-
-        pos = self.scale_button.mapToGlobal(self.scale_button.rect().topLeft())
-        pos.setX(pos.x() + self.scale_button.width() - popup.width() + ui_scaled(14))
-        pos.setY(pos.y() - popup.height() + ui_scaled(6))
-        popup.move(pos)
-        popup.show()
-
-    def _change_ui_scale(self, value: str):
-        """Сохраняет выбор и просит владельца пересобрать окно с новым масштабом."""
-        if value == get_ui_scale_setting():
-            return
-        apply_ui_scale_setting(value)
-        clear_stylesheet_cache()
-        self.restart_requested.emit()
-
     def _apply_theme_styles(self):
         """Перетемизирует окно, главную страницу и все открытые страницы."""
         self.styles = get_stylesheet(self.dark_theme, self.language)
@@ -715,10 +717,6 @@ class MainWindow(QMainWindow):
         for button, icon_name in self._footer_buttons:
             button.setStyleSheet(self.styles["footer_button"])
             button.setIcon(get_icon(icon_name, 20, dark_theme=self.dark_theme, force_dark=True))
-        self.theme_button.setIcon(get_icon(
-            "sun.svg" if self.dark_theme else "moon.svg",
-            20, dark_theme=self.dark_theme, force_dark=True,
-        ))
 
         self.home_page.styles = self.styles
         self.home_page.dark_theme = self.dark_theme
@@ -735,18 +733,10 @@ class MainWindow(QMainWindow):
     def _apply_texts(self):
         """Переводит заголовок, главную страницу и все открытые страницы."""
         self.setWindowTitle(WINDOW_TITLE)
-        tooltip_theme = tr("theme_button").strip()
-        tooltip_lang = tr("language_button").strip()
-        self.theme_button.setToolTip(tooltip_theme)
-        self.theme_button.setStatusTip(tooltip_theme)
-        self.theme_button.setAccessibleName(tooltip_theme)
-        self.language_button.setToolTip(tooltip_lang)
-        self.language_button.setStatusTip(tooltip_lang)
-        self.language_button.setAccessibleName(tooltip_lang)
-        tooltip_scale = tr("scale_button").strip()
-        self.scale_button.setToolTip(tooltip_scale)
-        self.scale_button.setStatusTip(tooltip_scale)
-        self.scale_button.setAccessibleName(tooltip_scale)
+        tooltip_settings = tr("settings_button").strip()
+        self.settings_button.setToolTip(tooltip_settings)
+        self.settings_button.setStatusTip(tooltip_settings)
+        self.settings_button.setAccessibleName(tooltip_settings)
 
         self.home_page.apply_texts()
 

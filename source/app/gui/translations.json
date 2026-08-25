@@ -1,6 +1,7 @@
 {
   "ru": {
     "language_name": "Русский",
+    "settings_button": "Настройки",
     "scale_button": "Масштаб интерфейса",
     "scale_auto": "Авто",
     "backup_missing_title": "Backup не найден",
@@ -125,6 +126,7 @@
   },
   "en": {
     "language_name": "English",
+    "settings_button": "Settings",
     "scale_button": "Interface scale",
     "scale_auto": "Auto",
     "backup_missing_title": "Backup not found",
@@ -249,6 +251,7 @@
   },
   "de": {
     "language_name": "Deutsch",
+    "settings_button": "Einstellungen",
     "scale_button": "Oberflächenskalierung",
     "scale_auto": "Auto",
     "backup_missing_title": "Backup nicht gefunden",
@@ -373,6 +376,7 @@
   },
   "uk": {
     "language_name": "Українська",
+    "settings_button": "Налаштування",
     "scale_button": "Масштаб інтерфейсу",
     "scale_auto": "Авто",
     "backup_missing_title": "Резервну копію не знайдено",
@@ -497,6 +501,7 @@
   },
   "be": {
     "language_name": "Беларуская",
+    "settings_button": "Налады",
     "scale_button": "Маштаб інтэрфейсу",
     "scale_auto": "Аўта",
     "backup_missing_title": "Рэзервовая копія не знойдзена",
@@ -621,6 +626,7 @@
   },
   "kk": {
     "language_name": "Қазақша",
+    "settings_button": "Параметрлер",
     "scale_button": "Интерфейс масштабы",
     "scale_auto": "Авто",
     "backup_missing_title": "Резервтік көшірме табылмады",
@@ -745,6 +751,7 @@
   },
   "fr": {
     "language_name": "Français",
+    "settings_button": "Paramètres",
     "scale_button": "Échelle de l'interface",
     "scale_auto": "Auto",
     "backup_missing_title": "Sauvegarde non trouvée",
@@ -869,6 +876,7 @@
   },
   "pl": {
     "language_name": "Polski",
+    "settings_button": "Ustawienia",
     "scale_button": "Skalowanie interfejsu",
     "scale_auto": "Auto",
     "backup_missing_title": "Nie znaleziono kopii zapasowej",
@@ -993,6 +1001,7 @@
   },
   "es": {
     "language_name": "Español",
+    "settings_button": "Ajustes",
     "scale_button": "Escala de la interfaz",
     "scale_auto": "Auto",
     "backup_missing_title": "Copia de seguridad no encontrada",
@@ -1117,6 +1126,7 @@
   },
   "pt": {
     "language_name": "Português",
+    "settings_button": "Configurações",
     "scale_button": "Escala da interface",
     "scale_auto": "Auto",
     "backup_missing_title": "Backup não encontrado",
@@ -1241,6 +1251,7 @@
   },
   "it": {
     "language_name": "Italiano",
+    "settings_button": "Impostazioni",
     "scale_button": "Scala dell'interfaccia",
     "scale_auto": "Auto",
     "backup_missing_title": "Backup non trovato",
@@ -1365,6 +1376,7 @@
   },
   "tr": {
     "language_name": "Türkçe",
+    "settings_button": "Ayarlar",
     "scale_button": "Arayüz ölçeği",
     "scale_auto": "Otomatik",
     "backup_missing_title": "Yedek bulunamadı",
@@ -1489,6 +1501,7 @@
   },
   "zh": {
     "language_name": "中文",
+    "settings_button": "设置",
     "scale_button": "界面缩放",
     "scale_auto": "自动",
     "backup_missing_title": "未找到备份",
@@ -1613,6 +1626,7 @@
   },
   "ja": {
     "language_name": "日本語",
+    "settings_button": "設定",
     "scale_button": "インターフェースの倍率",
     "scale_auto": "自動",
     "backup_missing_title": "バックアップが見つかりません",
@@ -1737,6 +1751,7 @@
   },
   "ko": {
     "language_name": "한국어",
+    "settings_button": "설정",
     "scale_button": "인터페이스 배율",
     "scale_auto": "자동",
     "backup_missing_title": "백업을 찾을 수 없음",
@@ -1861,6 +1876,7 @@
   },
   "cs": {
     "language_name": "Čeština",
+    "settings_button": "Nastavení",
     "scale_button": "Měřítko rozhraní",
     "scale_auto": "Automaticky",
     "backup_missing_title": "Záloha nenalezena",
@@ -1985,6 +2001,7 @@
   },
   "nl": {
     "language_name": "Nederlands",
+    "settings_button": "Instellingen",
     "scale_button": "Interfaceschaling",
     "scale_auto": "Auto",
     "backup_missing_title": "Back-up niet gevonden",
@@ -2109,6 +2126,7 @@
   },
   "sv": {
     "language_name": "Svenska",
+    "settings_button": "Inställningar",
     "scale_button": "Gränssnittsskalning",
     "scale_auto": "Auto",
     "backup_missing_title": "Säkerhetskopia hittades inte",
