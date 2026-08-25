@@ -30,6 +30,7 @@ from app.gui.icons import get_icon
 from app.gui.workers import HostsWorker, VersionWorker, AppUpdateWorker
 from app.gui.components.title_bar import DraggableTitleBar, WINDOW_TITLE
 from app.gui.components.page_navigator import PageNavigator
+from app.gui.components.popup_fade import fade_in_popup, fade_out_popup
 from app.gui.components.scale_popup import ScalePopup, get_scale_options
 from app.gui.components.settings_menu import SettingsPopup
 from app.gui.pages.home_page import HomePage
@@ -665,18 +666,30 @@ class MainWindow(QMainWindow):
         popup = SettingsPopup(self.dark_theme, self)
         popup.action_selected.connect(self._on_settings_action)
         self._popup_position_above_settings(popup)
-        popup.show()
+        fade_in_popup(popup)
 
     def _on_settings_action(self, action: str):
-        # Отложенный показ: меню настроек должно полностью закрыться до
-        # открытия вложенного попапа, иначе popup-grab Qt закрывает его
-        # сразу после показа (пункт «просто закрывается и ничего не происходит»)
-        if action == SettingsPopup.THEME:
-            QTimer.singleShot(0, self.switch_theme)
-        elif action == SettingsPopup.LANGUAGE:
-            QTimer.singleShot(0, self._open_language_popup)
-        elif action == SettingsPopup.SCALE:
-            QTimer.singleShot(0, self._open_scale_popup)
+        """Анимированный переход: меню затухает → close → вложенный попап.
+
+        Вложенный попап открывается строго после закрытия меню, иначе
+        popup-grab Qt закрывает его сразу после показа. sender() — меню,
+        из которого пришло действие; при прямом вызове (тесты) — None.
+        """
+        menu = self.sender()
+        menu = menu if isinstance(menu, QWidget) else None
+
+        def after_menu_closed():
+            if action == SettingsPopup.THEME:
+                self.switch_theme()
+            elif action == SettingsPopup.LANGUAGE:
+                self._open_language_popup()
+            elif action == SettingsPopup.SCALE:
+                self._open_scale_popup()
+
+        if menu is not None and menu.isVisible():
+            fade_out_popup(menu, on_finished=after_menu_closed)
+        else:
+            QTimer.singleShot(0, after_menu_closed)
 
     def _open_language_popup(self):
         from app.gui.localization import get_supported_languages
@@ -686,7 +699,7 @@ class MainWindow(QMainWindow):
         popup = LanguagePopup(supported, self.language, self.dark_theme, self)
         popup.language_selected.connect(self.change_language_to)
         self._popup_position_above_settings(popup)
-        popup.show()
+        fade_in_popup(popup)
 
     def _scale_options_for_screen(self) -> list[tuple[str, str]]:
         """Пункты меню масштаба: варианты, не влезающие в экран, скрыты.
@@ -722,7 +735,7 @@ class MainWindow(QMainWindow):
         )
         popup.scale_selected.connect(self._change_ui_scale)
         self._popup_position_above_settings(popup)
-        popup.show()
+        fade_in_popup(popup)
 
     def _change_ui_scale(self, value: str):
         """Сохраняет выбор и просит владельца пересобрать окно с новым масштабом."""

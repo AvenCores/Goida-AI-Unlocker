@@ -155,10 +155,10 @@ class SettingsPopup(QWidget):
         idx = self._index_at(event.position().toPoint().y())
         if idx >= 0:
             action, _label, _submenu = self._items[idx]
-            # Сначала закрываем меню: вложенный попап показывается
-            # отложенно (см. MainWindow._on_settings_action), и открытие
-            # до завершения закрытия сбивает popup-grab Qt
-            self.close()
+            # Закрытие с анимацией и открытие вложенного попапа выполняет
+            # MainWindow (см. _on_settings_action): меню затухает и только
+            # после close() показывается вложенное — иначе popup-grab Qt
+            # закрывает его сразу после показа
             self.action_selected.emit(action)
         super().mousePressEvent(event)
 
