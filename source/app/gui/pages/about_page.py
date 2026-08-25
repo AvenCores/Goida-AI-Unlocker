@@ -4,7 +4,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QSize
 
 from app.gui.localization import tr
-from app.gui.icons import get_icon
+from app.gui.icons import get_icon, get_icon_pixmap
+from app.gui.scaling import ui_scaled
 from app.utils.helpers import open_target
 
 
@@ -27,11 +28,11 @@ class AboutPage(QWidget):
 
         vbox = QVBoxLayout(self)
         vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        vbox.setSpacing(8)
-        vbox.setContentsMargins(12, 12, 12, 12)
+        vbox.setSpacing(ui_scaled(8))
+        vbox.setContentsMargins(*(ui_scaled(12),) * 4)
 
         self.icon_label = QLabel()
-        self.icon_label.setPixmap(get_icon("bulb.svg", 32, dark_theme=dark_theme).pixmap(32, 32))
+        self.icon_label.setPixmap(get_icon_pixmap("bulb.svg", 32, dark_theme=dark_theme))
         self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         vbox.addWidget(self.icon_label)
 
@@ -44,8 +45,8 @@ class AboutPage(QWidget):
         vbox.addWidget(self.info_label)
 
         grid = QGridLayout()
-        grid.setHorizontalSpacing(12)
-        grid.setVerticalSpacing(8)
+        grid.setHorizontalSpacing(ui_scaled(12))
+        grid.setVerticalSpacing(ui_scaled(8))
         grid.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
         self._tool_buttons: list[QToolButton] = []
@@ -64,9 +65,9 @@ class AboutPage(QWidget):
             grid.addWidget(btn, index // 3, index % 3, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         vbox.addLayout(grid)
-        vbox.addSpacing(8)
+        vbox.addSpacing(ui_scaled(8))
         vbox.addWidget(self.repo_button, alignment=Qt.AlignmentFlag.AlignHCenter)
-        vbox.addSpacing(8)
+        vbox.addSpacing(ui_scaled(8))
 
         self.back_button = QPushButton(f"  {tr('back_to_menu')}  ")
         self.back_button.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -79,7 +80,7 @@ class AboutPage(QWidget):
         btn = QToolButton()
         btn.setText(text)
         btn.setIcon(get_icon(icon_name, 24, dark_theme=self.dark_theme, force_dark=True))
-        btn.setIconSize(QSize(24, 24))
+        btn.setIconSize(QSize(ui_scaled(24), ui_scaled(24)))
         btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._tool_buttons.append(btn)

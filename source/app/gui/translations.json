@@ -1,6 +1,8 @@
 {
   "ru": {
     "language_name": "Русский",
+    "scale_button": "Масштаб интерфейса",
+    "scale_auto": "Авто",
     "backup_missing_title": "Backup не найден",
     "backup_missing_info": "Последний backup-файл отсутствует.\nОткрыть папку с backup-файлами?",
     "open_folder": "Открыть папку",
@@ -123,6 +125,8 @@
   },
   "en": {
     "language_name": "English",
+    "scale_button": "Interface scale",
+    "scale_auto": "Auto",
     "backup_missing_title": "Backup not found",
     "backup_missing_info": "The latest backup file is missing.\nOpen the backup folder?",
     "open_folder": "Open folder",
@@ -245,6 +249,8 @@
   },
   "de": {
     "language_name": "Deutsch",
+    "scale_button": "Oberflächenskalierung",
+    "scale_auto": "Auto",
     "backup_missing_title": "Backup nicht gefunden",
     "backup_missing_info": "Die letzte Backup-Datei fehlt.\nBackup-Ordner öffnen?",
     "open_folder": "Ordner öffnen",
@@ -367,6 +373,8 @@
   },
   "uk": {
     "language_name": "Українська",
+    "scale_button": "Масштаб інтерфейсу",
+    "scale_auto": "Авто",
     "backup_missing_title": "Резервну копію не знайдено",
     "backup_missing_info": "Останній файл резервної копії відсутній.\nВідкрити папку з резервними копіями?",
     "open_folder": "Відкрити папку",
@@ -489,6 +497,8 @@
   },
   "be": {
     "language_name": "Беларуская",
+    "scale_button": "Маштаб інтэрфейсу",
+    "scale_auto": "Аўта",
     "backup_missing_title": "Рэзервовая копія не знойдзена",
     "backup_missing_info": "Апошні файл рэзервовай копіі адсутнічае.\nАдкрыць папку з рэзервовымі копіямі?",
     "open_folder": "Адкрыць папку",
@@ -611,6 +621,8 @@
   },
   "kk": {
     "language_name": "Қазақша",
+    "scale_button": "Интерфейс масштабы",
+    "scale_auto": "Авто",
     "backup_missing_title": "Резервтік көшірме табылмады",
     "backup_missing_info": "Соңғы резервтік көшірме файлы жоқ.\nРезервтік көшірмелер қалтасын ашу керек пе?",
     "open_folder": "Қалтаны ашу",
@@ -733,6 +745,8 @@
   },
   "fr": {
     "language_name": "Français",
+    "scale_button": "Échelle de l'interface",
+    "scale_auto": "Auto",
     "backup_missing_title": "Sauvegarde non trouvée",
     "backup_missing_info": "Le dernier fichier de sauvegarde est manquant.\nOuvrir le dossier de sauvegarde ?",
     "open_folder": "Ouvrir le dossier",
@@ -855,6 +869,8 @@
   },
   "pl": {
     "language_name": "Polski",
+    "scale_button": "Skalowanie interfejsu",
+    "scale_auto": "Auto",
     "backup_missing_title": "Nie znaleziono kopii zapasowej",
     "backup_missing_info": "Brak najnowszego pliku kopii zapasowej.\nOtworzyć folder z kopiami zapasowymi?",
     "open_folder": "Otwórz folder",
@@ -977,6 +993,8 @@
   },
   "es": {
     "language_name": "Español",
+    "scale_button": "Escala de la interfaz",
+    "scale_auto": "Auto",
     "backup_missing_title": "Copia de seguridad no encontrada",
     "backup_missing_info": "Falta el último archivo de copia de seguridad.\n¿Abrir la carpeta de copias de seguridad?",
     "open_folder": "Abrir carpeta",
@@ -1099,6 +1117,8 @@
   },
   "pt": {
     "language_name": "Português",
+    "scale_button": "Escala da interface",
+    "scale_auto": "Auto",
     "backup_missing_title": "Backup não encontrado",
     "backup_missing_info": "O último arquivo de backup está ausente.\nAbrir a pasta de backups?",
     "open_folder": "Abrir pasta",
@@ -1221,6 +1241,8 @@
   },
   "it": {
     "language_name": "Italiano",
+    "scale_button": "Scala dell'interfaccia",
+    "scale_auto": "Auto",
     "backup_missing_title": "Backup non trovato",
     "backup_missing_info": "L'ultimo file di backup è mancante.\nAprire la cartella dei backup?",
     "open_folder": "Apri cartella",
@@ -1343,6 +1365,8 @@
   },
   "tr": {
     "language_name": "Türkçe",
+    "scale_button": "Arayüz ölçeği",
+    "scale_auto": "Otomatik",
     "backup_missing_title": "Yedek bulunamadı",
     "backup_missing_info": "Son yedek dosyası eksik.\nYedek klasörünü açmak ister misiniz?",
     "open_folder": "Klasörü aç",
@@ -1465,6 +1489,8 @@
   },
   "zh": {
     "language_name": "中文",
+    "scale_button": "界面缩放",
+    "scale_auto": "自动",
     "backup_missing_title": "未找到备份",
     "backup_missing_info": "最新的备份文件不存在。\n是否打开备份文件夹？",
     "open_folder": "打开文件夹",
@@ -1587,6 +1613,8 @@
   },
   "ja": {
     "language_name": "日本語",
+    "scale_button": "インターフェースの倍率",
+    "scale_auto": "自動",
     "backup_missing_title": "バックアップが見つかりません",
     "backup_missing_info": "最新のバックアップファイルがありません。\nバックアップフォルダを開きますか？",
     "open_folder": "フォルダを開く",
@@ -1709,6 +1737,8 @@
   },
   "ko": {
     "language_name": "한국어",
+    "scale_button": "인터페이스 배율",
+    "scale_auto": "자동",
     "backup_missing_title": "백업을 찾을 수 없음",
     "backup_missing_info": "최신 백업 파일이 없습니다.\n백업 폴더를 열겠습니까?",
     "open_folder": "폴더 열기",
@@ -1831,6 +1861,8 @@
   },
   "cs": {
     "language_name": "Čeština",
+    "scale_button": "Měřítko rozhraní",
+    "scale_auto": "Automaticky",
     "backup_missing_title": "Záloha nenalezena",
     "backup_missing_info": "Poslední záložní soubor chybí.\nOtevřít složku se zálohami?",
     "open_folder": "Otevřít složku",
@@ -1953,6 +1985,8 @@
   },
   "nl": {
     "language_name": "Nederlands",
+    "scale_button": "Interfaceschaling",
+    "scale_auto": "Auto",
     "backup_missing_title": "Back-up niet gevonden",
     "backup_missing_info": "Het laatste back-upbestand ontbreekt.\nBack-upmap openen?",
     "open_folder": "Map openen",
@@ -2075,6 +2109,8 @@
   },
   "sv": {
     "language_name": "Svenska",
+    "scale_button": "Gränssnittsskalning",
+    "scale_auto": "Auto",
     "backup_missing_title": "Säkerhetskopia hittades inte",
     "backup_missing_info": "Den senaste säkerhetskopian saknas.\nÖppna mappen med säkerhetskopior?",
     "open_folder": "Öppna mapp",

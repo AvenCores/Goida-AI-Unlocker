@@ -2,6 +2,8 @@ from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, Signal, QRect, QRectF
 from PySide6.QtGui import QPainter, QColor, QPen, QPainterPath, QFont
 
+from app.gui.scaling import get_ui_scale, ui_scaled
+
 # Flag definitions: horizontal/vertical stripes, cross, circle, or custom types
 _FLAGS: dict[str, dict] = {
     "ru": {"stripes": [("#ffffff", 1/3), ("#0039a6", 1/3), ("#d52b1e", 1/3)]},
@@ -42,13 +44,13 @@ class LanguagePopup(QWidget):
         self.current_lang = current_lang
         self._hover_index = -1
         self._items: list[tuple[str, str]] = list(languages.items())
-        self._item_height = 32
-        self._padding = 6
-        self._radius = 12
+        self._item_height = ui_scaled(32)
+        self._padding = ui_scaled(6)
+        self._radius = ui_scaled(12)
 
-        self._margin = 10  # space for manual shadow
+        self._margin = ui_scaled(10)  # space for manual shadow
         total_height = self._margin * 2 + self._padding * 2 + self._item_height * len(self._items)
-        self._width = 190 + self._margin * 2
+        self._width = ui_scaled(190) + self._margin * 2
         self.setFixedSize(self._width, total_height)
 
         self.setMouseTracking(True)
@@ -80,12 +82,13 @@ class LanguagePopup(QWidget):
         painter.drawPath(path)
 
         # Items
-        painter.setFont(QFont("Segoe UI", 9.5, QFont.Weight.Medium))
+        painter.setFont(self._item_font())
         for i, (code, name) in enumerate(self._items):
             y = m + self._padding + i * self._item_height
             item_rect_x = m + self._padding
             item_rect_w = self.width() - 2 * m - self._padding * 2
-            item_rect_h = self._item_height - 4
+            item_rect_h = self._item_height - ui_scaled(4)
+            gap = ui_scaled(2)
 
             is_selected = code == self.current_lang
             is_hovered = i == self._hover_index
@@ -94,13 +97,13 @@ class LanguagePopup(QWidget):
             if is_selected:
                 accent = QColor("#246cf0") if self.dark_theme else QColor("#0078d4")
                 hover_path = QPainterPath()
-                hover_path.addRoundedRect(item_rect_x, y + 2, item_rect_w, item_rect_h, 8, 8)
+                hover_path.addRoundedRect(item_rect_x, y + gap, item_rect_w, item_rect_h, 8, 8)
                 painter.fillPath(hover_path, accent)
                 text_color = QColor("#ffffff")
             elif is_hovered:
                 hover_bg = QColor("#363d46") if self.dark_theme else QColor("#f0f2f5")
                 hover_path = QPainterPath()
-                hover_path.addRoundedRect(item_rect_x, y + 2, item_rect_w, item_rect_h, 8, 8)
+                hover_path.addRoundedRect(item_rect_x, y + gap, item_rect_w, item_rect_h, 8, 8)
                 painter.fillPath(hover_path, hover_bg)
                 text_color = QColor("#f3f6fd") if self.dark_theme else QColor("#1a1a1a")
             else:
@@ -109,23 +112,34 @@ class LanguagePopup(QWidget):
             # Flag
             flag_def = _FLAGS.get(code)
             if flag_def:
-                self._draw_flag(painter, flag_def, item_rect_x + 8, y + 2 + (item_rect_h - 12) // 2, 18, 12)
+                flag_w, flag_h = ui_scaled(18), ui_scaled(12)
+                flag_y = y + gap + (item_rect_h - flag_h) // 2
+                self._draw_flag(painter, flag_def, item_rect_x + ui_scaled(8), flag_y, flag_w, flag_h)
 
             # Text
-            painter.setFont(QFont("Segoe UI", 9.5, QFont.Weight.Medium))
+            painter.setFont(self._item_font())
             painter.setPen(text_color)
-            text_rect = QRect(item_rect_x + 32, y + 2, item_rect_w - 54, item_rect_h)
+            text_rect = QRect(
+                item_rect_x + ui_scaled(32), y + gap,
+                item_rect_w - ui_scaled(54), item_rect_h,
+            )
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, name)
 
             # Checkmark for selected
             if is_selected:
                 painter.setPen(QPen(QColor("#ffffff"), 1.8, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
-                cx = item_rect_x + item_rect_w - 20
-                cy = y + 2 + item_rect_h // 2
+                cx = item_rect_x + item_rect_w - ui_scaled(20)
+                cy = y + gap + item_rect_h // 2
                 painter.drawLine(cx - 4, cy, cx - 1, cy + 3)
                 painter.drawLine(cx - 1, cy + 3, cx + 5, cy - 3)
 
         painter.end()
+
+    def _item_font(self) -> QFont:
+        font = QFont("Segoe UI")
+        font.setPointSizeF(round(9.5 * get_ui_scale(), 1))
+        font.setWeight(QFont.Weight.Medium)
+        return font
 
     def mouseMoveEvent(self, event):
         idx = self._index_at(event.position().toPoint().y())
@@ -288,6 +302,6 @@ class LanguagePopup(QWidget):
             return -1
         # Check if within item bounds (not in gap)
         offset_in_item = rel - idx * self._item_height
-        if offset_in_item > self._item_height - 4:
+        if offset_in_item > self._item_height - ui_scaled(4):
             return -1
         return idx

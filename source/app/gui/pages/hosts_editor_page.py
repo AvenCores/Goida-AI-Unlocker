@@ -18,7 +18,8 @@ from app.core.hosts_manager import HostsManager
 from app.core.constants import HOSTS_PATH
 from app.core.logger import logger
 from app.gui.localization import tr
-from app.gui.icons import get_icon
+from app.gui.icons import get_icon, get_icon_pixmap
+from app.gui.scaling import ui_scaled
 
 # Максимум подсвечиваемых совпадений поиска (защита от тормозов на больших файлах)
 _MAX_SEARCH_HIGHLIGHTS = 2000
@@ -29,7 +30,7 @@ _BACKUP_ACTION_RE = re.compile(r"hosts_backup_([A-Za-z]+?)_")
 
 
 def _monospace_font() -> QFont:
-    font = QFont("Consolas", 11)
+    font = QFont("Consolas", ui_scaled(11))
     font.setStyleHint(QFont.StyleHint.Monospace)
     return font
 
@@ -121,7 +122,7 @@ class _LineNumbersEditor(QPlainTextEdit):
 
     def line_number_area_width(self) -> int:
         digits = max(2, len(str(max(1, self.blockCount()))))
-        return 16 + self.fontMetrics().horizontalAdvance("9") * digits
+        return ui_scaled(16) + self.fontMetrics().horizontalAdvance("9") * digits
 
     def _update_line_number_area_width(self, _count: int = 0):
         self.setViewportMargins(self.line_number_area_width(), 0, 0, 0)
@@ -160,7 +161,7 @@ class _LineNumbersEditor(QPlainTextEdit):
             if block.isVisible():
                 painter.setPen(current_fg if number == current else fg)
                 painter.drawText(
-                    0, top, self._line_number_area.width() - 8,
+                    0, top, self._line_number_area.width() - ui_scaled(8),
                     self.fontMetrics().height(),
                     Qt.AlignmentFlag.AlignRight, str(number + 1),
                 )
@@ -180,16 +181,16 @@ class _HeaderedPage(QWidget):
         self.dark_theme = dark_theme
 
         self._vbox = QVBoxLayout(self)
-        self._vbox.setSpacing(12)
-        self._vbox.setContentsMargins(20, 16, 20, 16)
+        self._vbox.setSpacing(ui_scaled(12))
+        self._vbox.setContentsMargins(
+            ui_scaled(20), ui_scaled(16), ui_scaled(20), ui_scaled(16)
+        )
 
         header = QHBoxLayout()
-        header.setSpacing(8)
+        header.setSpacing(ui_scaled(8))
 
         self.icon_label = QLabel()
-        self.icon_label.setPixmap(
-            get_icon(icon_name, 24, dark_theme=dark_theme).pixmap(24, 24)
-        )
+        self.icon_label.setPixmap(get_icon_pixmap(icon_name, 24, dark_theme=dark_theme))
         header.addWidget(self.icon_label)
 
         self.title_label = QLabel()
@@ -263,7 +264,7 @@ class _SearchablePage(_HeaderedPage):
         search_layout.addWidget(self.search_count_label)
         self.search_close_button = QPushButton("✕")
         self.search_close_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.search_close_button.setFixedWidth(36)
+        self.search_close_button.setFixedWidth(ui_scaled(36))
         self.search_close_button.clicked.connect(lambda: self._toggle_search(False))
         search_layout.addWidget(self.search_close_button)
         self.search_bar.setVisible(False)
@@ -686,7 +687,7 @@ class HostsEditorPage(_SearchablePage):
         self.validation_save_button.setStyleSheet(styles["button1"])
         self.validation_back_button.setStyleSheet(styles["theme"])
         self.icon_label.setPixmap(
-            get_icon("book-open.svg", 24, dark_theme=dark_theme).pixmap(24, 24)
+            get_icon_pixmap("book-open.svg", 24, dark_theme=dark_theme)
         )
 
 
@@ -711,7 +712,7 @@ class HostsBackupViewerPage(_SearchablePage):
         selector.addWidget(self.select_label)
         self.backup_combo = QComboBox()
         self.backup_combo.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.backup_combo.setMinimumWidth(300)
+        self.backup_combo.setMinimumWidth(ui_scaled(300))
         selector.addWidget(self.backup_combo, 1)
 
         self.refresh_button = QPushButton()
@@ -1107,5 +1108,5 @@ class HostsBackupViewerPage(_SearchablePage):
         self.delete_confirm_panel.confirm_button.setStyleSheet(styles["button2"])
         self.delete_confirm_panel.cancel_button.setStyleSheet(styles["theme"])
         self.icon_label.setPixmap(
-            get_icon("clock.svg", 24, dark_theme=dark_theme).pixmap(24, 24)
+            get_icon_pixmap("clock.svg", 24, dark_theme=dark_theme)
         )

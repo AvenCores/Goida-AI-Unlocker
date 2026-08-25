@@ -2,7 +2,8 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QApplic
 from PySide6.QtCore import Qt, QPropertyAnimation, QSequentialAnimationGroup, QPauseAnimation
 
 from app.gui.localization import tr
-from app.gui.icons import get_icon
+from app.gui.icons import get_icon_pixmap
+from app.gui.scaling import ui_scaled
 
 SBER_CARD_NUMBER = "2202 2050 1464 4675"
 _FADE_MS = 150
@@ -19,26 +20,26 @@ class DonatePage(QWidget):
 
         vbox = QVBoxLayout(self)
         vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        vbox.setSpacing(24)
-        vbox.setContentsMargins(20, 20, 20, 20)
+        vbox.setSpacing(ui_scaled(24))
+        vbox.setContentsMargins(*(ui_scaled(20),) * 4)
 
         self.card = QWidget()
         self.card.setObjectName("donate_card")
-        self.card.setMinimumWidth(240)
-        self.card.setMaximumWidth(380)
+        self.card.setMinimumWidth(ui_scaled(240))
+        self.card.setMaximumWidth(ui_scaled(380))
         cl = QVBoxLayout(self.card)
         cl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        cl.setSpacing(16)
-        cl.setContentsMargins(32, 24, 32, 24)
+        cl.setSpacing(ui_scaled(16))
+        cl.setContentsMargins(
+            ui_scaled(32), ui_scaled(24), ui_scaled(32), ui_scaled(24)
+        )
 
         self.title_label = QLabel(tr("donate_title"))
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cl.addWidget(self.title_label)
 
         sber_icon_lbl = QLabel()
-        sber_icon_lbl.setPixmap(
-            get_icon("sber.svg", 36, dark_theme=dark_theme).pixmap(36, 36)
-        )
+        sber_icon_lbl.setPixmap(get_icon_pixmap("sber.svg", 36, dark_theme=dark_theme))
         sber_icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cl.addWidget(sber_icon_lbl)
         self.sber_icon_label = sber_icon_lbl
@@ -121,5 +122,5 @@ class DonatePage(QWidget):
         self.copy_button.setStyleSheet(styles["button1"])
         self.back_button.setStyleSheet(styles["theme"])
         self.sber_icon_label.setPixmap(
-            get_icon("sber.svg", 36, dark_theme=dark_theme).pixmap(36, 36)
+            get_icon_pixmap("sber.svg", 36, dark_theme=dark_theme)
         )

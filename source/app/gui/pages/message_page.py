@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt
 from app.gui.localization import tr, clean_message_line
 from app.gui.components.card import CardPage
 from app.gui.components.busy_spinner import BusySpinner
+from app.gui.scaling import ui_scaled
 from app.utils.helpers import open_target
 
 
@@ -183,7 +184,7 @@ class UpdateAvailablePage(CardPage):
         self._local_ver = local_ver
         self._latest_ver = latest_ver
         self._dl_url = dl_url
-        self.card.setMinimumWidth(420)
+        self.card.setMinimumWidth(ui_scaled(420))
 
         self.icon_label = self.add_icon("alert.svg")
         self.info_labels = [
@@ -232,7 +233,7 @@ class NoUpdatePage(CardPage):
         super().__init__(styles, dark_theme, max_width=460)
         self._local_ver = local_ver
         self._latest_ver = latest_ver
-        self.card.setMinimumWidth(420)
+        self.card.setMinimumWidth(ui_scaled(420))
 
         self.icon_label = self.add_icon("check-circle.svg")
         self.info_labels = [

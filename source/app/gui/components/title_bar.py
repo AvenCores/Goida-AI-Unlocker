@@ -1,6 +1,8 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt
 
+from app.gui.scaling import ui_scaled
+
 WINDOW_TITLE = "Goida AI Unlocker"
 
 
@@ -15,8 +17,11 @@ class DraggableTitleBar(QWidget):
         self._main_window = main_window
         self._drag_pos = None
 
+        self.bar_height = ui_scaled(self.TITLE_BAR_HEIGHT)
+        button_size = ui_scaled(self.BUTTON_SIZE)
+
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(12, 0, 8, 0)
+        layout.setContentsMargins(ui_scaled(12), 0, ui_scaled(8), 0)
         layout.setSpacing(0)
 
         self.title_label = QLabel(WINDOW_TITLE)
@@ -25,13 +30,13 @@ class DraggableTitleBar(QWidget):
         layout.addStretch()
 
         self.minimize_button = QPushButton("\u2500")
-        self.minimize_button.setFixedSize(self.BUTTON_SIZE, self.BUTTON_SIZE)
+        self.minimize_button.setFixedSize(button_size, button_size)
         self.minimize_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.minimize_button.clicked.connect(self._main_window.showMinimized)
         layout.addWidget(self.minimize_button)
 
         self.close_button = QPushButton("\u00d7")
-        self.close_button.setFixedSize(self.BUTTON_SIZE, self.BUTTON_SIZE)
+        self.close_button.setFixedSize(button_size, button_size)
         self.close_button.setCursor(Qt.CursorShape.PointingHandCursor)
         # close() корректнее quit(): срабатывают closeEvent и завершение по последнему окну
         self.close_button.clicked.connect(self._main_window.close)

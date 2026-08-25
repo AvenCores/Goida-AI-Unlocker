@@ -2,6 +2,8 @@ from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, QTimer, QRectF
 from PySide6.QtGui import QPainter, QPen, QColor
 
+from app.gui.scaling import ui_scaled
+
 
 class BusySpinner(QWidget):
     """Компактный вращающийся индикатор занятости."""
@@ -10,8 +12,8 @@ class BusySpinner(QWidget):
         super().__init__(parent)
         self._color = QColor(color)
         self._angle = 0
-        self._diameter = diameter
-        self.setFixedSize(diameter, diameter)
+        self._diameter = ui_scaled(diameter)
+        self.setFixedSize(self._diameter, self._diameter)
 
         self._timer = QTimer(self)
         self._timer.setInterval(70)
@@ -36,10 +38,10 @@ class BusySpinner(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        pen = QPen(self._color, 4)
+        pen = QPen(self._color, ui_scaled(4))
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
-        margin = pen.width()
+        margin = ui_scaled(4)
         rect = QRectF(
             margin, margin,
             self._diameter - margin * 2,

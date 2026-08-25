@@ -1,8 +1,11 @@
+import re
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 
 from app.core.constants import APP_VERSION
 from app.gui.localization import normalize_language, tr, CURRENT_LANGUAGE
+from app.gui.scaling import get_ui_scale
 
 # Палитры тем: единый источник цветов для всех стилей
 _PALETTES: dict[bool, dict] = {
@@ -97,6 +100,28 @@ def _grad(start: str, end: str) -> str:
     return f"qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {start}, stop:1 {end})"
 
 
+_PX_VALUE_RE = re.compile(r"(-?\d+(?:\.\d+)?)px")
+
+
+def _apply_ui_scale(styles: dict[str, str]) -> dict[str, str]:
+    """Пропорционально увеличивает все px-размеры готовых CSS/HTML строк.
+
+    Регэксп проходит по каждому значению «Npx» (шрифты, отступы, радиусы,
+    min/max-width), поэтому масштабирование не рассинхронизируется при
+    добавлении новых правил. Ширины границ тоже растут — на больших
+    экранах это сохраняет визуальный баланс.
+    """
+    factor = get_ui_scale()
+    if factor == 1.0:
+        return styles
+
+    def repl(match: re.Match) -> str:
+        scaled = max(1, round(float(match.group(1)) * factor))
+        return f"{scaled}px"
+
+    return {key: _PX_VALUE_RE.sub(repl, value) for key, value in styles.items()}
+
+
 def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
     p = _PALETTES[dark]
     link_color = "#2d7dff" if dark else "#0078d4"
@@ -130,7 +155,7 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
             border: 1.5px solid {p['card_border']};
             border-radius: 8px;
             padding: 6px 12px;
-            font-size: 11pt;
+            font-size: 15px;
             font-weight: 500;
             min-width: 200px;
         }}
@@ -192,7 +217,7 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
         " border-radius: 8px; padding: 4px 8px; margin: 2px;"
     )
 
-    return {
+    result = {
         "main": main,
         "outline_reset": "QPushButton:focus { outline: none; }",
         "label": (
@@ -217,7 +242,7 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
         "theme": theme,
         # Компактная кнопка для маленьких фиксированных размеров (крестик поиска)
         "small_button": theme + "\nQPushButton { padding: 4px 6px; font-size: 13px; }",
-        "tool_button": theme + "\nQToolButton { font-size: 10pt; padding: 6px 12px; }",
+        "tool_button": theme + "\nQToolButton { font-size: 13px; padding: 6px 12px; }",
         "footer_button": footer_button,
         "icon_button": icon_button,
         "title_button": title_button,
@@ -255,6 +280,7 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
         ),
         "combo": combo,
     }
+    return _apply_ui_scale(result)
 
 
 def clear_stylesheet_cache():

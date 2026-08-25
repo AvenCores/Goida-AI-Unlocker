@@ -16,6 +16,7 @@ from app.core.dns_manager import (
 from app.utils.helpers import open_target
 from app.gui.localization import localize_update_date, tr
 from app.gui.icons import get_icon
+from app.gui.scaling import ui_scaled
 
 # Ширина колонки контента главной страницы (карточка статуса + кнопки)
 COLUMN_MAX_WIDTH = 420
@@ -68,14 +69,14 @@ class HomePage(QWidget):
 
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.setSpacing(24)
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(ui_scaled(24))
+        layout.setContentsMargins(*(ui_scaled(20),) * 4)
 
         # Колонка контента ограничена по ширине: rich-text QLabel'ы дают
         # завышенный sizeHint, из-за чего без ограничения колонка
         # растягивается на всю ширину окна
         column = QWidget()
-        column.setMaximumWidth(COLUMN_MAX_WIDTH)
+        column.setMaximumWidth(ui_scaled(COLUMN_MAX_WIDTH))
         column.setLayout(layout)
 
         # Заголовок приложения
@@ -120,8 +121,10 @@ class HomePage(QWidget):
 
         self.status_container = QWidget()
         status_vbox = QVBoxLayout(self.status_container)
-        status_vbox.setContentsMargins(16, 12, 16, 12)
-        status_vbox.setSpacing(8)
+        status_vbox.setContentsMargins(
+            ui_scaled(16), ui_scaled(12), ui_scaled(16), ui_scaled(12)
+        )
+        status_vbox.setSpacing(ui_scaled(8))
         status_vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
         status_vbox.addWidget(self.mechanism_combo)
         # Кнопка открытия сайта/репозитория — справа от комбобокса провайдера
@@ -208,7 +211,7 @@ class HomePage(QWidget):
         и тогда растягивается вся колонка главной страницы.
         """
         row = QHBoxLayout()
-        row.setSpacing(6)
+        row.setSpacing(ui_scaled(6))
         row.setContentsMargins(0, 0, 0, 0)
         row.addWidget(combo)
         row.addWidget(button)
@@ -223,8 +226,8 @@ class HomePage(QWidget):
 
         site_button = QPushButton()
         site_button.setIcon(get_icon("globe.svg", 18, dark_theme=self.dark_theme))
-        site_button.setIconSize(QSize(18, 18))
-        site_button.setFixedSize(32, 32)
+        site_button.setIconSize(QSize(ui_scaled(18), ui_scaled(18)))
+        site_button.setFixedSize(ui_scaled(32), ui_scaled(32))
         site_button.setCursor(Qt.CursorShape.PointingHandCursor)
         site_button.setToolTip(tr("provider_repo_tooltip"))
         site_button.clicked.connect(open_callback)
@@ -234,7 +237,8 @@ class HomePage(QWidget):
     def _make_action_button(self, icon_name: str, *, force_white: bool,
                             clicked: Callable) -> QPushButton:
         button = QPushButton()
-        button.setIconSize(QSize(18, 18))
+        icon_px = ui_scaled(18)
+        button.setIconSize(QSize(icon_px, icon_px))
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         button.clicked.connect(clicked)
         self._icon_buttons.append((button, icon_name, force_white, False))
@@ -242,7 +246,8 @@ class HomePage(QWidget):
 
     def _make_tool_button(self, icon_name: str, text: str, slot: Callable) -> QPushButton:
         button = QPushButton(text)
-        button.setIconSize(QSize(18, 18))
+        icon_px = ui_scaled(18)
+        button.setIconSize(QSize(icon_px, icon_px))
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         button.clicked.connect(slot)
         self._icon_buttons.append((button, icon_name, False, True))
@@ -276,7 +281,7 @@ class HomePage(QWidget):
             lbl.setMinimumHeight(0)
             if not lbl.isVisibleTo(self):
                 continue
-            width = COLUMN_MAX_WIDTH - 72
+            width = ui_scaled(COLUMN_MAX_WIDTH) - ui_scaled(72)
             need = lbl.heightForWidth(width) if lbl.wordWrap() else lbl.sizeHint().height()
             lbl.setMinimumHeight(need)
 

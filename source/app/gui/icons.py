@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QLabel
 from PySide6.QtCore import Qt
 
 from app.core.constants import resource_path
+from app.gui.scaling import ui_scaled
 
 ICON_CACHE: dict = {}
 RENDERER_CACHE: dict = {}
@@ -29,9 +30,13 @@ def get_icon(file_name: str, size_px: int | None = None, *,
              dark_theme: bool = False,
              force_dark: bool = False,
              force_white: bool = False) -> QIcon:
-    """Загружает SVG-иконку, окрашенную под тему (с кэшированием)."""
+    """Загружает SVG-иконку, окрашенную под тему (с кэшированием).
+
+    Базовый размер из вызова масштабируется под разрешение экрана,
+    поэтому все места вызова остаются с исходными «дизайнерскими» px.
+    """
     path = resource_path(os.path.join("assets", "icons", file_name))
-    render_size = size_px or 48
+    render_size = ui_scaled(size_px or 48)
     if force_white:
         tint = QColor("#ffffff")
     elif force_dark or not dark_theme:
@@ -60,8 +65,15 @@ def get_icon(file_name: str, size_px: int | None = None, *,
     return icon
 
 
+def get_icon_pixmap(file_name: str, size_px: int, **kwargs) -> QPixmap:
+    """Пиксмап иконки нужного (уже масштабированного) размера для QLabel."""
+    scaled = ui_scaled(size_px)
+    return get_icon(file_name, size_px, **kwargs).pixmap(scaled, scaled)
+
+
 def create_icon_label(file_name: str, size: int = 48, dark_theme: bool = False) -> QLabel:
     label = QLabel()
-    label.setPixmap(get_icon(file_name, size, dark_theme=dark_theme).pixmap(size, size))
+    pixmap = get_icon_pixmap(file_name, size, dark_theme=dark_theme)
+    label.setPixmap(pixmap)
     label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     return label

@@ -1,23 +1,35 @@
 import sys
+from math import floor
 from typing import Callable, Optional
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget,
     QPushButton
 )
-from PySide6.QtCore import Qt, QTimer, Slot, QThreadPool, QSize, QPropertyAnimation
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import Qt, QTimer, Slot, QThreadPool, QSize, QPropertyAnimation, Signal
+from PySide6.QtGui import QIcon, QGuiApplication
 
 from app.core.constants import resource_path
 from app.core.hosts_manager import HostsManager
 from app.core.dns_manager import DnsManager, DNS_PROVIDER_ID, DNS_PROVIDERS
 from app.core.settings import get_setting, set_setting
 from app.gui.localization import CURRENT_LANGUAGE, set_current_language, tr
+from app.gui.scaling import (
+    MAX_SCALE,
+    MIN_SCALE,
+    SCALE_STEP,
+    apply_ui_scale_setting,
+    get_ui_scale,
+    get_ui_scale_setting,
+    set_fit_limited_scale,
+    ui_scaled,
+)
 from app.gui.styles import clear_stylesheet_cache, get_stylesheet, is_system_dark_theme
 from app.gui.icons import get_icon
 from app.gui.workers import HostsWorker, VersionWorker, AppUpdateWorker
 from app.gui.components.title_bar import DraggableTitleBar, WINDOW_TITLE
 from app.gui.components.page_navigator import PageNavigator
+from app.gui.components.scale_popup import ScalePopup, get_scale_options
 from app.gui.pages.home_page import HomePage
 from app.gui.pages.about_page import AboutPage
 from app.gui.pages.donate_page import DonatePage
@@ -31,13 +43,20 @@ from app.gui.pages.message_page import (
 from app.gui.pages.hosts_editor_page import HostsBackupViewerPage, HostsEditorPage
 
 # Геометрия окна: фиксированная ширина, высота подстраивается под главную
-# страницу (высота меняется только при смене механизма Hosts/DNS)
+# страницу (высота меняется только при смене механизма Hosts/DNS).
+# Базовые значения масштабируются под разрешение экрана через ui_scaled()
 WINDOW_WIDTH = 640
 MIN_WINDOW_HEIGHT = 560
 MIN_WINDOW_WIDTH = 480
 
 
 class MainWindow(QMainWindow):
+    """Главное окно приложения."""
+
+    # Запрошено применение нового масштаба интерфейса: окно пересоздаётся
+    # владельцем (main.py), т.к. все размеры виджетов фиксируются при сборке
+    restart_requested = Signal()
+
     def __init__(self):
         super().__init__()
         self.is_animating = False
@@ -48,7 +67,18 @@ class MainWindow(QMainWindow):
         icon_file = "assets/icon.icns" if sys.platform == "darwin" else "assets/icon.ico"
         self.setWindowIcon(QIcon(resource_path(icon_file)))
         self.setWindowTitle(WINDOW_TITLE)
-        self.setMinimumSize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
+        # Размеры окна фиксируются на старте: фактор масштабирования за сеанс не меняется
+        self.window_width = ui_scaled(WINDOW_WIDTH)
+        self.min_window_height = ui_scaled(MIN_WINDOW_HEIGHT)
+        # Минимум тоже не должен превышать экран: иначе окно невозможно
+        # уменьшить до доступной высоты и футер с переключателем масштаба
+        # оказывается недостижим
+        available_h = self._available_screen_height()
+        min_height = self.min_window_height if available_h <= 0 else min(
+            self.min_window_height, available_h
+        )
+        self.setMinimumSize(ui_scaled(MIN_WINDOW_WIDTH), min_height)
+        self._fit_rebuild_started = False
 
         # Тема: сохранённая или системная
         saved_theme = get_setting("theme")
@@ -84,12 +114,54 @@ class MainWindow(QMainWindow):
         self.home_page: Optional[HomePage] = None
         self.theme_button: Optional[QPushButton] = None
         self.language_button: Optional[QPushButton] = None
+        self.scale_button: Optional[QPushButton] = None
 
         self._setup_ui()
         self._apply_theme_styles()
+        self._apply_texts()
 
-        self.resize(WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
+        self.resize(self.window_width, self._height_capped_to_screen(self.min_window_height))
         self.check_version_status()
+
+    # ------------------------------------------------------------------
+    # Помещение окна на экран
+    # ------------------------------------------------------------------
+
+    def _available_screen_height(self) -> int:
+        screen = self.screen() or QGuiApplication.primaryScreen()
+        if screen is None:
+            return 0
+        return screen.availableGeometry().height()
+
+    def _height_capped_to_screen(self, height: int) -> int:
+        available = self._available_screen_height()
+        if available > 0:
+            return min(height, available)
+        return height
+
+    def _reduce_scale_to_fit(self, content_h: int, available_h: int, title_h: int):
+        """Уменьшает фактор, если окно в текущем масштабе выше экрана.
+
+        Дилемма «слишком большого увеличения»: при переполнении экрана
+        футер с переключателем масштаба уходит за границу, и вернуться
+        к меньшему размеру невозможно. Потолок записывается в scaling
+        и ограничивает любой источник фактора до конца сеанса; окно
+        пересобирается через restart_requested.
+        """
+        if self._fit_rebuild_started:
+            return
+        current = get_ui_scale()
+        if current <= MIN_SCALE:
+            return
+        fitting = (available_h - title_h) / max(1, content_h) * current
+        fit = floor(fitting / SCALE_STEP) * SCALE_STEP
+        fit = max(MIN_SCALE, min(MAX_SCALE, min(current, fit)))
+        if current - fit < SCALE_STEP / 2:
+            return
+        self._fit_rebuild_started = True
+        set_fit_limited_scale(fit)
+        clear_stylesheet_cache()
+        self.restart_requested.emit()
 
     # ------------------------------------------------------------------
     # Построение интерфейса
@@ -106,7 +178,7 @@ class MainWindow(QMainWindow):
 
         title_bar = DraggableTitleBar(self)
         title_bar.setObjectName("titleBar")
-        title_bar.setFixedHeight(DraggableTitleBar.TITLE_BAR_HEIGHT)
+        title_bar.setFixedHeight(title_bar.bar_height)
         self.title_bar = title_bar
         main_layout.addWidget(title_bar)
 
@@ -143,7 +215,8 @@ class MainWindow(QMainWindow):
 
     def _make_footer_button(self, icon_name: str, clicked: Callable) -> QPushButton:
         button = QPushButton()
-        button.setIconSize(QSize(20, 20))
+        icon_px = ui_scaled(20)
+        button.setIconSize(QSize(icon_px, icon_px))
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         button.clicked.connect(clicked)
         self._footer_buttons.append((button, icon_name))
@@ -152,12 +225,13 @@ class MainWindow(QMainWindow):
     def _wrap_with_footer(self, page: QWidget) -> QWidget:
         """Главная страница + футер с кнопками языка/темы."""
         footer = QHBoxLayout()
-        footer.setContentsMargins(20, 0, 20, 20)
+        footer.setContentsMargins(ui_scaled(20), 0, ui_scaled(20), ui_scaled(20))
         footer.setSpacing(0)
 
         self._footer_buttons: list[tuple[QPushButton, str]] = []
 
         self.language_button = self._make_footer_button("language.svg", self.switch_language)
+        self.scale_button = self._make_footer_button("settings.svg", self.switch_ui_scale)
         self.theme_button = self._make_footer_button(
             "sun.svg" if self.dark_theme else "moon.svg", self.switch_theme
         )
@@ -167,6 +241,11 @@ class MainWindow(QMainWindow):
             alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom,
         )
         footer.addStretch()
+        footer.addWidget(
+            self.scale_button,
+            alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom,
+        )
+        footer.addSpacing(ui_scaled(8))
         footer.addWidget(
             self.theme_button,
             alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom,
@@ -215,9 +294,19 @@ class MainWindow(QMainWindow):
                 inner.invalidate()
                 inner.activate()
         content_h = wrapper.minimumSizeHint().height()
-        target_h = max(MIN_WINDOW_HEIGHT, content_h + DraggableTitleBar.TITLE_BAR_HEIGHT)
+        title_h = self.title_bar.bar_height
+        target_h = max(self.min_window_height, content_h + title_h)
+
+        # Окно никогда не должно быть выше экрана: иначе футер с кнопкой
+        # масштаба становится недостижим. Сначала ужимаем саму высоту,
+        # затем при необходимости уменьшаем фактор и пересобираем окно
+        available_h = self._available_screen_height()
+        if available_h > 0 and target_h > available_h:
+            target_h = available_h
+            self._reduce_scale_to_fit(content_h, available_h, title_h)
+
         if abs(self.height() - target_h) > 4:
-            self.resize(WINDOW_WIDTH, target_h)
+            self.resize(self.window_width, target_h)
 
     # ------------------------------------------------------------------
     # Навигация по страницам
@@ -582,8 +671,8 @@ class MainWindow(QMainWindow):
         popup.language_selected.connect(self.change_language_to)
 
         pos = self.language_button.mapToGlobal(self.language_button.rect().topLeft())
-        pos.setX(pos.x() - 14)
-        pos.setY(pos.y() - popup.height() + 6)
+        pos.setX(pos.x() - ui_scaled(14))
+        pos.setY(pos.y() - popup.height() + ui_scaled(6))
         popup.move(pos)
         popup.show()
 
@@ -598,6 +687,24 @@ class MainWindow(QMainWindow):
             self._apply_theme_styles()
             self._apply_texts()
         self._animate_transition(update)
+
+    def switch_ui_scale(self):
+        popup = ScalePopup(get_scale_options(), get_ui_scale_setting(), self.dark_theme, self)
+        popup.scale_selected.connect(self._change_ui_scale)
+
+        pos = self.scale_button.mapToGlobal(self.scale_button.rect().topLeft())
+        pos.setX(pos.x() + self.scale_button.width() - popup.width() + ui_scaled(14))
+        pos.setY(pos.y() - popup.height() + ui_scaled(6))
+        popup.move(pos)
+        popup.show()
+
+    def _change_ui_scale(self, value: str):
+        """Сохраняет выбор и просит владельца пересобрать окно с новым масштабом."""
+        if value == get_ui_scale_setting():
+            return
+        apply_ui_scale_setting(value)
+        clear_stylesheet_cache()
+        self.restart_requested.emit()
 
     def _apply_theme_styles(self):
         """Перетемизирует окно, главную страницу и все открытые страницы."""
@@ -636,6 +743,10 @@ class MainWindow(QMainWindow):
         self.language_button.setToolTip(tooltip_lang)
         self.language_button.setStatusTip(tooltip_lang)
         self.language_button.setAccessibleName(tooltip_lang)
+        tooltip_scale = tr("scale_button").strip()
+        self.scale_button.setToolTip(tooltip_scale)
+        self.scale_button.setStatusTip(tooltip_scale)
+        self.scale_button.setAccessibleName(tooltip_scale)
 
         self.home_page.apply_texts()
 

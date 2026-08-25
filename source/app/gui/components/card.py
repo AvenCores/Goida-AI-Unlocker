@@ -1,7 +1,8 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy
 from PySide6.QtCore import Qt
 
-from app.gui.icons import get_icon
+from app.gui.icons import get_icon_pixmap
+from app.gui.scaling import ui_scaled
 
 
 class CardPage(QWidget):
@@ -21,18 +22,20 @@ class CardPage(QWidget):
 
         vbox = QVBoxLayout(self)
         vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        vbox.setSpacing(24)
-        vbox.setContentsMargins(20, 20, 20, 20)
+        vbox.setSpacing(ui_scaled(24))
+        vbox.setContentsMargins(*(ui_scaled(20),) * 4)
 
         self.card = QWidget()
         self.card.setObjectName("msg_card")
-        self.card.setMinimumWidth(240)
-        self.card.setMaximumWidth(max_width)
+        self.card.setMinimumWidth(ui_scaled(240))
+        self.card.setMaximumWidth(ui_scaled(max_width))
         self.card.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.card_layout = QVBoxLayout(self.card)
         self.card_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.card_layout.setSpacing(16)
-        self.card_layout.setContentsMargins(32, 24, 32, 24)
+        self.card_layout.setSpacing(ui_scaled(16))
+        self.card_layout.setContentsMargins(
+            ui_scaled(32), ui_scaled(24), ui_scaled(32), ui_scaled(24)
+        )
 
         vbox.addWidget(self.card)
 
@@ -40,7 +43,7 @@ class CardPage(QWidget):
 
     def add_icon(self, file_name: str, size: int = 48) -> QLabel:
         label = QLabel()
-        label.setPixmap(get_icon(file_name, size, dark_theme=self.dark_theme).pixmap(size, size))
+        label.setPixmap(get_icon_pixmap(file_name, size, dark_theme=self.dark_theme))
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         # Прозрачный фон: иначе глобальное правило QWidget {} рисует
         # под иконкой тёмную плашку с закруглёнными углами
@@ -55,7 +58,7 @@ class CardPage(QWidget):
             if entry[0] is label:
                 self._icon_labels.remove(entry)
                 break
-        label.setPixmap(get_icon(file_name, size, dark_theme=self.dark_theme).pixmap(size, size))
+        label.setPixmap(get_icon_pixmap(file_name, size, dark_theme=self.dark_theme))
         self._icon_labels.append((label, file_name, size))
 
     def add_message(
@@ -88,9 +91,7 @@ class CardPage(QWidget):
         self.dark_theme = dark_theme
         self.card.setStyleSheet(styles["message_card"])
         for label, file_name, size in self._icon_labels:
-            label.setPixmap(
-                get_icon(file_name, size, dark_theme=dark_theme).pixmap(size, size)
-            )
+            label.setPixmap(get_icon_pixmap(file_name, size, dark_theme=dark_theme))
         for label, _, block in self._message_labels:
             key = "message_block_label" if block else "message_label"
             label.setStyleSheet(styles[key])
