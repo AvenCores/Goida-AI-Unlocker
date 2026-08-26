@@ -242,7 +242,8 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
         "theme": theme,
         # Компактная кнопка для маленьких фиксированных размеров (крестик поиска)
         "small_button": theme + "\nQPushButton { padding: 4px 6px; font-size: 13px; }",
-        "tool_button": theme + "\nQToolButton { font-size: 13px; padding: 6px 12px; }",
+        "tool_button": theme
+        + "\nQToolButton, QPushButton { font-size: 13px; padding: 6px 12px; }",
         "footer_button": footer_button,
         "icon_button": icon_button,
         "title_button": title_button,

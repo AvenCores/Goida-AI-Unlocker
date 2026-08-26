@@ -39,6 +39,8 @@ class DonatePage(QWidget):
         cl.addWidget(self.title_label)
 
         sber_icon_lbl = QLabel()
+        # Прозрачный фон: иначе QLabel наследует рамку карточки
+        sber_icon_lbl.setStyleSheet("background: transparent; border: none;")
         sber_icon_lbl.setPixmap(get_icon_pixmap("sber.svg", 36, dark_theme=dark_theme))
         sber_icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cl.addWidget(sber_icon_lbl)
