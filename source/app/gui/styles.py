@@ -264,7 +264,10 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
             " background: transparent;"
         ),
         "donate_card_number": (
-            f"font-size: 16px; color: {p['text']}; background: transparent;"
+            f"QLabel {{ font-size: 16px; color: {p['text']};"
+            f" background: {p['field_bg']}; border: 1px solid {p['card_border']};"
+            " border-radius: 8px; padding: 10px 14px;"
+            " font-family: 'Consolas', 'Courier New', monospace; }"
         ),
         "about_title_style": "font-size:25px; margin-bottom:4px;",
         "about_title_html": (

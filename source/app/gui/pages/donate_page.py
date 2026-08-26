@@ -10,7 +10,11 @@ _FADE_MS = 150
 
 
 class DonatePage(QWidget):
-    """Страница поддержки автора с копированием номера карты."""
+    """Страница поддержки автора: карточка с номером карты и копированием.
+
+    Номер выделен полем на подложке (выделяется мышью), кнопки копирования
+    и возврата — внутри карточки, как на странице «О программе».
+    """
 
     def __init__(self, styles: dict, dark_theme: bool, return_callback):
         super().__init__()
@@ -20,47 +24,53 @@ class DonatePage(QWidget):
 
         vbox = QVBoxLayout(self)
         vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        vbox.setSpacing(ui_scaled(24))
         vbox.setContentsMargins(*(ui_scaled(20),) * 4)
 
         self.card = QWidget()
         self.card.setObjectName("donate_card")
         self.card.setMinimumWidth(ui_scaled(240))
-        self.card.setMaximumWidth(ui_scaled(380))
-        cl = QVBoxLayout(self.card)
-        cl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        cl.setSpacing(ui_scaled(16))
-        cl.setContentsMargins(
+        self.card.setMaximumWidth(ui_scaled(440))
+        card_layout = QVBoxLayout(self.card)
+        card_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        card_layout.setSpacing(ui_scaled(16))
+        card_layout.setContentsMargins(
             ui_scaled(32), ui_scaled(24), ui_scaled(32), ui_scaled(24)
         )
 
         self.title_label = QLabel(tr("donate_title"))
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        cl.addWidget(self.title_label)
+        card_layout.addWidget(self.title_label)
 
-        sber_icon_lbl = QLabel()
         # Прозрачный фон: иначе QLabel наследует рамку карточки
-        sber_icon_lbl.setStyleSheet("background: transparent; border: none;")
-        sber_icon_lbl.setPixmap(get_icon_pixmap("sber.svg", 36, dark_theme=dark_theme))
-        sber_icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        cl.addWidget(sber_icon_lbl)
-        self.sber_icon_label = sber_icon_lbl
+        self.sber_icon_label = QLabel()
+        self.sber_icon_label.setStyleSheet("background: transparent; border: none;")
+        self.sber_icon_label.setPixmap(
+            get_icon_pixmap("sber.svg", 48, dark_theme=dark_theme)
+        )
+        self.sber_icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        card_layout.addWidget(self.sber_icon_label)
 
         self.card_number_label = QLabel(f"\u3164SBER: <b>{SBER_CARD_NUMBER}</b>\u3164")
         self.card_number_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        cl.addWidget(self.card_number_label)
+        self.card_number_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        card_layout.addWidget(self.card_number_label)
 
         self.copy_button = QPushButton(tr("copy_card"))
         self.copy_button.setProperty("style_role", "button1")
+        self.copy_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.copy_button.clicked.connect(self._copy_card_number)
-        cl.addWidget(self.copy_button)
+        card_layout.addWidget(self.copy_button)
 
-        vbox.addWidget(self.card)
+        card_layout.addSpacing(ui_scaled(4))
 
         self.back_button = QPushButton(f"  {tr('back_to_menu')}  ")
         self.back_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.back_button.clicked.connect(return_callback)
-        vbox.addWidget(self.back_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        card_layout.addWidget(self.back_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        vbox.addWidget(self.card)
 
         self.apply_theme(styles, dark_theme)
 
@@ -124,5 +134,5 @@ class DonatePage(QWidget):
         self.copy_button.setStyleSheet(styles["button1"])
         self.back_button.setStyleSheet(styles["theme"])
         self.sber_icon_label.setPixmap(
-            get_icon_pixmap("sber.svg", 36, dark_theme=dark_theme)
+            get_icon_pixmap("sber.svg", 48, dark_theme=dark_theme)
         )
