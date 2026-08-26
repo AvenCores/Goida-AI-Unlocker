@@ -298,6 +298,21 @@ class DnsManager:
         active = self._get_active_interfaces()
         if not active:
             raise RuntimeError("No active network interfaces found")
+        # Без прав администратора — один UAC-запрос на все интерфейсы
+        if IS_WINDOWS and not is_windows_admin():
+            commands = []
+            for iface in active:
+                original = snapshot.get(iface)
+                if original and original.get("source") == "static" and original.get("servers"):
+                    commands.append(self._build_set_dns_ps(iface, original["servers"]))
+                else:
+                    commands.append(
+                        f"Set-DnsClientServerAddress -InterfaceAlias '{iface}' "
+                        "-ResetServerAddresses"
+                    )
+            if commands:
+                return _run_elevated_ps("; ".join(commands), ", ".join(active))
+            return True
         ok = True
         for iface in active:
             original = snapshot.get(iface)
@@ -429,10 +444,24 @@ class DnsManager:
         active = self._get_active_interfaces()
         if not active:
             raise RuntimeError("No active network interfaces found")
+        # Без прав администратора применяем все интерфейсы одним батчем:
+        # иначе каждый адаптер поднимает свой UAC-запрос (по одному на интерфейс)
+        if IS_WINDOWS and not is_windows_admin():
+            servers = list(ipv4_servers) + list(ipv6_servers)
+            script = "; ".join(self._build_set_dns_ps(iface, servers) for iface in active)
+            return _run_elevated_ps(script, ", ".join(active))
         ok = True
         for iface in active:
             ok = self._set_interface_dns(iface, list(ipv4_servers), list(ipv6_servers)) and ok
         return ok
+
+    @staticmethod
+    def _build_set_dns_ps(iface: str, servers: list) -> str:
+        quoted = ", ".join(f"'{s}'" for s in servers)
+        return (
+            f"Set-DnsClientServerAddress -InterfaceAlias '{iface}' "
+            f"-ServerAddresses ({quoted})"
+        )
 
     def _set_interface_dns(self, iface: str, ipv4: list, ipv6: list) -> bool:
         if IS_WINDOWS:
@@ -442,12 +471,7 @@ class DnsManager:
         return self._set_interface_dns_linux(iface, ipv4 + ipv6)
 
     def _set_interface_dns_windows(self, iface: str, ipv4: list, ipv6: list) -> bool:
-        servers = ipv4 + ipv6
-        quoted = ", ".join(f"'{s}'" for s in servers)
-        ps_script = (
-            f"Set-DnsClientServerAddress -InterfaceAlias '{iface}' "
-            f"-ServerAddresses ({quoted})"
-        )
+        ps_script = self._build_set_dns_ps(iface, list(ipv4) + list(ipv6))
         code, output = _run_command(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script]
         )
