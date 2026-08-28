@@ -37,7 +37,11 @@
 
 # 🎦 Видео гайд по установке и использованию 
 
-<img alt="maxresdefault" src="https://i.ibb.co/FbYYJzn9/Rounded-Rectangle.png" />
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=ВАШ_ID_ВИДЕО">
+    <img src="https://i.ibb.co/FbYYJzn9/Rounded-Rectangle.png" alt="Видео гайд по установке" width="600" />
+  </a>
+</p>
 
 <div align="center">
 
