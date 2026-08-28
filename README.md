@@ -37,17 +37,17 @@
 
 # 🎦 Видео гайд по установке и использованию 
 
-<img alt="maxresdefault" src="https://github.com/user-attachments/assets/dab3d1db-8aed-42ee-a44f-76c1234788be" />
+<img alt="maxresdefault" src="https://i.ibb.co/39M0x7fm/1.png" />
 
 <div align="center">
 
-[**Смотреть на YouTube**](https://youtu.be/4ByAuSJfzv8)  
+[**Смотреть на YouTube**](https://youtu.be/UWWJa56T3uI)  
 
-[**Смотреть на Dzen**](https://dzen.ru/video/watch/687bd6192a6ef63c8d76ed0b)  
+[**Смотреть на Dzen**](https://dzen.ru/video/watch/6a8d625a755f962adf216e8d)  
 
-[**Смотреть на VK Video**](https://vk.com/video-200297343_456239487)
+[**Смотреть на VK Video**](https://vkvideo.ru/video-234234162_456239113)
 
-[**Смотреть в Telegram**](https://t.me/avencoreschat/83499)
+[**Смотреть в Telegram**](https://t.me/avencoreschat/573498)
 
 </div>
 
