@@ -38,7 +38,7 @@
 # 🎦 Видео гайд по установке и использованию 
 
 <p align="center">
-    <img src="https://i.ibb.co/FbYYJzn9/Rounded-Rectangle.png" alt="Видео гайд по установке" width="600" />
+    <img src="https://i.ibb.co/FbYYJzn9/Rounded-Rectangle.png" alt="Видео гайд по установке" width="1000" />
 </p>
 
 <div align="center">
