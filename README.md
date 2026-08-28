@@ -37,7 +37,7 @@
 
 # 🎦 Видео гайд по установке и использованию 
 
-<img alt="maxresdefault" src="https://i.ibb.co/39M0x7fm/1.png" />
+<img alt="maxresdefault" src="https://i.ibb.co/FbYYJzn9/Rounded-Rectangle.png" />
 
 <div align="center">
 
