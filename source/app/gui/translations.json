@@ -122,7 +122,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "Доступна новая версия: v{version}",
+    "update_badge_tooltip": "Открыть страницу обновления"
   },
   "en": {
     "language_name": "English",
@@ -247,7 +249,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "New version available: v{version}",
+    "update_badge_tooltip": "Open update page"
   },
   "de": {
     "language_name": "Deutsch",
@@ -372,7 +376,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "Neue Version verfügbar: v{version}",
+    "update_badge_tooltip": "Update-Seite öffnen"
   },
   "uk": {
     "language_name": "Українська",
@@ -497,7 +503,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "Доступна нова версія: v{version}",
+    "update_badge_tooltip": "Відкрити сторінку оновлення"
   },
   "be": {
     "language_name": "Беларуская",
@@ -622,7 +630,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "Даступная новая версія: v{version}",
+    "update_badge_tooltip": "Адкрыць старонку абнаўлення"
   },
   "kk": {
     "language_name": "Қазақша",
@@ -747,7 +757,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "Жаңа нұсқа қолжетімді: v{version}",
+    "update_badge_tooltip": "Жаңарту бетін ашу"
   },
   "fr": {
     "language_name": "Français",
@@ -872,7 +884,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "Nouvelle version disponible : v{version}",
+    "update_badge_tooltip": "Ouvrir la page de mise à jour"
   },
   "pl": {
     "language_name": "Polski",
@@ -997,7 +1011,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "Dostępna nowa wersja: v{version}",
+    "update_badge_tooltip": "Otwórz stronę aktualizacji"
   },
   "es": {
     "language_name": "Español",
@@ -1122,7 +1138,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "Nueva versión disponible: v{version}",
+    "update_badge_tooltip": "Abrir página de actualización"
   },
   "pt": {
     "language_name": "Português",
@@ -1247,7 +1265,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "Nova versão disponível: v{version}",
+    "update_badge_tooltip": "Abrir página de atualização"
   },
   "it": {
     "language_name": "Italiano",
@@ -1372,7 +1392,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "Nuova versione disponibile: v{version}",
+    "update_badge_tooltip": "Apri la pagina di aggiornamento"
   },
   "tr": {
     "language_name": "Türkçe",
@@ -1497,7 +1519,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "Yeni sürüm kullanılabilir: v{version}",
+    "update_badge_tooltip": "Güncelleme sayfasını aç"
   },
   "zh": {
     "language_name": "中文",
@@ -1622,7 +1646,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "新版本可用：v{version}",
+    "update_badge_tooltip": "打开更新页面"
   },
   "ja": {
     "language_name": "日本語",
@@ -1747,7 +1773,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "新バージョンが利用できます: v{version}",
+    "update_badge_tooltip": "更新ページを開く"
   },
   "ko": {
     "language_name": "한국어",
@@ -1872,7 +1900,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "새 버전 사용 가능: v{version}",
+    "update_badge_tooltip": "업데이트 페이지 열기"
   },
   "cs": {
     "language_name": "Čeština",
@@ -1997,7 +2027,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "Je dostupná nová verze: v{version}",
+    "update_badge_tooltip": "Otevřít stránku aktualizace"
   },
   "nl": {
     "language_name": "Nederlands",
@@ -2122,7 +2154,9 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "Nieuwe versie beschikbaar: v{version}",
+    "update_badge_tooltip": "Updatepagina openen"
   },
   "sv": {
     "language_name": "Svenska",
@@ -2247,6 +2281,8 @@
     "mechanism_hosts": "Hosts",
     "provider_xbox_dns": "Xbox DNS",
     "provider_geohide_dns": "GeoHide DNS",
-    "provider_malw_dns": "dns.malw.link"
+    "provider_malw_dns": "dns.malw.link",
+    "update_badge_text": "Ny version tillgänglig: v{version}",
+    "update_badge_tooltip": "Öppna uppdateringssidan"
   }
 }

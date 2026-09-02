@@ -143,6 +143,12 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
         QPushButton:hover {{ background: {_grad(_DANGER_HOVER_START, _DANGER_HOVER_END)}; }}
         QPushButton:pressed {{ background: {_grad(_DANGER_PRESSED_START, _DANGER_PRESSED_END)}; padding: 14px 22px 10px 22px; }}
     """
+    # Компактная «пилюля» о доступном обновлении на главной странице
+    update_badge = f"""
+        QPushButton {{ background: {_grad(_DANGER_START, _DANGER_END)}; color: white; border: none; border-radius: 14px; padding: 6px 14px; font-size: 13px; font-weight: 600; }}
+        QPushButton:hover {{ background: {_grad(_DANGER_HOVER_START, _DANGER_HOVER_END)}; }}
+        QPushButton:pressed {{ background: {_grad(_DANGER_PRESSED_START, _DANGER_PRESSED_END)}; }}
+    """
     theme = f"""
         QPushButton, QToolButton {{ background: {p['btn_bg']}; color: {p['btn_text']}; border: 1.5px solid {p['btn_border']}; border-radius: 8px; padding: 10px 16px; font-size: 15px; font-weight: 500; }}
         QPushButton:hover, QToolButton:hover {{ background: {p['btn_hover']}; }}
@@ -239,6 +245,7 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
         ),
         "button1": button1,
         "button2": button2,
+        "update_badge": update_badge,
         "theme": theme,
         # Компактная кнопка для маленьких фиксированных размеров (крестик поиска)
         "small_button": theme + "\nQPushButton { padding: 4px 6px; font-size: 13px; }",

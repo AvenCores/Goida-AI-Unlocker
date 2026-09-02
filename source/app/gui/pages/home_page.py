@@ -35,6 +35,8 @@ class HomePage(QWidget):
     dns_provider_changed = Signal(str)    # id DNS-провайдера
     open_hosts_requested = Signal()       # открыть редактор hosts
     view_backups_requested = Signal()     # открыть просмотрщик бэкапов
+    # Клик по бейджу «доступна новая версия»
+    update_badge_clicked = Signal()
     # Текст статуса изменился — высоте окна может потребоваться пересчёт
     home_content_changed = Signal()
 
@@ -53,6 +55,8 @@ class HomePage(QWidget):
 
         # Последний полученный асинхронно статус (вместо свойств на QLabel)
         self._status: Optional[HostsStatusResult] = None
+        # Версия доступного обновления (бейдж на главной), None — обновление не найдено
+        self._update_badge_version: Optional[str] = None
         # (кнопка, имя_иконки, force_white, force_dark) для перетемизации иконок
         self._icon_buttons: list[tuple[QPushButton, str, bool, bool]] = []
 
@@ -175,6 +179,17 @@ class HomePage(QWidget):
         self.about_button = self._make_tool_button(
             "info.svg", tr("about_button"), self.about_requested.emit
         )
+        # Компактный бейдж «доступна новая версия». Не добавляется в layout:
+        # MainWindow переносит его в контейнер окна и позиционирует
+        # наложением по центру внизу, чтобы он не влиял на размеры окна
+        self.update_badge = QPushButton(self)
+        badge_px = ui_scaled(14)
+        self.update_badge.setIconSize(QSize(badge_px, badge_px))
+        self.update_badge.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.update_badge.clicked.connect(self.update_badge_clicked.emit)
+        self.update_badge.setVisible(False)
+        self._icon_buttons.append((self.update_badge, "alert.svg", False, True))
+
         layout.addWidget(self.update_button)
         layout.addWidget(self.about_button)
 
@@ -298,6 +313,19 @@ class HomePage(QWidget):
         self.sync_status_label_heights()
         self.home_content_changed.emit()
 
+    def set_update_badge(self, version: str):
+        """Заполняет бейдж «доступна новая версия».
+
+        Видимость и fade-анимация — ответственность MainWindow
+        (бейдж виден только на главной странице).
+        """
+        self._update_badge_version = version
+        self.update_badge.setText(tr("update_badge_text", version=version))
+        self.update_badge.setToolTip(tr("update_badge_tooltip"))
+
+    def clear_update_badge(self):
+        self._update_badge_version = None
+
     def apply_hosts_version_status(self, status: HostsStatusResult):
         self._status = status
 
@@ -374,6 +402,11 @@ class HomePage(QWidget):
         self.donate_button.setText(tr("donate_button"))
         self.about_button.setText(tr("about_button"))
         self.update_button.setText(tr("update_button"))
+        if self._update_badge_version is not None:
+            self.update_badge.setText(
+                tr("update_badge_text", version=self._update_badge_version)
+            )
+            self.update_badge.setToolTip(tr("update_badge_tooltip"))
         self.open_hosts_button.setText(tr("open_hosts_button"))
         self.backup_hosts_button.setText(tr("backup_hosts_button"))
 
@@ -395,6 +428,8 @@ class HomePage(QWidget):
                 button.setStyleSheet(self.styles["button1"])
             elif button is self.uninstall_button:
                 button.setStyleSheet(self.styles["button2"])
+            elif button is self.update_badge:
+                button.setStyleSheet(self.styles["update_badge"])
             else:
                 button.setStyleSheet(self.styles["theme"])
             button.setIcon(get_icon(

@@ -29,7 +29,12 @@ class PageNavigator:
         anim.setEndValue(end)
         return anim
 
-    def animate_switch(self, new_widget: QWidget, on_finish: Optional[Callable] = None):
+    def animate_switch(
+        self, new_widget: QWidget, on_finish: Optional[Callable] = None,
+        on_start: Optional[Callable] = None,
+    ):
+        if on_start:
+            on_start()
         current = self._stacked.currentWidget()
         if not current or current == new_widget:
             self._stacked.setCurrentWidget(new_widget)

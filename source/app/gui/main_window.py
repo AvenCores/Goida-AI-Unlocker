@@ -4,14 +4,18 @@ from typing import Callable, Optional
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget,
-    QPushButton
+    QPushButton, QGraphicsOpacityEffect
 )
-from PySide6.QtCore import Qt, QTimer, Slot, QThreadPool, QSize, QPropertyAnimation, Signal
+from PySide6.QtCore import (
+    Qt, QTimer, Slot, QThreadPool, QSize, QPropertyAnimation, Signal, QEvent,
+    QEasingCurve,
+)
 from PySide6.QtGui import QIcon, QGuiApplication
 
 from app.core.constants import resource_path
 from app.core.hosts_manager import HostsManager
 from app.core.dns_manager import DnsManager, DNS_PROVIDER_ID, DNS_PROVIDERS
+from app.core.logger import logger
 from app.core.settings import get_setting, set_setting
 from app.gui.localization import CURRENT_LANGUAGE, set_current_language, tr
 from app.gui.scaling import (
@@ -111,6 +115,14 @@ class MainWindow(QMainWindow):
 
         self._check_updates_running = False
         self._version_status_check_running = False
+        # Фоновая проверка обновлений при запуске: результат помечает
+        # бейдж на главной, но не переключает страницы
+        self._bg_update_check_running = False
+        # (local, remote, url) найденного обновления или None
+        self._pending_update: Optional[tuple[str, str, str]] = None
+        # Состояние fade-анимации бейджа (видимость управляется opacity)
+        self._badge_fade: Optional[QPropertyAnimation] = None
+        self._badge_opacity_target = 0.0
         self._processing_widget: Optional[QWidget] = None
         # Последнее содержимое, отправленное в hosts через «Сохранить»
         # (нужно для кнопки «Повторить попытку»)
@@ -126,6 +138,7 @@ class MainWindow(QMainWindow):
 
         self.resize(self.window_width, self._height_capped_to_screen(self.min_window_height))
         self.check_version_status()
+        self.check_for_updates_silently()
 
     # ------------------------------------------------------------------
     # Помещение окна на экран
@@ -200,6 +213,16 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.stacked_widget)
         self.setCentralWidget(main_container)
 
+        # Бейдж обновления — наложение поверх контейнера окна (вне layout):
+        # MainWindow позиционирует его по центру внизу при каждом ресайзе,
+        # поэтому его появление не меняет размеры окна
+        self.update_badge = home_page.update_badge
+        self.update_badge.setParent(main_container)
+        self.update_badge.installEventFilter(self)
+        # Бейдж — оверлей поверх контейнера, а не часть страниц: показываем
+        # его только когда открыта главная (на вложенных страницах — прячем)
+        self.stacked_widget.currentChanged.connect(self._sync_update_badge_visibility)
+
         # Страницы обновляют себя сами (apply_theme/apply_texts),
         # поэтому ручной обход findChildren больше не нужен
         home_page.install_requested.connect(self.start_installation)
@@ -216,6 +239,7 @@ class MainWindow(QMainWindow):
         )
         home_page.open_hosts_requested.connect(self.show_hosts_editor)
         home_page.view_backups_requested.connect(self.show_hosts_backup_viewer)
+        home_page.update_badge_clicked.connect(self.show_pending_update)
 
     def _make_footer_button(self, icon_name: str, clicked: Callable) -> QPushButton:
         button = QPushButton()
@@ -301,13 +325,106 @@ class MainWindow(QMainWindow):
         if abs(self.height() - target_h) > 4:
             self.resize(self.window_width, target_h)
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._reposition_update_badge()
+
+    def eventFilter(self, obj, event):
+        # Позиционируем бейдж при любом его показе (наложение вне layout)
+        if obj is getattr(self, "update_badge", None) and event.type() == QEvent.Type.Show:
+            QTimer.singleShot(0, self._reposition_update_badge)
+        return super().eventFilter(obj, event)
+
+    # ------------------------------------------------------------------
+    # Бейдж обновления: показ только на главной, fade синхронно со
+    # сменой страниц (тот же QGraphicsOpacityEffect-паттерн и длительность,
+    # что у PageNavigator)
+    # ------------------------------------------------------------------
+
+    def _badge_target_opacity(self) -> float:
+        on_home = (
+            self._pending_update is not None
+            and self.stacked_widget.currentWidget() is self.home_wrapper
+        )
+        return 1.0 if on_home else 0.0
+
+    def _sync_update_badge_visibility(self):
+        """Актуализирует бейдж под текущую страницу с fade-переходом."""
+        self._animate_badge_opacity(self._badge_target_opacity())
+
+    def _start_badge_hide(self):
+        """Гасит бейдж в начале ухода с главной — вместе с fading страницы."""
+        self._animate_badge_opacity(0.0)
+
+    def _animate_badge_opacity(self, target: float):
+        badge = getattr(self, "update_badge", None)
+        if badge is None or getattr(self, "_badge_opacity_target", None) == target:
+            return
+        self._badge_opacity_target = target
+
+        anim = self._badge_fade
+        if anim is not None:
+            anim.stop()
+            self._badge_fade = None
+
+        effect = badge.graphicsEffect()
+        if not isinstance(effect, QGraphicsOpacityEffect):
+            effect = QGraphicsOpacityEffect(badge)
+            badge.setGraphicsEffect(effect)
+            effect.setOpacity(1.0 if badge.isVisible() else 0.0)
+
+        if target > 0.0:
+            # позиция нужна до показа, чтобы бейдж не мигнул в левом верхнем углу
+            self._reposition_update_badge()
+            badge.show()
+        if target == 1.0 and round(effect.opacity(), 2) >= 1.0:
+            self._badge_fade = None
+            badge.raise_()
+            return
+
+        anim = QPropertyAnimation(effect, b"opacity")
+        anim.setDuration(PageNavigator.FADE_DURATION_MS)
+        anim.setStartValue(effect.opacity())
+        anim.setEndValue(target)
+        anim.setEasingCurve(QEasingCurve.Type.InOutSine)
+        anim.finished.connect(lambda t=target, a=anim: self._on_badge_fade_finished(t, a))
+        self._badge_fade = anim
+        anim.start()
+        badge.raise_()
+
+    def _on_badge_fade_finished(self, target: float, anim: QPropertyAnimation):
+        # ignore() — от остановленной анимации: её заменила новая, не трогаем
+        if anim is self._badge_fade:
+            self._badge_fade = None
+            if target == 0.0:
+                self.home_page.update_badge.hide()
+
+    def _reposition_update_badge(self):
+        """Размещает бейдж обновления по центру внизу окна (поверх контента).
+
+        Бейдж вне layout, поэтому его размер/появление не влияют на высоту
+        окна — окно не нужно пересобирать и растягивать.
+        """
+        badge = getattr(self, "update_badge", None)
+        if badge is None:
+            return
+        badge.adjustSize()
+        container = self.centralWidget()
+        margin_bottom = ui_scaled(20)
+        x = (container.width() - badge.width()) // 2
+        y = container.height() - badge.height() - margin_bottom
+        badge.move(max(0, x), max(0, y))
+        badge.raise_()
+
     # ------------------------------------------------------------------
     # Навигация по страницам
     # ------------------------------------------------------------------
 
     def _add_and_switch(self, widget: QWidget):
         self._navigator.add_page(widget)
-        self._navigator.animate_switch(widget)
+        # Уход с главной: бейдж гаснет сразу, синхронно с затуханием страницы
+        # (currentChanged сработает только в середине перехода)
+        self._navigator.animate_switch(widget, on_start=self._start_badge_hide)
 
     def _return_to_main(self, widget: QWidget):
         self._navigator.return_to_main(self.home_wrapper, widget)
@@ -596,15 +713,66 @@ class MainWindow(QMainWindow):
         worker.signals.message.connect(self.on_app_update_message, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(worker)
 
+    def check_for_updates_silently(self):
+        """Фоновая проверка обновлений при запуске: без страниц и попапов.
+
+        Результат лишь включает/гасит бейдж «доступна новая версия» на
+        главной; ошибки молча пишутся в лог, чтобы не мешать работе.
+        """
+        if self._bg_update_check_running:
+            return
+        self._bg_update_check_running = True
+        worker = AppUpdateWorker(self)
+        worker.signals.update_ready.connect(
+            self._on_silent_update_ready, Qt.ConnectionType.QueuedConnection
+        )
+        worker.signals.no_update.connect(
+            self._on_silent_no_update, Qt.ConnectionType.QueuedConnection
+        )
+        worker.signals.message.connect(
+            self._on_silent_update_message, Qt.ConnectionType.QueuedConnection
+        )
+        QThreadPool.globalInstance().start(worker)
+
+    @Slot(str, str, str)
+    def _on_silent_update_ready(self, local: str, remote: str, url: str):
+        self._bg_update_check_running = False
+        self._pending_update = (local, remote, url)
+        self.home_page.set_update_badge(remote)
+        self._sync_update_badge_visibility()
+
+    @Slot(str, str)
+    def _on_silent_no_update(self, local: str, remote: str):
+        self._bg_update_check_running = False
+        self._pending_update = None
+        self.home_page.clear_update_badge()
+        self._sync_update_badge_visibility()
+
+    @Slot(str, bool, bool)
+    def _on_silent_update_message(self, msg: str, success: bool, word_wrap: bool):
+        self._bg_update_check_running = False
+        logger.info("Silent update check finished with a message: %s", msg)
+
+    def show_pending_update(self):
+        """Открывает страницу обновления из результата фоновой проверки."""
+        if self._pending_update is not None:
+            self.show_update_available(*self._pending_update)
+
     @Slot(str, str, str)
     def on_app_update_ready(self, local: str, remote: str, url: str):
         self._dismiss_processing()
+        self._pending_update = (local, remote, url)
+        self.home_page.set_update_badge(remote)
+        self._sync_update_badge_visibility()
         self.show_update_available(local, remote, url)
         self._check_updates_running = False
 
     @Slot(str, str)
     def on_app_up_to_date(self, local: str, remote: str):
         self._dismiss_processing()
+        self._pending_update = None
+        self.home_page.clear_update_badge()
+        self._sync_update_badge_visibility()
         self.show_no_update(local, remote)
         self._check_updates_running = False
 
@@ -779,6 +947,9 @@ class MainWindow(QMainWindow):
             if callable(apply_theme):
                 apply_theme(self.styles, self.dark_theme)
 
+        # Размер бейджа зависит от шрифта/отступов темы — переставляем
+        QTimer.singleShot(0, self._reposition_update_badge)
+
     def _apply_texts(self):
         """Переводит заголовок, главную страницу и все открытые страницы."""
         self.setWindowTitle(WINDOW_TITLE)
@@ -796,6 +967,9 @@ class MainWindow(QMainWindow):
             apply_texts = getattr(w, "apply_texts", None)
             if callable(apply_texts):
                 apply_texts()
+
+        # Длина текста бейджа могла измениться с языком — центрируем заново
+        QTimer.singleShot(0, self._reposition_update_badge)
 
     def start_system_move(self) -> bool:
         handle = self.windowHandle()
