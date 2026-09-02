@@ -15,6 +15,7 @@ from PySide6.QtGui import QIcon, QGuiApplication
 from app.core.constants import resource_path
 from app.core.hosts_manager import HostsManager
 from app.core.dns_manager import DnsManager, DNS_PROVIDER_ID, DNS_PROVIDERS
+from app.core.http_client import DOH_DEFAULT_PROVIDER, DOH_ENABLED_SETTING, DOH_PROVIDER_SETTING, DOH_RESOLVER_OPTIONS
 from app.core.logger import logger
 from app.core.settings import get_setting, set_setting
 from app.gui.localization import CURRENT_LANGUAGE, set_current_language, tr
@@ -35,6 +36,7 @@ from app.gui.workers import HostsWorker, VersionWorker, AppUpdateWorker
 from app.gui.components.title_bar import DraggableTitleBar, WINDOW_TITLE
 from app.gui.components.page_navigator import PageNavigator
 from app.gui.components.popup_fade import fade_in_popup, fade_out_popup
+from app.gui.components.doh_popup import DohPopup, get_doh_options
 from app.gui.components.scale_popup import ScalePopup, get_scale_options
 from app.gui.components.settings_menu import SettingsPopup
 from app.gui.pages.home_page import HomePage
@@ -853,6 +855,8 @@ class MainWindow(QMainWindow):
                 self._open_language_popup()
             elif action == SettingsPopup.SCALE:
                 self._open_scale_popup()
+            elif action == SettingsPopup.DOH:
+                self._open_doh_popup()
 
         if menu is not None and menu.isVisible():
             fade_out_popup(menu, on_finished=after_menu_closed)
@@ -904,6 +908,29 @@ class MainWindow(QMainWindow):
         popup.scale_selected.connect(self._change_ui_scale)
         self._popup_position_above_settings(popup)
         fade_in_popup(popup)
+
+    def _open_doh_popup(self):
+        popup = DohPopup(
+            get_doh_options(),
+            get_setting(DOH_PROVIDER_SETTING, DOH_DEFAULT_PROVIDER),
+            bool(get_setting(DOH_ENABLED_SETTING, True)),
+            self.dark_theme,
+            self,
+        )
+        popup.toggled.connect(self._set_doh_enabled)
+        popup.provider_selected.connect(self._select_doh_provider)
+        self._popup_position_above_settings(popup)
+        fade_in_popup(popup)
+
+    def _set_doh_enabled(self, enabled: bool):
+        set_setting(DOH_ENABLED_SETTING, bool(enabled))
+
+    def _select_doh_provider(self, provider: str):
+        """Выбор резолвера автоматически включает DoH-фолбэк HTTP-клиента."""
+        if provider not in DOH_RESOLVER_OPTIONS:
+            return
+        set_setting(DOH_PROVIDER_SETTING, provider)
+        set_setting(DOH_ENABLED_SETTING, True)
 
     def _change_ui_scale(self, value: str):
         """Сохраняет выбор и просит владельца пересобрать окно с новым масштабом."""

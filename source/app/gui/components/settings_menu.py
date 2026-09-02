@@ -8,9 +8,9 @@ from app.gui.scaling import get_ui_scale, ui_scaled
 
 
 class SettingsPopup(QWidget):
-    """Меню настроек: смена темы, языка и масштаба интерфейса.
+    """Меню настроек: смена темы, языка, масштаба и DoH-резолвера.
 
-    Пункты языка и масштаба открывают вложенные попапы — о них
+    Пункты языка, масштаба и DoH открывают вложенные попапы — о них
     напоминает шеврон «›» справа.
     """
 
@@ -19,6 +19,7 @@ class SettingsPopup(QWidget):
     THEME = "theme"
     LANGUAGE = "language"
     SCALE = "scale"
+    DOH = "doh"
 
     def __init__(self, dark_theme: bool, parent=None):
         super().__init__(parent)
@@ -34,6 +35,7 @@ class SettingsPopup(QWidget):
             (self.THEME, tr("theme_button").strip(), False),
             (self.LANGUAGE, tr("language_button").strip(), True),
             (self.SCALE, tr("scale_button").strip(), True),
+            (self.DOH, tr("doh_button").strip(), True),
         ]
         self._item_height = ui_scaled(32)
         self._padding = ui_scaled(6)
@@ -106,7 +108,7 @@ class SettingsPopup(QWidget):
                 painter.drawPixmap(icon_x, icon_y, get_icon_pixmap(icon_name, 16, dark_theme=self.dark_theme))
             elif action == self.LANGUAGE:
                 painter.drawPixmap(icon_x, icon_y, get_icon_pixmap("language.svg", 16, dark_theme=self.dark_theme))
-            else:  # SCALE — глиф «развернуть»: диагональ со стрелками на концах
+            elif action == self.SCALE:  # глиф «развернуть»: диагональ со стрелками на концах
                 painter.setPen(QPen(
                     text_color, 1.6,
                     Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin,
@@ -120,6 +122,16 @@ class SettingsPopup(QWidget):
                 painter.drawLine(x1, y1, x1, y1 + arrow)
                 painter.drawLine(x0, y0, x0 + arrow, y0)
                 painter.drawLine(x0, y0, x0, y0 - arrow)
+            else:  # DOH — глобус: круг с меридианом и экватором
+                painter.setPen(QPen(
+                    text_color, 1.4,
+                    Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin,
+                ))
+                radius = icon_px / 2 - 1
+                cx, cy = icon_x + icon_px / 2, icon_y + icon_px / 2
+                painter.drawEllipse(QRectF(cx - radius, cy - radius, radius * 2, radius * 2))
+                painter.drawEllipse(QRectF(cx - radius * 0.45, cy - radius, radius * 0.9, radius * 2))
+                painter.drawLine(int(cx - radius), int(cy), int(cx + radius), int(cy))
 
             painter.setFont(self._item_font())
             painter.setPen(text_color)
