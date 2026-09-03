@@ -105,5 +105,5 @@ class AppUpdateWorker(QRunnable):
             else:
                 self.signals.no_update.emit(local_ver, remote_ver)
         except Exception as e:
-            err = f"{tr('updates_check_failed')}\n{e}"
+            err = f"{tr('updates_check_failed')}\n{e}\n{tr('vpn_hint')}"
             self.signals.message.emit(err, False, True)
