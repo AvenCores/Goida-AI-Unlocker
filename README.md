@@ -167,38 +167,76 @@ python main.py
 ## 🌍 Разблокируемые сервисы
 
 ### 📱 Социальные сети и мессенджеры
-* Instagram · TikTok · Truth Social · Guilded
+* Instagram (включая CDN и E2EE чаты) • TikTok • Truth Social • Twitch • Patreon
 
-### 🧠 AI-платформы
-* ChatGPT / OpenAI (включая Sora) · Claude · Grok · Gemini · Google AI Studio · NotebookLM · Google Labs (Jules, Stitch и др.) · Microsoft Copilot · GitHub Copilot · ElevenLabs · DeepL
+### 🧠 ИИ и ассистенты
+* **OpenAI:** ChatGPT, Sora, Operator, API, CDN (oaistatic, oaiusercontent)
+* **Anthropic:** Claude (API, Console)
+* **X.AI:** Grok
+* **Google:** Gemini, AI Studio, Generative Language API, NotebookLM, Jules, Stitch, AI Test Kitchen
+* **Microsoft:** Copilot, Bing (Sydney, Edge Services)
+* **Разработка:** GitHub Copilot, JetBrains AI, Codeium (Windsurf), Trae.ai, Manus
+* **Инструменты:** ElevenLabs (API, Reader), DeepL (API, Write, Voice)
 
-### 🎮 Игры и игровые сервисы
-* Clash Royale · Clash of Clans · Brawl Stars · Supercell (ассеты) · Xbox · Xbox Cloud Gaming · Microsoft Rewards
+### 🎮 Игры и гейминг
+* **Supercell:** Clash Royale, Clash of Clans, Brawl Stars, Squad Busters, mo.co, Supercell ID / Store
+* **Microsoft / Xbox:** Xbox Auth, Xbox Cloud Gaming (xGPU) • Microsoft Rewards
+* **Другое:** Parsec (Cloud Gaming) • OpenBitTorrent (Tracker)
 
-### 🎵 Музыкальные сервисы
-* Spotify · Tidal · Deezer
+### 🎵 Музыка
+* Spotify (включая API, Dealer, CDN) • Tidal • Deezer
 
-### ✉️ Электронная почта и облако
-* Proton Mail · Proton Drive
+### 🧩 Разработка и создание контента
+* GitHub API • JetBrains (Datalore, Plugins, Downloads, Account) • Linear • Canva • Framer • Autodesk • NVIDIA Developer • Guided Hacking • Tria.ge (Malware Analysis)
 
-### 🧩 Разработка и программирование
-* GitHub (включая Copilot API) · JetBrains (Datalore, Plugins) · Google AI API · NVIDIA Developer · Parsec
+### ☁️ Сервисы и веб-платформы
+* Tailscale • Notion • Weather.com • Internet Archive • Qwant • Imgur • Intel • Dell • Broadcom • Elgato • Dyson • Rutor • ntc.party • OneTrust (Geolocation/Consent)
 
-### 🛠️ Продуктивность и утилиты
-* Notion · Canva · Intel · Dell · Weather.com · Imgur · Web Archive · Tria.ge
+### ⌚️ Здоровье
+* Fitbit (Google)
 
-### ⌚️ Здоровье и фитнес
-* Fitbit
+### 💳 Платежи и финтех
+* Square / Squareup • Pump.fun
 
-### 💳 Финансы
-* Square / Squareup (через Tidal)
+---
 
-### 🌐 Торренты
-* OpenBitTorrent (tracker.openbittorrent.com)
+## 🚫 Блокировка угроз, рекламы и скама (Правила `0.0.0.0`)
+Огромный массив доменов перенаправляется на `0.0.0.0` для защиты пользователя. Вот основные категории блокируемых угроз:
 
-### 🚫 Блокировка вредных сайтов
-* Скримеры: <code>only-fans.uk</code>, <code>only-fans.me</code>, <code>onlyfans.wtf</code>
-* IP-логгеры: <code>iplogger.org</code>, <code>wl.gl</code>, <code>ed.tc</code>, <code>bc.ax</code>, <code>maper.info</code>, <code>2no.co</code>, <code>yip.su</code>, <code>iplis.ru</code>, <code>ezstat.ru</code>, <code>iplog.co</code>, <code>grabify.org</code>
+### 🛑 Рекламные сети, аналитика и трекеры
+* **Мобильная и веб-аналитика:** Appsflyer, Adjust, Branch, Swrve, Amplitude, Mixpanel, CleverTap, Airship.
+* **Рекламные биржи и сети:** Criteo, Taboola, Outbrain, AdColony, DoubleClick, Unity Ads, IronSource, Vungle.
+* **Телеметрия:** Сборщики данных смарт-ТВ, браузеров и мобильных приложений.
+
+### 🕵️ IP-логгеры и деанонимизаторы
+* Сервисы для скрытого перехвата IP-адреса и сбора данных: `iplogger.*`, `grabify.*`, `blasze.tk`, `gyazo.*` и тысячи их зеркал.
+
+### 💀 Скримеры и шок-контент
+* Классические шок-сайты и треш-контент: `2girls1cup.ws`, `1man1jar.org`, `goatse.*`, `tubgirl.*`, `lemonparty.org`, `meatspin` и т.д.
+
+### 💸 Массовый крипто-скам и фейковые ИИ-трейдеры
+* **Фальшивые платформы:** Блокируются **сотни** доменов, маскирующихся под легальные инвестиции и ИИ-трейдинг.
+* **Паттерны скама:** `immediate-*`, `bitcoin-*`, `quantum-*`, `yuan-*`, `oil-profit`, `trade-*`, `bit-*`, `crypto-*` (например, *Immediate Edge, Quantum AI, Yuan Pay Group, Bitcoin Code, Oil Zero*).
+
+### 🎣 Фишинг и поддельные панели входа
+* **Корпоративный фишинг:** Фейковые страницы авторизации Webmail, Zimbra, cPanel, Outlook.
+* **Соцсети:** Клонированные страницы входа Facebook, Instagram, TikTok.
+* **Мошеннические ссылки:** Поддельные уведомления о доставке (Colissimo, DHL), "проверках безопасности" и компрометации аккаунтов.
+
+### 🛒 Скам-маркетплейсы и фейковые магазины
+* **Платформы объявлений:** Фишинговые зеркала Vinted, OLX, Allegro, eBay.
+* **Бронирования:** Фейковые копии Booking, Airbnb (ссылки на "верификацию" и "возврат средств").
+* **Фейковые бренды:** Магазины-клон, продающие контрафакт или крадущие данные карт (PEPCO, Super-Pharm, Wittchen, Ochnik, Nike, Skechers, Jysk, Thursday Boots).
+
+### 🏴‍☠️ Опасные пиратские стриминги
+* Зараженные и фишинговые сайты "бесплатного" кино и сериалов: `zalukaj`, `cda-vod`, `filman`, `efilmy`, `vodplay`, `ekino`, `kinoman` и сотни связанных с ними поддоменов-сателлитов.
+
+### 🎰 Онлайн-казино, ставки и фейковые "раздачи"
+* Vulkan Vegas, Ice Casino, GGBet, National Casino и тысячи их партнерских "зеркал".
+* Фейковые опросы, "выигрыши" iPhone/Samsung, генераторы кодов и сайты из серии "заработок в сети".
+
+### 🦠 Вредоносное ПО (Malware) и Adware
+* Фейковые антивирусы, "очистители реестра" (Registry Cleaners), пиратский софт с троянами, загрузчики майнеров (CoinHive и аналоги) и рекламное ПО (Adware).
 
 ---
 
