@@ -15,6 +15,9 @@ def fade_in_popup(widget: QWidget, duration: int = FADE_MS):
     anim.setStartValue(0.0)
     anim.setEndValue(1.0)
     anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+    # Держим ссылку на виджете, иначе GC убьёт анимацию до finished
+    widget._fade_anim = anim  # type: ignore[attr-defined]
+    anim.finished.connect(lambda: setattr(widget, "_fade_anim", None))
     anim.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
 
 
@@ -26,16 +29,30 @@ def fade_out_popup(widget: QWidget, duration: int = FADE_MS, on_finished=None):
     """
 
     def _finish():
-        if not widget.isVisible():
+        try:
+            widget._fade_anim = None  # type: ignore[attr-defined]
+        except Exception:
+            pass
+        try:
+            if not widget.isVisible():
+                return
+        except RuntimeError:
             return
-        widget.close()
+        try:
+            widget.close()
+        except RuntimeError:
+            return
         if on_finished:
             on_finished()
 
     anim = QPropertyAnimation(widget, b"windowOpacity", widget)
     anim.setDuration(duration)
-    anim.setStartValue(widget.windowOpacity())
+    try:
+        anim.setStartValue(widget.windowOpacity())
+    except RuntimeError:
+        return
     anim.setEndValue(0.0)
     anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+    widget._fade_anim = anim  # type: ignore[attr-defined]
     anim.finished.connect(_finish)
     anim.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)

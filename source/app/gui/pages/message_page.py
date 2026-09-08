@@ -156,7 +156,13 @@ class ProcessingPage(CardPage):
         self.apply_theme(styles, dark_theme)
 
     def _message_key(self) -> str:
-        return self._ACTION_KEYS.get(self._action, "processing_uninstall")
+        key = self._ACTION_KEYS.get(self._action)
+        if key is None:
+            from app.core.logger import logger
+
+            logger.warning("Unknown processing action: %r", self._action)
+            return "processing_install"
+        return key
 
     def _fill_messages(self):
         for raw_line in tr(self._message_key()).split("\n"):

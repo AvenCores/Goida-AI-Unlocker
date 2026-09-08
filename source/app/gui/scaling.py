@@ -43,7 +43,7 @@ def _parse_env_override() -> float | None:
         value = float(raw.replace(",", "."))
     except ValueError:
         return None
-    return max(MIN_SCALE, min(MAX_SCALE * 1.25, value))
+    return max(MIN_SCALE, min(MAX_SCALE, value))
 
 
 def get_ui_scale_setting() -> str:
@@ -142,8 +142,16 @@ def get_ui_scale() -> float:
 
 def ui_scaled(value: int | float) -> int | float:
     """Увеличивает размер в пикселях под текущий фактор; int остаётся int."""
+    if value == 0:
+        return 0
     factor = get_ui_scale()
     result = value * factor
     if isinstance(value, int):
         return max(1, int(round(result)))
     return round(result, 2)
+
+
+def clear_scale_cache():
+    """Сбрасывает кэш масштаба (при смене экрана)."""
+    global _scale_cache
+    _scale_cache = None

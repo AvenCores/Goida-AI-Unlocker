@@ -48,20 +48,28 @@ def detect_system_language() -> str:
 def set_current_language(language: str | None) -> str:
     global CURRENT_LANGUAGE
     CURRENT_LANGUAGE = normalize_language(language)
+    try:
+        _tr_cached.cache_clear()
+    except Exception:
+        pass
     return CURRENT_LANGUAGE
 
 @lru_cache(maxsize=512)
-def _tr_cached(key: str, lang: str, kwargs_tuple: tuple) -> str:
+def _tr_cached(key: str, lang: str) -> str:
     bundle = TRANSLATIONS.get(lang, TRANSLATIONS["ru"])
-    template = bundle.get(key, TRANSLATIONS["ru"].get(key, key))
-    if kwargs_tuple:
-        return template.format(**dict(kwargs_tuple))
-    return template
+    return bundle.get(key, TRANSLATIONS["ru"].get(key, key))
 
 def tr(key: str, *, language: str | None = None, **kwargs) -> str:
+    from app.core.logger import logger as _logger
     lang = normalize_language(language or CURRENT_LANGUAGE)
-    kwargs_tuple = tuple(sorted(kwargs.items())) if kwargs else tuple()
-    return _tr_cached(key, lang, kwargs_tuple)
+    template = _tr_cached(key, lang)
+    if kwargs:
+        try:
+            return template.format(**kwargs)
+        except Exception:
+            _logger.debug("tr format failed for key %r", key)
+            return template
+    return template
 
 def clean_message_line(text: str) -> str:
     return text.replace(_LAYOUT_FILLER, "").strip()

@@ -12,22 +12,26 @@ def resource_path(relative_path: str) -> str:
     except Exception:
         pass
 
-    base_path = os.path.abspath(".")
-    candidates.append(os.path.join(base_path, relative_path))
+    # Frozen (PyInstaller onefile/onedir): ресурсы рядом с exe / в _MEIPASS
+    try:
+        if getattr(sys, "frozen", False):
+            exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+            candidates.append(os.path.join(exe_dir, relative_path))
+    except Exception:
+        pass
 
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-    if os.path.exists(repo_root):
-        candidates.append(os.path.join(repo_root, relative_path))
-
-    source_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    if os.path.exists(source_dir):
+    # Рядом с этим файлом: source/app/core -> source/
+    try:
+        source_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         candidates.append(os.path.join(source_dir, relative_path))
+    except Exception:
+        pass
 
     for candidate in candidates:
         if os.path.exists(candidate):
             return candidate
 
-    return os.path.join(base_path, relative_path)
+    return candidates[-1] if candidates else os.path.abspath(relative_path)
 
 def _get_backup_dir() -> Path:
     try:
@@ -45,7 +49,14 @@ def _get_settings_path() -> Path:
         import tempfile
         return Path(tempfile.gettempdir()) / "goida-ai-unlocker" / "settings.json"
 
-HOSTS_PATH = Path(r"C:\Windows\System32\drivers\etc\hosts") if sys.platform == "win32" else Path("/etc/hosts")
+def _get_hosts_path() -> Path:
+    if sys.platform == "win32":
+        root = os.environ.get("SystemRoot", r"C:\Windows")
+        return Path(root) / "System32" / "drivers" / "etc" / "hosts"
+    return Path("/etc/hosts")
+
+
+HOSTS_PATH = _get_hosts_path()
 HOSTS_BACKUP_DIR = _get_backup_dir()
 HOSTS_BACKUP_PREFIX = "hosts_backup_"
 SETTINGS_PATH = _get_settings_path()

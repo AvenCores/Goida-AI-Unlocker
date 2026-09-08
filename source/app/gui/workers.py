@@ -1,6 +1,6 @@
 import json
 
-from PySide6.QtCore import QObject, Signal, QRunnable
+from PySide6.QtCore import QObject, Signal, QRunnable, Qt
 
 from app.core.logger import logger
 from app.core.constants import (
@@ -20,7 +20,7 @@ class WorkerSignals(QObject):
     message = Signal(str, bool, bool)
 
     def __init__(self, parent=None):
-        super().__init__(None)
+        super().__init__(parent)
 
 
 class HostsWorker(QRunnable):
@@ -28,10 +28,16 @@ class HostsWorker(QRunnable):
 
     def __init__(self, action: str, manager, provider: str = "dns.malw.link", parent=None):
         super().__init__()
+        self.setAutoDelete(True)
         self.action = action
         self.manager = manager
         self.provider = provider
-        self.signals = WorkerSignals()
+        owner = parent if isinstance(parent, QObject) else None
+        self.signals = WorkerSignals(owner)
+        if owner is not None:
+            self.signals.finished.connect(
+                self.signals.deleteLater, Qt.ConnectionType.QueuedConnection
+            )
         self.save_content: str = ""
         # Способ восстановления hosts при uninstall: "" | "backup" | "clean"
         # (актуально только для HostsManager; DnsManager его игнорирует)
@@ -44,9 +50,13 @@ class HostsWorker(QRunnable):
             if self.action in ("install", "update"):
                 result = self.manager.update(self.provider)
             elif self.action == "uninstall":
-                if self.restore_mode in ("backup", "clean"):
-                    result = self.manager.restore(self.restore_mode)
-                else:
+                # DnsManager.restore() не принимает mode — только HostsManager
+                try:
+                    if self.restore_mode in ("backup", "clean"):
+                        result = self.manager.restore(self.restore_mode)
+                    else:
+                        result = self.manager.restore()
+                except TypeError:
                     result = self.manager.restore()
             elif self.action == "save":
                 if self.pre_backup:
@@ -68,13 +78,22 @@ class VersionWorker(QRunnable):
 
     def __init__(self, manager, provider: str = "dns.malw.link", parent=None):
         super().__init__()
+        self.setAutoDelete(True)
         self.manager = manager
         self.provider = provider
-        self.signals = WorkerSignals()
+        owner = parent if isinstance(parent, QObject) else None
+        self.signals = WorkerSignals(owner)
 
     def run(self):
-        status = self.manager.check_status(self.provider)
-        self.signals.status_ready.emit(status)
+        try:
+            status = self.manager.check_status(self.provider)
+        except Exception as e:
+            logger.exception("Version check failed")
+            status = None
+        try:
+            self.signals.status_ready.emit(status)
+        except Exception:
+            pass
 
 
 def _parse_version(version: str) -> tuple:
@@ -84,20 +103,25 @@ def _parse_version(version: str) -> tuple:
 class AppUpdateWorker(QRunnable):
     """Проверка обновлений приложения через GitHub API."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, language: str | None = None):
         super().__init__()
-        self.signals = WorkerSignals()
+        self.setAutoDelete(True)
+        owner = parent if isinstance(parent, QObject) else None
+        self.signals = WorkerSignals(owner)
+        self.language = language
 
     def run(self):
         try:
+            from app.gui.localization import normalize_language
+            lang = normalize_language(self.language) if self.language else None
             local_ver = APP_VERSION
             remote_content = HttpClient.fetch(GITHUB_RELEASES_API_URL, bypass_cache=True)
             if not remote_content:
-                raise RuntimeError(tr("update_info_unavailable"))
+                raise RuntimeError(tr("update_info_unavailable", language=lang))
             remote_data = json.loads(remote_content)
             remote_ver = remote_data.get("tag_name", "").lstrip("vV")
             if not remote_ver:
-                raise RuntimeError(tr("update_info_unavailable"))
+                raise RuntimeError(tr("update_info_unavailable", language=lang))
             download_url = remote_data.get("html_url", GITHUB_RELEASES_PAGE_URL)
 
             if _parse_version(remote_ver) > _parse_version(local_ver):
@@ -105,5 +129,8 @@ class AppUpdateWorker(QRunnable):
             else:
                 self.signals.no_update.emit(local_ver, remote_ver)
         except Exception as e:
-            err = f"{tr('updates_check_failed')}\n{e}\n{tr('vpn_hint')}"
-            self.signals.message.emit(err, False, True)
+            err = f"{tr('updates_check_failed', language=lang)}\n{e}\n{tr('vpn_hint', language=lang)}"
+            try:
+                self.signals.message.emit(err, False, True)
+            except Exception:
+                pass

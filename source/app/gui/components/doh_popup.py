@@ -10,7 +10,7 @@ from app.gui.scaling import get_ui_scale, ui_scaled
 def get_doh_options() -> list[tuple[str, str]]:
     """Пункты выбора DoH-резолвера: (id, отображаемое имя)."""
     labels = {
-        "auto": tr("scale_auto"),
+        "auto": tr("doh_auto"),
         "cloudflare": "Cloudflare",
         "google": "Google",
         "xbox-dns": tr("provider_xbox_dns"),
@@ -55,7 +55,9 @@ class DohPopup(QWidget):
         self.setMouseTracking(True)
 
     def _item_font(self) -> QFont:
-        font = QFont("Segoe UI")
+        from PySide6.QtWidgets import QApplication
+
+        font = QFont(QApplication.font())
         font.setPointSizeF(round(9.5 * get_ui_scale(), 1))
         font.setWeight(QFont.Weight.Medium)
         return font

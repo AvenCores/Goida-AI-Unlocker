@@ -1,4 +1,5 @@
 import os
+from collections import OrderedDict
 
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
 from PySide6.QtSvg import QSvgRenderer
@@ -6,10 +7,32 @@ from PySide6.QtWidgets import QLabel
 from PySide6.QtCore import Qt
 
 from app.core.constants import resource_path
+from app.core.logger import logger
 from app.gui.scaling import ui_scaled
 
-ICON_CACHE: dict = {}
+_MAX_CACHE = 256
+ICON_CACHE: OrderedDict = OrderedDict()
 RENDERER_CACHE: dict = {}
+
+
+def _cache_get(cache: OrderedDict, key):
+    try:
+        val = cache.pop(key)
+        cache[key] = val
+        return val
+    except KeyError:
+        return None
+
+
+def _cache_put(cache: OrderedDict, key, val):
+    cache[key] = val
+    while len(cache) > _MAX_CACHE:
+        cache.popitem(last=False)
+
+
+def clear_icon_cache():
+    ICON_CACHE.clear()
+    RENDERER_CACHE.clear()
 
 
 def _tint_pixmap(pix: QPixmap, color: QColor) -> QPixmap:
@@ -18,11 +41,13 @@ def _tint_pixmap(pix: QPixmap, color: QColor) -> QPixmap:
     tinted = QPixmap(pix.size())
     tinted.fill(Qt.GlobalColor.transparent)
     painter = QPainter(tinted)
-    painter.setCompositionMode(QPainter.CompositionMode_Source)
-    painter.drawPixmap(0, 0, pix)
-    painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
-    painter.fillRect(tinted.rect(), color)
-    painter.end()
+    try:
+        painter.setCompositionMode(QPainter.CompositionMode_Source)
+        painter.drawPixmap(0, 0, pix)
+        painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
+        painter.fillRect(tinted.rect(), color)
+    finally:
+        painter.end()
     return tinted
 
 
@@ -30,7 +55,7 @@ def get_icon(file_name: str, size_px: int | None = None, *,
              dark_theme: bool = False,
              force_dark: bool = False,
              force_white: bool = False) -> QIcon:
-    """Загружает SVG-иконку, окрашенную под тему (с кэшированием).
+    """Загружает SVG-иконку, окрашенную под тему (с LRU-кэшированием).
 
     Базовый размер из вызова масштабируется под разрешение экрана,
     поэтому все места вызова остаются с исходными «дизайнерскими» px.
@@ -45,23 +70,42 @@ def get_icon(file_name: str, size_px: int | None = None, *,
         tint = QColor("#ffffff")
 
     cache_key = (path, render_size, tint.name())
-    cached = ICON_CACHE.get(cache_key)
+    cached = _cache_get(ICON_CACHE, cache_key)
     if cached is not None:
         return cached
+
+    if not os.path.exists(path):
+        logger.error("Icon not found: %s", path)
+        empty = QIcon()
+        _cache_put(ICON_CACHE, cache_key, empty)
+        return empty
 
     renderer = RENDERER_CACHE.get(path)
     if renderer is None:
         renderer = QSvgRenderer(path)
+        if not renderer.isValid():
+            logger.error("Invalid SVG icon: %s", path)
+            empty = QIcon()
+            _cache_put(ICON_CACHE, cache_key, empty)
+            return empty
         RENDERER_CACHE[path] = renderer
 
     pix = QPixmap(render_size, render_size)
     pix.fill(Qt.GlobalColor.transparent)
     painter = QPainter(pix)
-    renderer.render(painter)
-    painter.end()
+    try:
+        renderer.render(painter)
+    finally:
+        painter.end()
+
+    if pix.isNull():
+        logger.error("Failed to render icon: %s", path)
+        empty = QIcon()
+        _cache_put(ICON_CACHE, cache_key, empty)
+        return empty
 
     icon = QIcon(_tint_pixmap(pix, tint))
-    ICON_CACHE[cache_key] = icon
+    _cache_put(ICON_CACHE, cache_key, icon)
     return icon
 
 

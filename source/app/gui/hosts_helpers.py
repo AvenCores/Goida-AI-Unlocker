@@ -8,7 +8,7 @@ from app.core.logger import logger
 from app.core.constants import HOSTS_PATH, HOSTS_BACKUP_DIR
 from app.core.hosts_manager import HostsManager
 from app.utils.helpers import open_target
-from app.gui.localization import tr, normalize_language, CURRENT_LANGUAGE
+from app.gui.localization import tr
 
 def _show_open_hosts_error(detail: str, _inline_callback=None):
     hint = tr("admin_hint_windows") if sys.platform == "win32" else tr("admin_hint_unix")
@@ -59,7 +59,7 @@ def _open_hosts_file_linux_as_admin(wait=False) -> tuple[bool, str | None]:
                     if wait:
                         subprocess.run([ep, str(HOSTS_PATH)], check=True)
                     else:
-                        subprocess.Popen([ep, str(HOSTS_PATH)], start_new_session=True)
+                        _popen_detached([ep, str(HOSTS_PATH)])
                     return True, None
                 except Exception:
                     continue
@@ -97,16 +97,29 @@ def _open_hosts_file_linux_as_admin(wait=False) -> tuple[bool, str | None]:
                         logger.error("Admin open failed: %s", res.stderr)
                         return False, res.stderr or "Admin open failed"
                 else:
-                    subprocess.Popen(cmd, start_new_session=True)
+                    _popen_detached(cmd)
                 return True, None
             except Exception:
                 continue
     return False, "linux_admin_open_unavailable"
 
 
+def _popen_detached(cmd, **kwargs):
+    """Popen без POSIX-only флагов на Windows."""
+    if sys.platform == "win32":
+        kwargs.pop("start_new_session", None)
+        kwargs.setdefault("creationflags", getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    else:
+        kwargs.setdefault("start_new_session", True)
+    return subprocess.Popen(cmd, **kwargs)
+
+
 def _open_hosts_file_macos_as_admin(wait=False) -> tuple[bool, str | None]:
-    target = str(HOSTS_PATH).replace("'", "'\\''")
-    applescript = f"do shell script \"open -e '{target}'\" with administrator privileges"
+    import shlex
+    target = shlex.quote(str(HOSTS_PATH))
+    # Экранируем для AppleScript: внутри "..." бэкслэш и кавычки
+    as_target = target.replace("\\", "\\\\").replace('"', '\\"')
+    applescript = f'do shell script "open -e {as_target}" with administrator privileges'
 
     if shutil.which("osascript"):
         try:
@@ -117,7 +130,7 @@ def _open_hosts_file_macos_as_admin(wait=False) -> tuple[bool, str | None]:
                     logger.error("Admin open failed: %s", res.stderr)
                     return False, res.stderr or "Admin open failed"
             else:
-                subprocess.Popen(cmd, start_new_session=True)
+                _popen_detached(cmd)
             return True, None
         except Exception as e:
             logger.error("macOS admin open error: %s", e)
@@ -129,7 +142,7 @@ def _open_hosts_file_macos_as_admin(wait=False) -> tuple[bool, str | None]:
             if wait:
                 subprocess.run(cmd, check=True, timeout=60)
             else:
-                subprocess.Popen(cmd, start_new_session=True)
+                _popen_detached(cmd)
             return True, None
         except Exception as e:
             logger.error("macOS sudo open error: %s", e)
@@ -155,17 +168,9 @@ def open_hosts_file_sync() -> tuple[bool, str | None]:
         if error_key == "admin_hint_windows":
             detail = tr("admin_hint_windows")
         elif error_key == "linux_admin_open_unavailable":
-            detail = (
-                "Установите pkexec и графический текстовый редактор или запустите приложение от имени root."
-                if normalize_language(CURRENT_LANGUAGE) == "ru" else
-                "Install pkexec and a graphical text editor, or run the app as root."
-            )
+            detail = tr("linux_admin_open_unavailable")
         elif error_key == "macos_admin_open_unavailable":
-            detail = (
-                "Установите osascript или запустите приложение от имени администратора."
-                if normalize_language(CURRENT_LANGUAGE) == "ru" else
-                "Install osascript or run the app as administrator."
-            )
+            detail = tr("macos_admin_open_unavailable")
         else:
             detail = error_key or tr("admin_hint_unix")
         

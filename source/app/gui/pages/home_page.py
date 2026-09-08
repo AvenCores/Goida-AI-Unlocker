@@ -110,6 +110,7 @@ class HomePage(QWidget):
         self.textinformer = QLabel()
         self.textinformer.setTextFormat(Qt.TextFormat.RichText)
         self.textinformer.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.textinformer.setWordWrap(True)
 
         self.version_label = QLabel(tr("version_checking"))
         self.version_label.setTextFormat(Qt.TextFormat.RichText)
@@ -280,25 +281,53 @@ class HomePage(QWidget):
         глифы обрезаются. Явный минимум = heightForWidth() делает такое
         сжатие невозможным.
 
-        Ширина для замера берётся детерминированная (колонка минус поля
-        страницы и карточки), а не фактическая lbl.width(): при раннем
-        замере (showEvent на Wayland/X11) ширины ещё не устоялись, и
-        heightForWidth по «широкой» метке считает на строку меньше — окно
-        открывается заниженным и растягивается позже, когда приходит
-        асинхронный статус. Итоговая ширина метки всегда одна и та же:
-        ширина окна фиксирована, колонка ограничена COLUMN_MAX_WIDTH.
+        Замер идёт по нескольким кандидатам ширины (теоретическая ширина
+        колонки минус поля + фактическая ширина метки, если видна) с
+        небольшим запасом в меньшую сторону, и берётся максимум. Это
+        важно для текстов ровно на границе переноса (как
+        «Обход блокировок - Не установлен»): расхождение в пару пикселей
+        между замером и реальной отрисовкой (другой шрифт, QSS-паддинги,
+        округления скейла) иначе даёт высоту в 1 строку при реальных 2 —
+        и вторая строка обрезается ровно по границе слов.
 
         Вызывается при смене текста статусов и из MainWindow
         перед замером высоты окна (метрики шрифтов актуальны только
         после полировки стилей при показе).
         """
         for lbl in (self.textinformer, self.version_label, self.update_date_label):
-            lbl.setMinimumHeight(0)
-            if not lbl.isVisibleTo(self):
+            try:
+                if not lbl.isVisibleTo(self):
+                    # Страница скрыта (процессинг/сообщение): старые минимумы
+                    # не трогаем, иначе окно замерится по нулевым высотам,
+                    # ужмётся, а при возврате ряды наедут друг на друга
+                    continue
+                lbl.setMinimumHeight(0)
+            except RuntimeError:
                 continue
-            width = ui_scaled(COLUMN_MAX_WIDTH) - ui_scaled(72)
-            need = lbl.heightForWidth(width) if lbl.wordWrap() else lbl.sizeHint().height()
-            lbl.setMinimumHeight(need)
+            candidates = [ui_scaled(COLUMN_MAX_WIDTH) - ui_scaled(72)]
+            try:
+                actual = lbl.width()
+            except RuntimeError:
+                actual = 0
+            if actual and actual > 100:
+                candidates.append(actual)
+            need = 0
+            for w in candidates:
+                # Запас в безопасную сторону: уже — значит выше; чуть
+                # более высокая карточка лучше обрезанной строки
+                probe = max(50, w - ui_scaled(8))
+                try:
+                    if lbl.wordWrap():
+                        need = max(need, lbl.heightForWidth(probe))
+                    else:
+                        need = max(need, lbl.sizeHint().height())
+                except RuntimeError:
+                    pass
+            if need > 0:
+                try:
+                    lbl.setMinimumHeight(need)
+                except RuntimeError:
+                    pass
 
     def update_status_label(self):
         if self.current_mechanism == DNS_PROVIDER_ID:

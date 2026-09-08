@@ -257,7 +257,11 @@ class _SearchablePage(_HeaderedPage):
         search_layout.setSpacing(8)
         self.search_edit = QLineEdit()
         self.search_edit.setClearButtonEnabled(True)
-        self.search_edit.textChanged.connect(self._refresh_search)
+        self._search_debounce = QTimer(self)
+        self._search_debounce.setSingleShot(True)
+        self._search_debounce.setInterval(250)
+        self._search_debounce.timeout.connect(self._refresh_search)
+        self.search_edit.textChanged.connect(lambda: self._search_debounce.start())
         self.search_edit.returnPressed.connect(self._find_next)
         search_layout.addWidget(self.search_edit, 1)
         self.search_count_label = QLabel()
@@ -617,7 +621,15 @@ class HostsEditorPage(_SearchablePage):
     def _copy_path(self):
         QApplication.clipboard().setText(str(HOSTS_PATH))
         self.copy_path_button.setText(tr("copied"))
-        QTimer.singleShot(1500, lambda: self.copy_path_button.setText(tr("hosts_editor_copy_path")))
+        btn = self.copy_path_button
+
+        def _rst():
+            try:
+                btn.setText(tr("hosts_editor_copy_path"))
+            except RuntimeError:
+                pass
+
+        QTimer.singleShot(1500, _rst)
 
     def keyPressEvent(self, event):
         # Esc закрывает панели, затем спрашивает про несохранённые правки,
@@ -1005,7 +1017,15 @@ class HostsBackupViewerPage(_SearchablePage):
     def _copy_content(self):
         QApplication.clipboard().setText(self.viewer.toPlainText())
         self.copy_button.setText(tr("copied"))
-        QTimer.singleShot(1500, lambda: self.copy_button.setText(tr("hosts_backup_copy")))
+        btn = self.copy_button
+
+        def _rst():
+            try:
+                btn.setText(tr("hosts_backup_copy"))
+            except RuntimeError:
+                pass
+
+        QTimer.singleShot(1500, _rst)
 
     def _export_backup(self):
         if not self._current_path or not self._current_content \
@@ -1020,7 +1040,15 @@ class HostsBackupViewerPage(_SearchablePage):
             Path(target).write_text(self._current_content, encoding="utf-8")
             logger.info("Backup exported to %s", target)
             self.export_button.setText(tr("ok"))
-            QTimer.singleShot(1500, lambda: self.export_button.setText(tr("hosts_backup_export")))
+            btn = self.export_button
+
+            def _rst():
+                try:
+                    btn.setText(tr("hosts_backup_export"))
+                except RuntimeError:
+                    pass
+
+            QTimer.singleShot(1500, _rst)
         except Exception as e:
             logger.error("Backup export to %s failed: %s", target, e)
 

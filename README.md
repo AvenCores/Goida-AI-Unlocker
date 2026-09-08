@@ -115,8 +115,8 @@ python main.py
 
 Требования:
 * Windows 10/11 (x64, ARM64), Linux (x64, ARM64) или macOS 11+ (Intel, Apple Silicon)
-* Python 3.8+
-* PySide6 (устанавливается автоматически через <code>requirements.txt</code>)
+* Python 3.10+
+* PySide6, certifi (устанавливаются автоматически через <code>requirements.txt</code>)
 
 ---
 
@@ -128,17 +128,17 @@ python main.py
 
 **Windows (ARM64):** ```pyinstaller main.py --onefile --noconsole --icon=assets/icon.ico --name="Goida_AI_Unlocker_Windows_ARM64" --version-file=packaging/version.txt --add-data "assets;assets" --add-data "app;app"```
 
-**Linux (x64):** ```pyinstaller main.py --onefile --noconsole --icon=assets/icon.ico --name="Goida_AI_Unlocker_Linux" --add-data "assets:assets" --add-data "app:app"```
+**Linux (x64):** ```pyinstaller main.py --onefile --noconsole --name="Goida_AI_Unlocker_Linux" --add-data "assets:assets" --add-data "app:app"```
 
-**Linux (ARM64):** ```pyinstaller main.py --onefile --noconsole --icon=assets/icon.ico --name="Goida_AI_Unlocker_Linux_ARM64" --add-data "assets:assets" --add-data "app:app"```
+**Linux (ARM64):** ```pyinstaller main.py --onefile --noconsole --name="Goida_AI_Unlocker_Linux_ARM64" --add-data "assets:assets" --add-data "app:app"```
 
-**macOS Intel (.app, x86_64):** ```pyinstaller main.py --onedir --windowed --target-arch x86_64 --icon=assets/icon.icns --name="Goida_AI_Unlocker_macOS_x86_64" --add-data "assets:assets" --add-data "app:app"```
+**macOS Intel (.app, x86_64):** ```pyinstaller main.py --onedir --windowed --target-arch x86_64 --osx-bundle-identifier=com.avencores.goida-ai-unlocker --icon=assets/icon.icns --name="Goida_AI_Unlocker_macOS_x86_64" --add-data "assets:assets" --add-data "app:app"```
 
-**macOS Apple Silicon (.app, arm64):** ```pyinstaller main.py --onedir --windowed --icon=assets/icon.icns --name="Goida_AI_Unlocker_macOS_arm64" --add-data "assets:assets" --add-data "app:app"```
+**macOS Apple Silicon (.app, arm64):** ```pyinstaller main.py --onedir --windowed --target-arch arm64 --osx-bundle-identifier=com.avencores.goida-ai-unlocker --icon=assets/icon.icns --name="Goida_AI_Unlocker_macOS_arm64" --add-data "assets:assets" --add-data "app:app"```
 
 Скомпилированный файл появится в директории <code>dist/</code>.
 
-> 💡 Также доступен GitHub Actions workflow (<code>.github/workflows/build.yml</code>) для автоматической сборки под все платформы (запускается вручную через <code>workflow_dispatch</code>).
+> 💡 Также доступен GitHub Actions workflow (<code>.github/workflows/build.yml</code>) для автоматической сборки под все платформы (matrix из 6 джоб: запускается вручную через <code>workflow_dispatch</code>, а также по тегам <code>V*</code> и релизам).
 
 ---
 
@@ -252,8 +252,8 @@ python main.py
 
 ```
 source/
-├── main.py                  # Точка входа
-├── requirements.txt         # Зависимости (PySide6, PyInstaller)
+├── main.py                  # Точка входа (single-instance, темы, язык)
+├── requirements.txt         # Зависимости (PySide6, PyInstaller, certifi — пины версий)
 ├── assets/                  # Ресурсы приложения
 │   ├── icon.ico / icon.icns # Иконки приложения
 │   └── icons/               # SVG-иконки интерфейса

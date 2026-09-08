@@ -12,12 +12,17 @@ class PageNavigator:
     def __init__(self, stacked_widget: QStackedWidget):
         self._stacked = stacked_widget
         self._current_animation: Optional[QPropertyAnimation] = None
+        self._busy = False
+        self._pending: list = []
 
     def _clear_effects(self):
         for i in range(self._stacked.count()):
-            w = self._stacked.widget(i)
-            if w and w.graphicsEffect():
-                w.setGraphicsEffect(None)
+            try:
+                w = self._stacked.widget(i)
+                if w and w.graphicsEffect():
+                    w.setGraphicsEffect(None)
+            except RuntimeError:
+                pass
 
     @staticmethod
     def _fade(widget: QWidget, start: float, end: float) -> QPropertyAnimation:
@@ -33,48 +38,131 @@ class PageNavigator:
         self, new_widget: QWidget, on_finish: Optional[Callable] = None,
         on_start: Optional[Callable] = None,
     ):
+        # Быстрые клики: складываем в очередь, ничего не теряем
+        if self._busy:
+            self._pending.append((new_widget, on_finish, on_start))
+            # Защита от бесконечного роста при спаме
+            if len(self._pending) > 5:
+                dropped = self._pending.pop(0)
+                try:
+                    from app.core.logger import logger
+
+                    logger.debug("PageNavigator: dropped queued switch")
+                except Exception:
+                    pass
+            return
+        self._busy = True
         if on_start:
-            on_start()
+            try:
+                on_start()
+            except Exception:
+                pass
         current = self._stacked.currentWidget()
         if not current or current == new_widget:
-            self._stacked.setCurrentWidget(new_widget)
+            try:
+                self._stacked.setCurrentWidget(new_widget)
+            except RuntimeError:
+                pass
+            self._busy = False
             if on_finish:
-                on_finish()
+                try:
+                    on_finish()
+                except Exception:
+                    pass
+            self._drain_pending()
             return
 
-        if self._current_animation is not None:
-            self._current_animation.stop()
-            self._current_animation = None
-        self._clear_effects()
+        try:
+            if self._current_animation is not None:
+                try:
+                    self._current_animation.stop()
+                except Exception:
+                    pass
+                self._current_animation = None
+            self._clear_effects()
+        except Exception:
+            pass
 
-        fade_out = self._fade(current, 1.0, 0.0)
+        try:
+            fade_out = self._fade(current, 1.0, 0.0)
+        except RuntimeError:
+            self._busy = False
+            return
 
         def do_switch():
-            self._stacked.setCurrentWidget(new_widget)
-            current.setGraphicsEffect(None)
+            try:
+                self._stacked.setCurrentWidget(new_widget)
+            except RuntimeError:
+                self._busy = False
+                return
+            try:
+                current.setGraphicsEffect(None)
+            except RuntimeError:
+                pass
 
-            fade_in = self._fade(new_widget, 0.0, 1.0)
+            try:
+                fade_in = self._fade(new_widget, 0.0, 1.0)
+            except RuntimeError:
+                self._busy = False
+                return
 
             def cleanup():
-                new_widget.setGraphicsEffect(None)
+                try:
+                    new_widget.setGraphicsEffect(None)
+                except RuntimeError:
+                    pass
                 self._current_animation = None
+                self._busy = False
                 if on_finish:
-                    on_finish()
+                    try:
+                        on_finish()
+                    except Exception:
+                        pass
+                self._drain_pending()
 
-            fade_in.finished.connect(cleanup)
+            try:
+                fade_in.finished.connect(cleanup)
+            except RuntimeError:
+                self._busy = False
+                return
             self._current_animation = fade_in
             fade_in.start()
 
-        fade_out.finished.connect(do_switch)
+        try:
+            fade_out.finished.connect(do_switch)
+        except RuntimeError:
+            self._busy = False
+            return
         self._current_animation = fade_out
         fade_out.start()
+
+    def _drain_pending(self):
+        if self._pending:
+            item = self._pending.pop(0)
+            self.animate_switch(item[0], on_finish=item[1], on_start=item[2])
 
     def add_page(self, widget: QWidget):
         self._stacked.addWidget(widget)
 
     def remove_widget(self, widget: QWidget):
-        self._stacked.removeWidget(widget)
-        widget.deleteLater()
+        try:
+            if self._current_animation is not None:
+                try:
+                    self._current_animation.stop()
+                except Exception:
+                    pass
+                self._current_animation = None
+            self._clear_effects()
+        except Exception:
+            pass
+        try:
+            self._stacked.removeWidget(widget)
+        except RuntimeError:
+            return
+        try:
+            widget.deleteLater()
+        except RuntimeError:
+            pass
 
     def return_to_main(self, home_wrapper: QWidget, widget: QWidget):
         self.animate_switch(home_wrapper, on_finish=lambda: self.remove_widget(widget))

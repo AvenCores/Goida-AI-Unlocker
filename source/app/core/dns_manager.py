@@ -74,12 +74,18 @@ def get_dns_provider_site_url(provider_id: str) -> str | None:
     return cfg.get("site_url") if cfg else None
 
 
-# Виртуальные/служебные адаптеры, которые нельзя трогать (VMware, VirtualBox и т.п.)
+# Виртуальные/служебные адаптеры, которые нельзя трогать.
+# VPN намеренно НЕ исключаем — иначе на VPN будет «No active interfaces».
 _VIRTUAL_ADAPTER_RE = re.compile(
-    r"vmware|virtualbox|vbox|hyper-v|wsl|loopback|tap-|tunnel|vpn|"
+    r"vmware|virtualbox|vbox|hyper-v|wsl|loopback|"
     r"wi-fi direct|bluetooth|microsoft kernel|virtual",
     re.IGNORECASE,
 )
+
+
+def _ps_escape(s: str) -> str:
+    """Экранирование для PowerShell single-quoted строк."""
+    return s.replace("'", "''")
 # Код возврата UAC при отказе пользователя
 _UAC_CANCELLED_EXIT_CODE = 1223
 
@@ -179,6 +185,7 @@ class DnsManager:
         self._install_cache: dict[str, bool] = {}
         self._install_cache_ts: dict[str, float] = {}
         self._install_cache_ttl = 30.0  # секунды
+        self._cache_lock = threading.Lock()
 
     # ------------------------------------------------------------------
     # Публичный интерфейс (совместим с HostsManager)
@@ -193,9 +200,10 @@ class DnsManager:
         if provider not in DNS_PROVIDERS:
             return False
         now = time.monotonic()
-        ts = self._install_cache_ts.get(provider)
-        if ts is not None and (now - ts) < self._install_cache_ttl:
-            return self._install_cache[provider]
+        with self._cache_lock:
+            ts = self._install_cache_ts.get(provider)
+            if ts is not None and (now - ts) < self._install_cache_ttl:
+                return self._install_cache[provider]
         ipv4_servers, _ = get_dns_provider_servers(provider)
         active = self._get_active_interfaces()
         result = False
@@ -204,14 +212,16 @@ class DnsManager:
             if current and all(server in current for server in ipv4_servers):
                 result = True
                 break
-        self._install_cache[provider] = result
-        self._install_cache_ts[provider] = now
+        with self._cache_lock:
+            self._install_cache[provider] = result
+            self._install_cache_ts[provider] = now
         return result
 
     def invalidate_install_cache(self):
         """Сбрасывает кэш is_installed (после установки/удаления DNS)."""
-        self._install_cache.clear()
-        self._install_cache_ts.clear()
+        with self._cache_lock:
+            self._install_cache.clear()
+            self._install_cache_ts.clear()
 
     def get_cached_install_state(self, provider: str = DNS_PROVIDER_ID) -> bool:
         """Возвращает последнее известное состояние установки без блокировки.
@@ -220,7 +230,8 @@ class DnsManager:
         если кэш пуст, считается, что DNS не установлен (свежее значение
         придёт асинхронно через VersionWorker).
         """
-        return bool(self._install_cache.get(provider, False))
+        with self._cache_lock:
+            return bool(self._install_cache.get(provider, False))
 
     def update(self, provider: str = DNS_PROVIDER_ID) -> bool:
         """Устанавливает DNS-серверы выбранного провайдера на все активные интерфейсы."""
@@ -274,11 +285,13 @@ class DnsManager:
     def _save_original_dns(self):
         """Сохраняет оригинальные настройки DNS перед установкой.
 
-        Важно различать DHCP и статику: если адрес получен по DHCP,
-        при восстановлении нужно вернуть режим «авто», а не вписывать
-        адрес роутера как статический.
+        Не перезаписывает существующий валидный снапшот: двойной update
+        иначе затрёт исходные DNS адресами провайдера.
         """
         try:
+            existing = get_setting(_ORIGINAL_DNS_SETTING_KEY)
+            if isinstance(existing, dict) and existing:
+                return
             snapshot = {}
             for iface in self._get_active_interfaces():
                 dns = self._get_interface_dns(iface)
@@ -306,10 +319,7 @@ class DnsManager:
                 if original and original.get("source") == "static" and original.get("servers"):
                     commands.append(self._build_set_dns_ps(iface, original["servers"]))
                 else:
-                    commands.append(
-                        f"Set-DnsClientServerAddress -InterfaceAlias '{iface}' "
-                        "-ResetServerAddresses"
-                    )
+                    commands.append(self._build_reset_dns_ps(iface))
             if commands:
                 return _run_elevated_ps("; ".join(commands), ", ".join(active))
             return True
@@ -381,8 +391,9 @@ class DnsManager:
         return self._get_interface_dns_linux(iface)
 
     def _get_interface_dns_windows(self, iface: str) -> list:
+        safe = _ps_escape(iface)
         ps_script = (
-            f"(Get-DnsClientServerAddress -InterfaceAlias '{iface}' -AddressFamily IPv4 | "
+            f"(Get-DnsClientServerAddress -InterfaceAlias '{safe}' -AddressFamily IPv4 | "
             "Select-Object -ExpandProperty ServerAddresses)"
         )
         code, output = _run_command(
@@ -397,8 +408,9 @@ class DnsManager:
         if IS_WINDOWS:
             # Тип адресации надёжнее определять через реестр интерфейса:
             # пустой NameServer = DHCP, непустой = статические адреса
+            safe = _ps_escape(iface)
             ps_script = (
-                "$guid = (Get-NetAdapter -InterfaceAlias '" + iface + "').InterfaceGuid; "
+                "$guid = (Get-NetAdapter -InterfaceAlias '" + safe + "').InterfaceGuid; "
                 "$reg = 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces\\' + $guid; "
                 "(Get-ItemProperty -Path $reg -Name NameServer -ErrorAction SilentlyContinue).NameServer"
             )
@@ -457,10 +469,18 @@ class DnsManager:
 
     @staticmethod
     def _build_set_dns_ps(iface: str, servers: list) -> str:
-        quoted = ", ".join(f"'{s}'" for s in servers)
+        safe_iface = _ps_escape(iface)
+        quoted = ", ".join(f"'{_ps_escape(str(s))}'" for s in servers)
         return (
-            f"Set-DnsClientServerAddress -InterfaceAlias '{iface}' "
+            f"Set-DnsClientServerAddress -InterfaceAlias '{safe_iface}' "
             f"-ServerAddresses ({quoted})"
+        )
+
+    @staticmethod
+    def _build_reset_dns_ps(iface: str) -> str:
+        return (
+            f"Set-DnsClientServerAddress -InterfaceAlias '{_ps_escape(iface)}' "
+            "-ResetServerAddresses"
         )
 
     def _set_interface_dns(self, iface: str, ipv4: list, ipv6: list) -> bool:
@@ -486,12 +506,12 @@ class DnsManager:
 
         logger.warning("Direct Set-DnsClientServerAddress failed on %s: %s", iface, output.strip())
         # Мы уже админ — пробуем netsh как альтернативу
-        if self._set_interface_dns_netsh(iface, ipv4):
+        if self._set_interface_dns_netsh(iface, ipv4, ipv6):
             return True
         logger.error("Failed to set DNS on %s even with admin rights", iface)
         return False
 
-    def _set_interface_dns_netsh(self, iface: str, ipv4: list) -> bool:
+    def _set_interface_dns_netsh(self, iface: str, ipv4: list, ipv6: list | None = None) -> bool:
         ok = True
         if ipv4:
             code, output = _run_command(
@@ -510,7 +530,25 @@ class DnsManager:
                     ]
                 )
                 ok = code == 0 and ok
-        else:
+        # IPv6: netsh interface ipv6 (иначе частичная установка)
+        if ipv6:
+            code, _out = _run_command(
+                [
+                    "netsh", "interface", "ipv6", "set", "dns",
+                    f"name={iface}", "source=static",
+                    f"address={ipv6[0]}", "validate=no",
+                ]
+            )
+            ok = code == 0 and ok
+            for extra in ipv6[1:]:
+                code, _out = _run_command(
+                    [
+                        "netsh", "interface", "ipv6", "add", "dns",
+                        f"name={iface}", f"address={extra}", "validate=no",
+                    ]
+                )
+                ok = code == 0 and ok
+        if not ipv4 and not ipv6:
             ok = self._reset_interface_dns(iface) and ok
         return ok
 
@@ -523,28 +561,77 @@ class DnsManager:
 
     def _set_interface_dns_linux(self, iface: str, servers: list) -> bool:
         code, output = _run_command(["resolvectl", "dns", iface, *servers])
-        if code != 0:
-            logger.error("Failed to set DNS on %s: %s", iface, output.strip())
+        if code == 0:
+            return True
+        # Fallback: NetworkManager (systemd-resolved может отсутствовать)
+        nm = self._set_interface_dns_nmcli(iface, servers)
+        if nm:
+            return True
+        logger.error("Failed to set DNS on %s: %s", iface, output.strip())
+        return False
+
+    @staticmethod
+    def _set_interface_dns_nmcli(iface: str, servers: list) -> bool:
+        import shutil as _shutil
+
+        if not _shutil.which("nmcli"):
             return False
-        return True
+        # Ищем соединение по имени интерфейса
+        code, out = _run_command(
+            ["nmcli", "-t", "-f", "NAME,DEVICE", "connection", "show", "--active"]
+        )
+        if code != 0:
+            return False
+        conn = None
+        for line in out.splitlines():
+            if ":" in line:
+                name, dev = line.split(":", 1)
+                if dev.strip() == iface:
+                    conn = name.strip()
+                    break
+        if not conn:
+            return False
+        dns_csv = ",".join(servers)
+        code, _o = _run_command(
+            ["nmcli", "connection", "modify", conn, "ipv4.dns", dns_csv]
+        )
+        if code != 0:
+            return False
+        code, _o = _run_command(
+            ["nmcli", "connection", "modify", conn, "ipv4.ignore-auto-dns", "yes"]
+        )
+        if code != 0:
+            return False
+        code, _o = _run_command(["nmcli", "connection", "up", conn])
+        return code == 0
 
     def _reset_interface_dns(self, iface: str) -> bool:
-        """Сбрасывает DNS на автоматический (DHCP)."""
+        """Сбрасывает DNS на автоматический (DHCP) для IPv4 и IPv6."""
         if IS_WINDOWS:
+            ok4 = True
+            ok6 = True
             code, output = _run_command(
                 [
                     "netsh", "interface", "ip", "set", "dns",
                     f"name={iface}", "source=dhcp", "validate=no",
                 ]
             )
-            if code == 0:
+            if code != 0:
+                logger.warning("Direct netsh reset ipv4 failed on %s: %s", iface, output.strip())
+                ok4 = False
+            code6, out6 = _run_command(
+                [
+                    "netsh", "interface", "ipv6", "set", "dns",
+                    f"name={iface}", "source=auto", "validate=no",
+                ]
+            )
+            if code6 != 0:
+                logger.warning("Direct netsh reset ipv6 failed on %s: %s", iface, out6.strip())
+                ok6 = False
+            if ok4 and ok6:
                 return True
-            logger.warning("Direct netsh reset failed on %s: %s", iface, output.strip())
             if not is_windows_admin():
-                return _run_elevated_ps(
-                    f"Set-DnsClientServerAddress -InterfaceAlias '{iface}' -ResetServerAddresses",
-                    iface,
-                )
+                return _run_elevated_ps(self._build_reset_dns_ps(iface), iface)
             logger.error("Failed to reset DNS on %s even with admin rights", iface)
             return False
         if IS_MACOS:
@@ -554,10 +641,16 @@ class DnsManager:
                 return False
             return True
         code, output = _run_command(["resolvectl", "revert", iface])
-        if code != 0:
-            logger.error("Failed to reset DNS on %s: %s", iface, output.strip())
-            return False
-        return True
+        if code == 0:
+            return True
+        # Fallback NMCLI
+        import shutil as _shutil2
+
+        if _shutil2.which("nmcli"):
+            _run_command(["nmcli", "connection", "modify", iface, "ipv4.dns", ""])
+            _run_command(["nmcli", "connection", "modify", iface, "ipv4.ignore-auto-dns", "no"])
+        logger.error("Failed to reset DNS on %s: %s", iface, output.strip())
+        return False
 
     # ------------------------------------------------------------------
     # Сброс DNS-кэша

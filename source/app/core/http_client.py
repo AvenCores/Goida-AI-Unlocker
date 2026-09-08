@@ -59,6 +59,10 @@ _POSITIVE_DNS_TTL = 300.0      # сек: кэш успешных резолво�
 _NEGATIVE_DNS_TTL = 60.0       # сек: кэш неудачных резолвов
 _REDIRECT_STATUSES = (301, 302, 303, 307, 308)
 _MAX_REDIRECTS = 3
+_MAX_API_BODY = 64 * 1024  # DoH/JSON/GitHub API — защита от OOM
+_MAX_HOSTS_BODY = 5 * 1024 * 1024  # полный hosts-файл (блок-листы бывают большими)
+_MAX_BODY = _MAX_API_BODY  # алиас для обратной совместимости
+_MAX_ANSWERS = 100  # кап числа записей при разборе DNS (защита от ANCOUNT DoS)
 
 _dns_cache: dict[str, tuple[float, str | None]] = {}
 _dns_cache_lock = threading.Lock()
@@ -181,7 +185,8 @@ def _decode_dns_ipv4(payload: bytes, query_id: int, hostname: str) -> str | None
     if qtype != b"\x00\x01" or qclass != b"\x00\x01":
         return None
     offset += 4
-    for _ in range(int.from_bytes(payload[6:8], "big")):
+    ancount = min(int.from_bytes(payload[6:8], "big"), _MAX_ANSWERS)
+    for _ in range(ancount):
         record = _read_dns_name(payload, offset)
         if record is None:
             return None
@@ -242,7 +247,7 @@ def _doh_resolve(hostname: str, timeout: int = 5) -> str | None:
             )
             resp = conn.getresponse()
             if resp.status == 200:
-                ip = _decode_dns_ipv4(resp.read(), query_id, hostname)
+                ip = _decode_dns_ipv4(resp.read(_MAX_API_BODY), query_id, hostname)
                 if ip:
                     return ip
             logger.debug("DoH resolve via %s:%s returned HTTP %s for %s", host, port, resp.status, hostname)
@@ -260,8 +265,8 @@ def _doh_resolve(hostname: str, timeout: int = 5) -> str | None:
 class _PinnedHTTPSConnection(http.client.HTTPSConnection):
     """HTTPS-соединение с фиксированным IP, но SNI/Host от исходного имени."""
 
-    def __init__(self, ip: str, hostname: str, port: int = 443, timeout: int = 5):
-        super().__init__(ip, port=port, timeout=timeout, context=_ssl_context())
+    def __init__(self, ip: str, hostname: str, port: int | None = None, timeout: int = 5):
+        super().__init__(ip, port=port or 443, timeout=timeout, context=_ssl_context())
         self._pinned_hostname = hostname
 
     def connect(self):
@@ -310,11 +315,11 @@ def _fetch_via_doh(url: str, headers: dict, timeout: int):
             target += "?" + parts.query
         request_headers = {"Host": hostname}
         request_headers.update(headers)
-        conn = _PinnedHTTPSConnection(ip, hostname, timeout=timeout)
+        conn = _PinnedHTTPSConnection(ip, hostname, port=parts.port or 443, timeout=timeout)
         try:
             conn.request("GET", target, headers=request_headers)
             resp = conn.getresponse()
-            body = resp.read()
+            body = resp.read(_MAX_API_BODY)
             status = resp.status
             resp_headers = resp.getheaders()
         finally:
@@ -323,7 +328,11 @@ def _fetch_via_doh(url: str, headers: dict, timeout: int):
             except Exception:
                 pass
         if status in _REDIRECT_STATUSES:
-            location = dict(resp_headers).get("Location")
+            location = None
+            for k, v in resp_headers:
+                if k.lower() == "location":
+                    location = v
+                    break
             if not location:
                 raise urllib.error.HTTPError(current_url, status, "Redirect without Location", resp_headers, io.BytesIO(body))
             current_url = urllib.parse.urljoin(current_url, location)
@@ -332,6 +341,12 @@ def _fetch_via_doh(url: str, headers: dict, timeout: int):
             raise urllib.error.HTTPError(current_url, status, resp.reason if hasattr(resp, "reason") else "", resp_headers, io.BytesIO(body))
         return io.BytesIO(body)
     raise urllib.error.HTTPError(url, 310, "Too many redirects", [], io.BytesIO(b""))
+
+
+def _add_cache_buster(url: str, now: int) -> str:
+    parts = urllib.parse.urlsplit(url)
+    q = parts.query + ("&" if parts.query else "") + f"t={now}"
+    return urllib.parse.urlunsplit((parts.scheme, parts.netloc, parts.path, q, parts.fragment))
 
 
 class HttpClient:
@@ -361,7 +376,8 @@ class HttpClient:
             return _fetch_via_doh(url, headers, timeout)
 
     @classmethod
-    def fetch(cls, url: str, timeout: int = 10, bypass_cache: bool = False) -> str:
+    def fetch(cls, url: str, timeout: int = 10, bypass_cache: bool = False,
+              max_bytes: int = _MAX_HOSTS_BODY) -> str:
         now = _time.time()
         key = url
         with cls._lock:
@@ -371,10 +387,14 @@ class HttpClient:
                     return content
         try:
             headers = {"User-Agent": _USER_AGENT}
-            with cls._urlopen(
-                f"{url}?t={int(now)}" if bypass_cache else url, headers, timeout
-            ) as resp:
-                data = resp.read().decode("utf-8", errors="ignore")
+            fetch_url = _add_cache_buster(url, int(now)) if bypass_cache else url
+            with cls._urlopen(fetch_url, headers, timeout) as resp:
+                # Читаем limit+1 чтобы детектить обрыв: тихая обрезка hosts недопустима
+                raw = resp.read(max_bytes + 1)
+                if len(raw) > max_bytes:
+                    logger.error("HTTP body too large for %s (>%d bytes), aborting", url, max_bytes)
+                    return ""
+                data = raw.decode("utf-8", errors="ignore")
             with cls._lock:
                 cls._cache[key] = (now, data)
             return data
@@ -395,8 +415,8 @@ class HttpClient:
         try:
             url = HOSTS_SOURCE_URLS.get(provider) or HOSTS_SOURCE_URLS["dns.malw.link"]
             headers = {"User-Agent": _USER_AGENT, "Range": "bytes=0-1024"}
-            with cls._urlopen(f"{url}?t={int(now)}", headers, 10) as resp:
-                data = resp.read()
+            with cls._urlopen(_add_cache_buster(url, int(now)), headers, 10) as resp:
+                data = resp.read(_MAX_API_BODY)
             remote_line, remote_date = extract_update_line(data)
         except Exception:
             pass

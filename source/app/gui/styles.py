@@ -106,17 +106,17 @@ _PX_VALUE_RE = re.compile(r"(-?\d+(?:\.\d+)?)px")
 def _apply_ui_scale(styles: dict[str, str]) -> dict[str, str]:
     """Пропорционально увеличивает все px-размеры готовых CSS/HTML строк.
 
-    Регэксп проходит по каждому значению «Npx» (шрифты, отступы, радиусы,
-    min/max-width), поэтому масштабирование не рассинхронизируется при
-    добавлении новых правил. Ширины границ тоже растут — на больших
-    экранах это сохраняет визуальный баланс.
+    Границы <2px не трогаем, чтобы не толстели на больших экранах.
     """
     factor = get_ui_scale()
     if factor == 1.0:
         return styles
 
     def repl(match: re.Match) -> str:
-        scaled = max(1, round(float(match.group(1)) * factor))
+        raw = float(match.group(1))
+        if raw < 2.0 and "border" in match.string[max(0, match.start() - 60):match.start()].lower():
+            return match.group(0)
+        scaled = max(1, round(raw * factor))
         return f"{scaled}px"
 
     return {key: _PX_VALUE_RE.sub(repl, value) for key, value in styles.items()}
@@ -227,7 +227,7 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
         "main": main,
         "outline_reset": "QPushButton:focus { outline: none; }",
         "label": (
-            f"QLabel {{ font-size: 18px; padding: 16px 0 8px 0;"
+            f"QLabel {{ font-size: 16px; padding: 12px 8px 6px 8px;"
             f" color: {p['text']}; font-weight: 500; }}"
         ),
         "message_card": (
@@ -296,3 +296,8 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
 
 def clear_stylesheet_cache():
     _STYLESHEET_CACHE.clear()
+    try:
+        from app.gui.icons import clear_icon_cache
+        clear_icon_cache()
+    except Exception:
+        pass

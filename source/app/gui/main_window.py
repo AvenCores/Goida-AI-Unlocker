@@ -1,4 +1,5 @@
 import sys
+import os
 from math import floor
 from typing import Callable, Optional
 
@@ -126,6 +127,11 @@ class MainWindow(QMainWindow):
         self._badge_fade: Optional[QPropertyAnimation] = None
         self._badge_opacity_target = 0.0
         self._processing_widget: Optional[QWidget] = None
+        self._processing_widgets: list = []
+        # Удержание QRunnable от GC до finished + анимации темы
+        self._workers: list = []
+        self._theme_anim_out = None
+        self._theme_anim_in = None
         # Последнее содержимое, отправленное в hosts через «Сохранить»
         # (нужно для кнопки «Повторить попытку»)
         self._last_save_content = ""
@@ -296,6 +302,15 @@ class MainWindow(QMainWindow):
         """
         if self.home_wrapper is None:
             return
+        try:
+            if self.stacked_widget.currentWidget() is not self.home_wrapper:
+                # Замер по скрытой главной бессмысленен и вреден: минимумы
+                # меток либо нулевые, либо устаревшие — окно ужмётся, а при
+                # возврате ряды карточки наедут друг на друга. Высоту
+                # пересчитаем в _return_to_main после показа страницы.
+                return
+        except RuntimeError:
+            return
         wrapper = self.home_wrapper
         wrapper.ensurePolished()
         # Актуальные минимумы статусных меток: при показе окна стили
@@ -429,7 +444,20 @@ class MainWindow(QMainWindow):
         self._navigator.animate_switch(widget, on_start=self._start_badge_hide)
 
     def _return_to_main(self, widget: QWidget):
-        self._navigator.return_to_main(self.home_wrapper, widget)
+        def _after_switch():
+            # Контент мог обновиться, пока главная была скрыта
+            # (статусы после install/update/uninstall): пересчитываем
+            # минимумы и высоту окна уже по видимой странице
+            try:
+                self.home_page.sync_status_label_heights()
+            except Exception:
+                pass
+            QTimer.singleShot(0, self._adjust_window_to_content)
+
+        self._navigator.animate_switch(
+            self.home_wrapper,
+            on_finish=lambda: (self._navigator.remove_widget(widget), _after_switch()),
+        )
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -473,6 +501,40 @@ class MainWindow(QMainWindow):
         elif action == "check_updates":
             self.check_for_updates()
 
+    def _track_worker(self, worker, signals):
+        """Удерживает worker до finished, затем отпускает."""
+        self._workers.append(worker)
+        try:
+            signals.finished.connect(
+                lambda *a: self._release_worker(worker),
+                Qt.ConnectionType.QueuedConnection,
+            )
+            signals.status_ready.connect(
+                lambda *a: self._release_worker(worker),
+                Qt.ConnectionType.QueuedConnection,
+            )
+            signals.update_ready.connect(
+                lambda *a: self._release_worker(worker),
+                Qt.ConnectionType.QueuedConnection,
+            )
+            signals.no_update.connect(
+                lambda *a: self._release_worker(worker),
+                Qt.ConnectionType.QueuedConnection,
+            )
+            signals.message.connect(
+                lambda *a: self._release_worker(worker),
+                Qt.ConnectionType.QueuedConnection,
+            )
+        except Exception:
+            pass
+
+    def _release_worker(self, worker):
+        try:
+            if worker in self._workers:
+                self._workers.remove(worker)
+        except Exception:
+            pass
+
     def show_processing(self, action: str) -> QWidget:
         widget = ProcessingPage(action, self.styles, self.dark_theme)
         self._add_and_switch(widget)
@@ -484,7 +546,28 @@ class MainWindow(QMainWindow):
             return
         proc = self._processing_widget
         self._processing_widget = None
-        QTimer.singleShot(400, lambda: self._navigator.remove_widget(proc))
+        self._processing_widgets.append(proc)
+
+        def _remove():
+            try:
+                import sip  # type: ignore
+
+                if sip.isdeleted(proc):
+                    return
+            except Exception:
+                pass
+            try:
+                if proc in self._processing_widgets:
+                    self._processing_widgets.remove(proc)
+                # Окно могли закрыть — stacked уже мёртв
+                try:
+                    self._navigator.remove_widget(proc)
+                except RuntimeError:
+                    pass
+            except Exception:
+                pass
+
+        QTimer.singleShot(400, _remove)
 
     def show_update_available(self, local_ver: str, latest_ver: str, dl_url: str):
         widget = UpdateAvailablePage(
@@ -542,7 +625,7 @@ class MainWindow(QMainWindow):
         worker.save_content = content
         worker.pre_backup = pre_backup
         worker.signals.finished.connect(self._on_hosts_save_finished, Qt.ConnectionType.QueuedConnection)
-        QThreadPool.globalInstance().start(worker)
+        self._track_worker(worker, worker.signals); QThreadPool.globalInstance().start(worker)
 
     def _restore_hosts_backup(self, content: str):
         """Записывает содержимое выбранного бэкапа в hosts (с бэкапом текущего)."""
@@ -565,8 +648,6 @@ class MainWindow(QMainWindow):
 
     def _get_error_hint(self, error: str) -> str:
         """Подсказка по ошибке с учётом фактических привилегий."""
-        import os
-
         from app.utils.helpers import is_windows_admin
 
         if error:
@@ -603,7 +684,7 @@ class MainWindow(QMainWindow):
         else:
             worker = HostsWorker(action, self.hosts_manager, self.current_provider, self)
         worker.signals.finished.connect(self.on_hosts_finished, Qt.ConnectionType.QueuedConnection)
-        QThreadPool.globalInstance().start(worker)
+        self._track_worker(worker, worker.signals); QThreadPool.globalInstance().start(worker)
 
     def show_uninstall_choice(self):
         widget = UninstallChoicePage(
@@ -626,7 +707,7 @@ class MainWindow(QMainWindow):
         worker = HostsWorker("uninstall", self.hosts_manager, self.current_provider, self)
         worker.restore_mode = restore_mode
         worker.signals.finished.connect(self.on_hosts_finished, Qt.ConnectionType.QueuedConnection)
-        QThreadPool.globalInstance().start(worker)
+        self._track_worker(worker, worker.signals); QThreadPool.globalInstance().start(worker)
 
     @Slot(str, bool, str, bool)
     def on_hosts_finished(self, action: str, ok: bool, error: str, backup_failed: bool = False):
@@ -669,7 +750,7 @@ class MainWindow(QMainWindow):
             self._on_version_status_ready,
             Qt.ConnectionType.QueuedConnection,
         )
-        QThreadPool.globalInstance().start(worker)
+        self._track_worker(worker, worker.signals); QThreadPool.globalInstance().start(worker)
 
     @Slot(object)
     def _on_version_status_ready(self, status):
@@ -713,7 +794,7 @@ class MainWindow(QMainWindow):
         worker.signals.update_ready.connect(self.on_app_update_ready, Qt.ConnectionType.QueuedConnection)
         worker.signals.no_update.connect(self.on_app_up_to_date, Qt.ConnectionType.QueuedConnection)
         worker.signals.message.connect(self.on_app_update_message, Qt.ConnectionType.QueuedConnection)
-        QThreadPool.globalInstance().start(worker)
+        self._track_worker(worker, worker.signals); QThreadPool.globalInstance().start(worker)
 
     def check_for_updates_silently(self):
         """Фоновая проверка обновлений при запуске: без страниц и попапов.
@@ -734,7 +815,7 @@ class MainWindow(QMainWindow):
         worker.signals.message.connect(
             self._on_silent_update_message, Qt.ConnectionType.QueuedConnection
         )
-        QThreadPool.globalInstance().start(worker)
+        self._track_worker(worker, worker.signals); QThreadPool.globalInstance().start(worker)
 
     @Slot(str, str, str)
     def _on_silent_update_ready(self, local: str, remote: str, url: str):
@@ -801,17 +882,29 @@ class MainWindow(QMainWindow):
         fade_out.setDuration(150)
         fade_out.setStartValue(1.0)
         fade_out.setEndValue(0.0)
+        self._theme_anim_out = fade_out
+        self._theme_anim_in = None
 
         def apply_changes():
-            self.setUpdatesEnabled(False)
-            update_func()
-            self.setUpdatesEnabled(True)
+            try:
+                self.setUpdatesEnabled(False)
+                update_func()
+                self.setUpdatesEnabled(True)
+            finally:
+                pass
 
             fade_in = QPropertyAnimation(self, b"windowOpacity", self)
             fade_in.setDuration(150)
             fade_in.setStartValue(0.0)
             fade_in.setEndValue(1.0)
-            fade_in.finished.connect(lambda: setattr(self, "is_animating", False))
+            self._theme_anim_in = fade_in
+
+            def _done():
+                self.is_animating = False
+                self._theme_anim_out = None
+                self._theme_anim_in = None
+
+            fade_in.finished.connect(_done)
             fade_in.start()
 
         fade_out.finished.connect(apply_changes)
@@ -826,11 +919,22 @@ class MainWindow(QMainWindow):
         self._animate_transition(update)
 
     def _popup_position_above_settings(self, popup: QWidget):
-        """Левый край кнопки настроек: попап раскрывается вправо-вверх."""
+        """Левый край кнопки настроек: попап раскрывается вправо-вверх, в пределах экрана."""
         pos = self.settings_button.mapToGlobal(self.settings_button.rect().topLeft())
         pos.setX(pos.x() - ui_scaled(10))
         pos.setY(pos.y() - popup.height() + ui_scaled(6))
         popup.move(pos)
+        # Кламп к availableGeometry — иначе на маленьком экране за краем
+        try:
+            screen = self.screen() or QGuiApplication.primaryScreen()
+            if screen is not None:
+                avail = screen.availableGeometry()
+                popup.adjustSize()
+                x = min(max(pos.x(), avail.left()), max(avail.left(), avail.right() - popup.width()))
+                y = min(max(pos.y(), avail.top()), max(avail.top(), avail.bottom() - popup.height()))
+                popup.move(x, y)
+        except Exception:
+            pass
 
     def _open_settings_menu(self):
         popup = SettingsPopup(self.dark_theme, self)
@@ -1008,8 +1112,11 @@ class MainWindow(QMainWindow):
             return False
 
     def closeEvent(self, event):
-        # Даём фоновым воркерам (проверка статуса, установка, обновление)
-        # корректно завершиться: защищает от обрыва записи hosts на середине
-        # и от гонки «сигнал из удалённого объекта» при выходе.
-        QThreadPool.globalInstance().waitForDone(5000)
+        # Не блокируем GUI на 5с: сбрасываем очередь и ждём минимум,
+        # закрытие не должно висеть из-за подвисшего fetch.
+        try:
+            QThreadPool.globalInstance().clear()
+            QThreadPool.globalInstance().waitForDone(500)
+        except Exception:
+            pass
         super().closeEvent(event)

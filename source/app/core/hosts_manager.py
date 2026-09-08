@@ -31,6 +31,18 @@ from app.utils.helpers import (
 _IP_LINE_RE = _re.compile(r"^\s*\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+\S+", _re.MULTILINE)
 # Код возврата UAC при отказе пользователя
 _UAC_CANCELLED_EXIT_CODE = 1223
+_MAX_HOSTS_SIZE = 5 * 1024 * 1024
+_BACKUP_HEADER_LINES = 5
+_MAX_BACKUPS = 10
+
+_NO_WINDOW_KWARGS: dict = {}
+if sys.platform == "win32":
+    _NO_WINDOW_KWARGS = {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)}
+
+
+def _run_quiet(cmd, **kwargs):
+    kwargs = {**_NO_WINDOW_KWARGS, **kwargs}
+    return subprocess.run(cmd, **kwargs)
 
 
 @dataclass(frozen=True)
@@ -42,12 +54,13 @@ class HostsStatusResult:
 
 class HostsManager:
     def __init__(self):
-        self._cache: Optional[tuple[float, str]] = None
+        self._cache: Optional[tuple[tuple[int, int], str]] = None
         self._lock = threading.Lock()
         self.backup_failed: bool = False
         # Флаг «служба DNS Client остановлена» на время агрессивной разблокировки;
         # apply() в finally перезапускает службу, если он установлен
         self._dnscache_stopped = False
+        self._dnscache_was_running = False
 
     # ------------------------------------------------------------------
     # Чтение и статус
@@ -57,14 +70,20 @@ class HostsManager:
         if not HOSTS_PATH.exists():
             return ""
         try:
-            mtime = HOSTS_PATH.stat().st_mtime
+            st = HOSTS_PATH.stat()
+            key = (st.st_mtime_ns, st.st_size)
             with self._lock:
-                if self._cache and self._cache[0] == mtime:
+                if self._cache and self._cache[0] == key:
                     return self._cache[1]
 
             content = HOSTS_PATH.read_text(encoding="utf-8", errors="ignore")
+            try:
+                st2 = HOSTS_PATH.stat()
+                key = (st2.st_mtime_ns, st2.st_size)
+            except Exception:
+                pass
             with self._lock:
-                self._cache = (mtime, content)
+                self._cache = (key, content)
             return content
         except Exception as e:
             logger.error("Failed to read hosts: %s", e)
@@ -76,17 +95,44 @@ class HostsManager:
 
     def is_installed(self, provider: str = "") -> bool:
         content = self.read()
+        # Игнорируем комментарии: маркер в комментарии != установленный обход
+        hosts_lines = [
+            ln for ln in content.splitlines()
+            if ln.strip() and not ln.strip().startswith("#")
+        ]
+        body = "\n".join(hosts_lines)
         if provider == "geohide":
-            return "dns.geohide.ru" in content
+            return "dns.geohide.ru" in body
         if provider == "dns.malw.link":
-            return "dns.malw.link" in content and "dns.geohide.ru" not in content
-        return "dns.malw.link" in content or "dns.geohide.ru" in content
+            return "dns.malw.link" in body and "dns.geohide.ru" not in body
+        return "dns.malw.link" in body or "dns.geohide.ru" in body
 
     @staticmethod
     def validate_content(content: str) -> bool:
-        if "localhost" in content:
-            return True
-        return bool(_IP_LINE_RE.search(content))
+        if not content or len(content.encode("utf-8", errors="ignore")) > _MAX_HOSTS_SIZE:
+            return False
+        valid = 0
+        for line in content.splitlines():
+            s = line.strip()
+            if not s or s.startswith("#"):
+                continue
+            parts = s.split()
+            if len(parts) < 2:
+                continue
+            ip = parts[0]
+            # IPv4 с проверкой октетов
+            m = _re.match(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$", ip)
+            if m:
+                try:
+                    if all(0 <= int(g) <= 255 for g in m.groups()):
+                        valid += 1
+                        continue
+                except ValueError:
+                    pass
+            # IPv6 / hostname-записи засчитываем мягко
+            if ":" in ip or _re.match(r"^[0-9a-fA-F:.]+$", ip):
+                valid += 1
+        return valid >= 1
 
     def check_status(self, provider: str = "dns.malw.link") -> HostsStatusResult:
         if not HOSTS_PATH.exists():
@@ -161,6 +207,10 @@ class HostsManager:
                     f"# source {HOSTS_PATH}\n\n"
                 ).encode("utf-8")
                 path.write_bytes(header + data)
+                try:
+                    self._prune_backups(backup_dir)
+                except Exception:
+                    pass
                 return path
             except Exception as e:
                 logger.error("Backup attempt failed for %s: %s", backup_dir, e)
@@ -170,26 +220,64 @@ class HostsManager:
             logger.error("All backup attempts failed: %s", last_error)
         return None
 
+    def _prune_backups(self, backup_dir: Path):
+        """Ротация: держим только последние _MAX_BACKUPS бэкапов."""
+        try:
+            files = [
+                f for f in backup_dir.iterdir()
+                if f.is_file() and f.name.lower().startswith(HOSTS_BACKUP_PREFIX)
+                and f.name.lower().endswith(".txt")
+            ]
+        except Exception:
+            return
+        if len(files) <= _MAX_BACKUPS:
+            return
+
+        def _key(p: Path):
+            try:
+                return p.stat().st_mtime_ns
+            except Exception:
+                return 0
+
+        files.sort(key=_key)
+        for old in files[:-_MAX_BACKUPS]:
+            try:
+                old.unlink()
+            except Exception:
+                pass
+
     def get_backups_list(self) -> list[Path]:
         all_files: list[Path] = []
-        seen_names: set[str] = set()
+        seen: set[tuple[str, str]] = set()
         for backup_dir in self._get_backup_dirs():
             if not backup_dir.is_dir():
                 continue
             try:
-                for f in backup_dir.iterdir():
+                entries = list(backup_dir.iterdir())
+            except Exception as e:
+                logger.debug("Failed to list backups in %s: %s", backup_dir, e)
+                continue
+            for f in entries:
+                try:
                     if (
                         f.is_file()
                         and f.name.lower().startswith(HOSTS_BACKUP_PREFIX)
                         and f.name.lower().endswith(".txt")
-                        and f.name not in seen_names
                     ):
-                        seen_names.add(f.name)
-                        all_files.append(f)
-            except Exception as e:
-                logger.debug("Failed to list backups in %s: %s", backup_dir, e)
+                        key = (f.name, str(backup_dir))
+                        if key not in seen:
+                            seen.add(key)
+                            all_files.append(f)
+                except Exception:
+                    continue
 
-        all_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        def _key(p: Path):
+            try:
+                return p.stat().st_mtime_ns
+            except Exception:
+                return 0
+
+        all_files.sort(key=_key, reverse=True)
         return all_files
 
     def get_latest_backup(self) -> Optional[Path]:
@@ -218,7 +306,8 @@ class HostsManager:
         try:
             import stat
 
-            os.chmod(HOSTS_PATH, stat.S_IWRITE)
+            st = HOSTS_PATH.stat()
+            os.chmod(HOSTS_PATH, st.st_mode | stat.S_IWUSR | stat.S_IWGRP)
         except Exception as e:
             logger.debug("Failed to remove read-only attribute: %s", e)
 
@@ -228,7 +317,11 @@ class HostsManager:
         last_err: Optional[Exception] = None
         for attempt in range(retries):
             try:
-                shutil.copy(temp_path, HOSTS_PATH)
+                shutil.copyfile(temp_path, HOSTS_PATH)
+                try:
+                    os.chmod(HOSTS_PATH, 0o644)
+                except Exception:
+                    pass
                 self.invalidate_cache()
                 if self._verify_applied_content(content):
                     return True
@@ -245,10 +338,11 @@ class HostsManager:
 
     def _try_cmd_copy(self, temp_path: str, content: str) -> bool:
         """Резерв: копирование через cmd /c copy."""
+        if sys.platform != "win32":
+            return False
         try:
-            r = subprocess.run(
+            r = _run_quiet(
                 ["cmd", "/c", "copy", "/Y", temp_path, str(HOSTS_PATH)],
-                creationflags=subprocess.CREATE_NO_WINDOW,
                 timeout=30,
                 capture_output=True,
             )
@@ -261,15 +355,24 @@ class HostsManager:
             pass
         return False
 
-    def _try_cmd_type(self, temp_path: str, content: str) -> bool:
-        """Резерв: перезапись через cmd /c type (обходит некоторые блокировки копирования)."""
+    def _try_powershell_copy(self, temp_path: str, content: str) -> bool:
+        """Резерв: копирование через PowerShell Copy-Item без shell-редиректа."""
+        if sys.platform != "win32":
+            return False
         try:
-            r = subprocess.run(
-                ["cmd", "/c", "type", temp_path, ">", str(HOSTS_PATH)],
-                creationflags=subprocess.CREATE_NO_WINDOW,
+            import os as _os
+
+            env = _os.environ.copy()
+            env["GOIDA_SRC"] = temp_path
+            env["GOIDA_DST"] = str(HOSTS_PATH)
+            r = _run_quiet(
+                [
+                    "powershell", "-NoProfile", "-NonInteractive", "-Command",
+                    "Copy-Item -LiteralPath $env:GOIDA_SRC -Destination $env:GOIDA_DST -Force",
+                ],
                 timeout=30,
                 capture_output=True,
-                shell=True,
+                env=env,
             )
             if r.returncode == 0:
                 _time.sleep(0.2)
@@ -279,6 +382,9 @@ class HostsManager:
         except Exception:
             pass
         return False
+
+    # _try_cmd_type удалён: shell=True + список + ">" не работает как редирект
+    # и даёт инъекцию. Вместо него — _try_powershell_copy выше.
 
     def _try_winapi_write(self, temp_path: str, content: str) -> bool:
         """Последний резерв: запись через Windows API (CreateFileW + WriteFile),
@@ -366,11 +472,13 @@ class HostsManager:
         except (PermissionError, OSError, RuntimeError) as e:
             logger.debug("Direct copy failed: %s", e)
 
-        # 2. Агрессивная разблокировка (остановка DNS Client, takeown, icacls) + повтор
+        # 2. Агрессивная разблокировка (остановка DNS Client, права) + повтор
         if is_windows_admin():
             logger.info("Attempting aggressive hosts unlock...")
-            self._unlock_hosts_windows()
-            self._dnscache_stopped = True
+            stopped = self._unlock_hosts_windows()
+            # Флаг ставим только если реально остановили запущенную службу
+            if stopped:
+                self._dnscache_stopped = True
             try:
                 if self._try_direct_copy(temp_path, content, retries=2):
                     self._flush_dns_windows()
@@ -384,8 +492,8 @@ class HostsManager:
             self._flush_dns_windows()
             return True
 
-        # 4–6. cmd copy → cmd type → Windows API
-        for writer in (self._try_cmd_copy, self._try_cmd_type, self._try_winapi_write):
+        # 4-6. cmd copy → powershell copy → Windows API
+        for writer in (self._try_cmd_copy, self._try_powershell_copy, self._try_winapi_write):
             if writer(temp_path, content):
                 self._flush_dns_windows()
                 return True
@@ -399,51 +507,49 @@ class HostsManager:
             "or protected by security software. Try closing other programs and retrying."
         )
 
+    def _is_dnscache_running(self) -> bool:
+        try:
+            r = _run_quiet(["sc", "query", "dnscache"], timeout=10, capture_output=True, text=True)
+            return r.returncode == 0 and "RUNNING" in (r.stdout or "")
+        except Exception:
+            return False
+
     def _unlock_hosts_windows(self):
-        """Агрессивная разблокировка hosts: остановка DNS Client, смена владельца, права."""
+        """Минимальная разблокировка hosts без смены владельца и Everyone:F."""
         hosts_str = str(HOSTS_PATH)
+        was_running = self._is_dnscache_running()
+        self._dnscache_was_running = was_running
+        stopped = False
+        if was_running:
+            try:
+                r = _run_quiet(["net", "stop", "dnscache", "/y"], timeout=15, capture_output=True)
+                stopped = r.returncode == 0
+            except Exception as e:
+                logger.debug("net stop dnscache failed: %s", e)
         steps = [
-            ["net", "stop", "dnscache", "/y"],
-            ["takeown", "/f", hosts_str],
+            # Права только Administrators, НЕ Everyone (S-1-1-0)
             ["icacls", hosts_str, "/grant", "*S-1-5-32-544:F", "/c"],
-            ["icacls", hosts_str, "/grant", "*S-1-1-0:F", "/c"],
             ["attrib", "-R", hosts_str],
-            [
-                "powershell",
-                "-NoProfile",
-                "-Command",
-                f"Set-ItemProperty -Path '{hosts_str}' -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue",
-            ],
         ]
-        any_success = False
         for cmd in steps:
             try:
-                r = subprocess.run(
-                    cmd,
-                    creationflags=subprocess.CREATE_NO_WINDOW,
-                    timeout=15,
-                    capture_output=True,
-                )
-                if r.returncode == 0:
-                    any_success = True
-                else:
+                r = _run_quiet(cmd, timeout=15, capture_output=True)
+                if r.returncode != 0:
                     logger.debug(
                         "Unlock step %s returned %d: %s",
-                        cmd[0], r.returncode, r.stderr.decode(errors="ignore")[:200],
+                        cmd[0], r.returncode, (r.stderr or b"")[:200] if isinstance(r.stderr, bytes) else str(r.stderr)[:200],
                     )
             except Exception as e:
                 logger.debug("Unlock step %s failed: %s", cmd[0], e)
-        return any_success
+        # Возвращаем True только если реально остановили работавшую службу
+        return stopped
 
     def _restore_dns_service_windows(self):
-        """Перезапуск службы DNS Client после изменения hosts."""
+        """Перезапуск службы DNS Client только если останавливали её мы."""
+        if not self._dnscache_stopped or not self._dnscache_was_running:
+            return
         try:
-            subprocess.run(
-                ["net", "start", "dnscache"],
-                creationflags=subprocess.CREATE_NO_WINDOW,
-                timeout=15,
-                capture_output=True,
-            )
+            _run_quiet(["net", "start", "dnscache"], timeout=15, capture_output=True)
         except Exception:
             pass
 
@@ -505,7 +611,7 @@ class HostsManager:
                     "exit 1 "
                     "}",
                 ]
-                r = subprocess.run(cmd, creationflags=subprocess.CREATE_NO_WINDOW, timeout=90, capture_output=True)
+                r = _run_quiet(cmd, timeout=90, capture_output=True)
 
             elevated = r.returncode == 0
             uac_denied = r.returncode == _UAC_CANCELLED_EXIT_CODE
@@ -529,12 +635,7 @@ class HostsManager:
 
     def _flush_dns_windows(self):
         try:
-            subprocess.run(
-                ["ipconfig", "/flushdns"],
-                creationflags=subprocess.CREATE_NO_WINDOW,
-                timeout=10,
-                capture_output=True,
-            )
+            _run_quiet(["ipconfig", "/flushdns"], timeout=10, capture_output=True)
         except Exception:
             pass
 
@@ -542,17 +643,25 @@ class HostsManager:
     # macOS / Linux
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _sh_quote(s: str) -> str:
+        return "'" + s.replace("'", "'\\''") + "'"
+
     def _write_macos(self, temp_path: str) -> bool:
+        import shlex
+
         flush = (
             "dscacheutil -flushcache 2>/dev/null; "
             "killall -HUP mDNSResponder 2>/dev/null || true"
         )
-        s_src = temp_path.replace("'", "'\\''")
-        s_dst = str(HOSTS_PATH).replace("'", "'\\''")
-        shell_cmd = f"cp '{s_src}' '{s_dst}' && chmod 644 '{s_dst}' && {flush}"
+        s_src = self._sh_quote(temp_path)
+        s_dst = self._sh_quote(str(HOSTS_PATH))
+        shell_cmd = f"cp {s_src} {s_dst} && chmod 644 {s_dst} && {flush}"
 
         if shutil.which("osascript"):
-            applescript = f'do shell script "{shell_cmd}" with administrator privileges'
+            # Экранируем для AppleScript "..."
+            as_cmd = shell_cmd.replace("\\", "\\\\").replace('"', '\\"')
+            applescript = f'do shell script "{as_cmd}" with administrator privileges'
             try:
                 r = subprocess.run(
                     ["osascript", "-e", applescript],
@@ -567,23 +676,24 @@ class HostsManager:
 
         if shutil.which("sudo"):
             try:
-                r = subprocess.run(["sudo", "bash", "-c", shell_cmd], timeout=120)
-                if r.returncode == 0:
+                # Без shell: sudo cp + chmod напрямую
+                r1 = subprocess.run(["sudo", "cp", temp_path, str(HOSTS_PATH)], timeout=120)
+                if r1.returncode == 0:
+                    subprocess.run(["sudo", "chmod", "644", str(HOSTS_PATH)], timeout=30)
+                    subprocess.run(["dscacheutil", "-flushcache"], timeout=15)
                     return True
             except Exception:
                 pass
         return False
 
     def _write_linux(self, temp_path: str) -> bool:
+        s_src = self._sh_quote(temp_path)
+        s_dst = self._sh_quote(str(HOSTS_PATH))
         flush = (
             "resolvectl flush-caches 2>/dev/null || "
-            "systemd-resolve --flush-caches 2>/dev/null || "
-            "/etc/init.d/nscd restart 2>/dev/null || "
-            "killall -HUP dnsmasq 2>/dev/null || true"
+            "systemd-resolve --flush-caches 2>/dev/null || true"
         )
-        s_src = temp_path.replace("'", "'\\''")
-        s_dst = str(HOSTS_PATH).replace("'", "'\\''")
-        bash_cmd = f"cp '{s_src}' '{s_dst}' && chmod 644 '{s_dst}' && {flush}"
+        bash_cmd = f"cp {s_src} {s_dst} && chmod 644 {s_dst} && {flush}"
 
         launchers = [("pkexec", ["pkexec"]), ("sudo", ["sudo"])]
         launchers += [(tool, [tool]) for tool in ("gksudo", "kdesudo")]
@@ -678,9 +788,10 @@ class HostsManager:
         for backup_path in backups:
             try:
                 content = backup_path.read_text(encoding="utf-8", errors="ignore")
-                lines = content.splitlines()
-                if len(lines) >= 5 and lines[0].startswith("# Goida AI Unlocker hosts backup"):
-                    actual_hosts = "\n".join(lines[5:])
+                # Шапка бэкапа отделена пустой строкой — ищем разделитель, а не lines[5:]
+                if content.startswith("# Goida AI Unlocker hosts backup"):
+                    sep = content.find("\n\n")
+                    actual_hosts = content[sep + 2:] if sep != -1 else content
                 else:
                     actual_hosts = content
 

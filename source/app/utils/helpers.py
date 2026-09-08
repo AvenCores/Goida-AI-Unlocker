@@ -4,7 +4,7 @@ import subprocess
 import shutil
 import atexit
 import time as _time
-from functools import lru_cache
+import threading
 from pathlib import Path
 from app.core.logger import logger
 
@@ -32,9 +32,9 @@ def get_clean_system_env() -> dict:
 def open_target(path: str):
     try:
         if sys.platform == "win32":
-            os.startfile(path)
+            os.startfile(path)  # type: ignore[attr-defined]
         elif sys.platform == "darwin":
-            subprocess.Popen(["open", path], start_new_session=True)
+            subprocess.Popen(["open", path])
         else:
             env = get_clean_system_env()
             for cmd_name in ("xdg-open", "gio", "kde-open", "gnome-open"):
@@ -43,9 +43,9 @@ def open_target(path: str):
                         subprocess.Popen(
                             [cmd_name, str(path)],
                             env=env,
-                            start_new_session=True,
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL,
+                            start_new_session=True,
                         )
                         return
                 except Exception as e:
@@ -55,33 +55,53 @@ def open_target(path: str):
         logger.error("Open error for %s: %s", path, e)
 
 
-@lru_cache(maxsize=1)
+_admin_cache_lock = threading.Lock()
+_admin_cache: tuple[float, bool] | None = None
+_ADMIN_CACHE_TTL = 10.0
+
+
 def is_windows_admin() -> bool:
+    """Проверка прав администратора с коротким TTL-кэшем (10с)."""
+    global _admin_cache
     if sys.platform != "win32":
         return False
+    now = _time.monotonic()
+    with _admin_cache_lock:
+        if _admin_cache is not None and (now - _admin_cache[0]) < _ADMIN_CACHE_TTL:
+            return _admin_cache[1]
     try:
         import ctypes
 
-        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        result = bool(ctypes.windll.shell32.IsUserAnAdmin())
     except Exception:
-        return False
+        result = False
+    with _admin_cache_lock:
+        _admin_cache = (now, result)
+    return result
 
 
 def safe_remove(path: str, retries: int = 3, delay: float = 0.3):
     for _ in range(retries):
         try:
             p = Path(path)
-            if p.exists():
-                p.unlink()
+            p.unlink(missing_ok=True)
             return
         except PermissionError:
             _time.sleep(delay)
+        except FileNotFoundError:
+            return
         except Exception:
             break
     try:
         p = Path(path)
-        if p.exists():
-            atexit.register(lambda p=p: p.exists() and p.unlink())
+
+        def _late_remove(p=p):
+            try:
+                p.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+        atexit.register(_late_remove)
     except Exception:
         pass
 
@@ -97,20 +117,24 @@ _UPDATE_LINE_PREFIXES = ("Последнее обновление:", "Last updat
 
 
 def extract_update_line(content: bytes | str) -> tuple[str, str]:
-    """Ищет во второй строке hosts метку даты обновления.
+    """Ищет в первых строках hosts метку даты обновления.
 
     Возвращает (полная_строка, дата) или ("", ""), если метка не найдена.
+    Сканирует первые 10 строк (устойчиво к BOM/пустым строкам/смене шапки).
     """
     try:
         if isinstance(content, bytes):
-            content = content.decode("utf-8", errors="ignore")
+            content = content.decode("utf-8-sig", errors="ignore")
+        else:
+            # Убираем BOM если есть
+            if content.startswith("﻿"):
+                content = content.lstrip("﻿")
         lines = content.splitlines()
-        if len(lines) < 2:
-            return "", ""
-        line = lines[1].strip()
-        for prefix in _UPDATE_LINE_PREFIXES:
-            if prefix in line:
-                return line, line.split(prefix, 1)[1].strip()
+        for line in lines[:10]:
+            stripped = line.strip()
+            for prefix in _UPDATE_LINE_PREFIXES:
+                if prefix in stripped:
+                    return stripped, stripped.split(prefix, 1)[1].strip()
         return "", ""
     except Exception:
         return "", ""

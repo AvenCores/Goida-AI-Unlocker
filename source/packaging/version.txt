@@ -13,12 +13,12 @@ VSVersionInfo(
     StringFileInfo([
       StringTable(
         '040904B0',
-        [StringStruct('CompanyName', 'avencores'),
+        [StringStruct('CompanyName', 'AvenCores'),
          StringStruct('FileDescription', 'Goida AI Unlocker'),
          StringStruct('FileVersion', '1.3.9'),
          StringStruct('InternalName', 'Goida_AI_Unlocker'),
-         StringStruct('LegalCopyright', '© 2026'),
-         StringStruct('OriginalFilename', 'Goida_AI_Unlocker_Windows.exe'),
+         StringStruct('LegalCopyright', '© 2026 AvenCores'),
+         StringStruct('OriginalFilename', 'Goida_AI_Unlocker.exe'),
          StringStruct('ProductName', 'Goida AI Unlocker'),
          StringStruct('ProductVersion', '1.3.9')])
       ]),
