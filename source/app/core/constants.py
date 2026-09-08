@@ -52,6 +52,15 @@ def _get_settings_path() -> Path:
 def _get_hosts_path() -> Path:
     if sys.platform == "win32":
         root = os.environ.get("SystemRoot", r"C:\Windows")
+        # 32-битный процесс на 64-битной Windows: System32 редиректится
+        # в SysWOW64 (hosts там нет) — тогда нужен Sysnative. На остальных
+        # конфигурациях такого пути нет и берётся обычный System32.
+        try:
+            sysnative = Path(root) / "Sysnative" / "drivers" / "etc" / "hosts"
+            if sysnative.exists():
+                return sysnative
+        except Exception:
+            pass
         return Path(root) / "System32" / "drivers" / "etc" / "hosts"
     return Path("/etc/hosts")
 

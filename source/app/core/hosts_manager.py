@@ -61,6 +61,7 @@ class HostsManager:
         # apply() в finally перезапускает службу, если он установлен
         self._dnscache_stopped = False
         self._dnscache_was_running = False
+        self._last_elevated_detail = ""
 
     # ------------------------------------------------------------------
     # Чтение и статус
@@ -298,7 +299,28 @@ class HostsManager:
         except Exception as e:
             logger.error("Failed to read hosts for verification: %s", e)
             return False
-        return self._normalize_hosts_content(actual_content) == self._normalize_hosts_content(expected_content)
+        ok = self._normalize_hosts_content(actual_content) == self._normalize_hosts_content(expected_content)
+        if not ok:
+            # Диагностика расхождения вместо молчаливого False: длины и
+            # первая различающаяся строка (обрезано для лога)
+            try:
+                exp_lines = self._normalize_hosts_content(expected_content).splitlines()
+                act_lines = self._normalize_hosts_content(actual_content).splitlines()
+                diff_at = next(
+                    (i for i, (a, b) in enumerate(zip(exp_lines, act_lines)) if a != b),
+                    min(len(exp_lines), len(act_lines)),
+                )
+                logger.error(
+                    "Hosts verification mismatch: expected %d lines/%d chars, "
+                    "actual %d lines/%d chars, first diff at line %d: %r vs %r",
+                    len(exp_lines), len(expected_content),
+                    len(act_lines), len(actual_content), diff_at + 1,
+                    exp_lines[diff_at] if diff_at < len(exp_lines) else "<eof>",
+                    act_lines[diff_at] if diff_at < len(act_lines) else "<eof>",
+                )
+            except Exception:
+                pass
+        return ok
 
     def _clear_readonly_attribute(self):
         if not HOSTS_PATH.exists():
@@ -486,11 +508,20 @@ class HostsManager:
             except (PermissionError, OSError, RuntimeError) as e:
                 logger.debug("Post-unlock direct copy failed: %s", e)
 
-        # 3. Копирование с элевацией PowerShell (UAC при необходимости)
-        ok, uac_denied = self._try_elevated_copy(temp_path, content)
-        if ok:
-            self._flush_dns_windows()
-            return True
+        # 3. Копирование с элевацией PowerShell (UAC при необходимости).
+        # hosts часто transient-лочится антивирусом/фильтрами сразу после выдачи
+        # UAC: одна попытка даёт ложный "UAC denied", повтор через секунду успех.
+        elevated_granted = False
+        for attempt in range(3):
+            ok, uac_denied = self._try_elevated_copy(temp_path, content)
+            if ok:
+                self._flush_dns_windows()
+                return True
+            if uac_denied:
+                break
+            elevated_granted = True
+            logger.debug("Elevated copy attempt %d failed transiently, retrying...", attempt + 1)
+            _time.sleep(1.0)
 
         # 4-6. cmd copy → powershell copy → Windows API
         for writer in (self._try_cmd_copy, self._try_powershell_copy, self._try_winapi_write):
@@ -500,6 +531,16 @@ class HostsManager:
 
         if uac_denied:
             raise PermissionError("UAC elevation was denied by user")
+        if elevated_granted:
+            # UAC был выдан, но запись не прошла с трёх попыток: показываем
+            # реальную причину из дочернего процесса, а не generic-текст
+            detail = (self._last_elevated_detail or "").strip()
+            hint = f" Child says: {detail}" if detail else ""
+            raise RuntimeError(
+                "Elevated hosts write failed (elevation was granted, but the "
+                f"copy did not stick).{hint} The file may be locked by antivirus "
+                "or a system filter — please retry the operation."
+            )
         if not is_windows_admin():
             raise PermissionError("UAC elevation was denied or PowerShell execution failed")
         raise RuntimeError(
@@ -556,24 +597,44 @@ class HostsManager:
     def _try_elevated_copy(self, temp_path: str, content: str) -> tuple[bool, bool]:
         """Копирование hosts через PowerShell с элевацией.
 
-        Возвращает (успех, отказ_в_UAC).
+        Возвращает (успех, отказ_в_UAC). Детали последней попытки кладутся
+        в self._last_elevated_detail — иначе причина провала (текст ошибки
+        дочернего процесса) теряется и пользователю показывается generic.
         """
         ps_script_path: Optional[str] = None
+        log_path: Optional[str] = None
+        self._last_elevated_detail = ""
         try:
             safe_src = temp_path.replace("'", "''")
             safe_dst = str(HOSTS_PATH).replace("'", "''")
+            fd, log_path = tempfile.mkstemp(prefix="goida_ps_", suffix=".log")
+            os.close(fd)
+            safe_log = log_path.replace("'", "''")
             ps = (
                 "$ErrorActionPreference = 'Stop'\n"
                 f"$source = '{safe_src}'\n"
                 f"$dest = '{safe_dst}'\n"
+                f"$elog = '{safe_log}'\n"
+                "$out = @()\n"
                 "try {\n"
-                "    if (Test-Path $dest) {\n"
-                "        Set-ItemProperty -Path $dest -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue\n"
+                "    if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess) {\n"
+                "        $alt = Join-Path $env:SystemRoot 'Sysnative\\drivers\\etc\\hosts'\n"
+                "        if (Test-Path -LiteralPath $alt) { $dest = $alt }\n"
+                "    }\n"
+                "    $out += \"DEST=$dest\"\n"
+                "    $out += \"SRC_EXISTS=$(Test-Path -LiteralPath $source)\"\n"
+                "    if (Test-Path -LiteralPath $dest) {\n"
+                "        Set-ItemProperty -LiteralPath $dest -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue\n"
                 "    }\n"
                 "    Copy-Item -LiteralPath $source -Destination $dest -Force\n"
+                "    $out += 'COPIED'\n"
                 "    try { ipconfig /flushdns | Out-Null } catch {}\n"
+                "    $out += 'FLUSHED'\n"
+                "    $out | Out-File -LiteralPath $elog -Encoding utf8\n"
                 "    exit 0\n"
                 "} catch {\n"
+                "    $out += (\"ERROR: \" + $_.Exception.Message)\n"
+                "    try { $out | Out-File -LiteralPath $elog -Encoding utf8 } catch {}\n"
                 "    exit 1\n"
                 "}\n"
             )
@@ -583,17 +644,17 @@ class HostsManager:
             safe_script = ps_script_path.replace("'", "''")
 
             if is_windows_admin():
-                r = subprocess.run(
+                r = _run_quiet(
                     [
                         "powershell", "-WindowStyle", "Hidden", "-NoProfile",
                         "-ExecutionPolicy", "Bypass", "-File", ps_script_path,
                     ],
-                    creationflags=subprocess.CREATE_NO_WINDOW,
                     timeout=60,
                     capture_output=True,
                 )
                 if r.returncode != 0:
-                    logger.debug("PowerShell script failed (admin): %s", r.stderr.decode(errors="ignore"))
+                    err = r.stderr.decode(errors="ignore") if isinstance(r.stderr, bytes) else (r.stderr or "")
+                    logger.debug("PowerShell script failed (admin): %s", err)
             else:
                 cmd = [
                     "powershell", "-WindowStyle", "Hidden", "-NoProfile",
@@ -615,23 +676,51 @@ class HostsManager:
 
             elevated = r.returncode == 0
             uac_denied = r.returncode == _UAC_CANCELLED_EXIT_CODE
+            child_tail = self._read_child_log_tail(log_path)
+            if child_tail:
+                self._last_elevated_detail = child_tail
             if not elevated and not uac_denied:
+                err = r.stderr.decode(errors="ignore") if isinstance(r.stderr, bytes) else (r.stderr or "")
                 logger.debug(
-                    "PowerShell elevated copy failed: rc=%d stderr=%s",
-                    r.returncode, r.stderr.decode(errors="ignore"),
+                    "PowerShell elevated copy failed: rc=%d stderr=%s child=%s",
+                    r.returncode, err, child_tail,
                 )
             if elevated:
-                _time.sleep(0.3)
-                self.invalidate_cache()
-                if self._verify_applied_content(content):
-                    return True, False
+                # Верификация с повторами: сразу после записи файл может
+                # быть transient-залочен (Defender/фильтр) и чтение вернёт
+                # старое содержимое — без повтора это ложный провал
+                for i in range(3):
+                    _time.sleep(0.5)
+                    self.invalidate_cache()
+                    if self._verify_applied_content(content):
+                        return True, False
+                logger.debug(
+                    "Elevated copy reported success but verification failed "
+                    "(transient lock?), child=%s — will retry outer loop",
+                    child_tail,
+                )
             return False, uac_denied
         except Exception as e:
             logger.debug("PowerShell elevated copy failed: %s", e)
+            self._last_elevated_detail = str(e)
             return False, False
         finally:
             if ps_script_path:
                 safe_remove(ps_script_path)
+            if log_path:
+                safe_remove(log_path)
+
+    @staticmethod
+    def _read_child_log_tail(log_path: Optional[str], limit: int = 500) -> str:
+        """Хвост лога дочернего PowerShell (там реальная причина провала)."""
+        if not log_path:
+            return ""
+        try:
+            data = Path(log_path).read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            return ""
+        tail = "\n".join([ln for ln in data.splitlines() if ln.strip()][-6:])
+        return tail[:limit]
 
     def _flush_dns_windows(self):
         try:
