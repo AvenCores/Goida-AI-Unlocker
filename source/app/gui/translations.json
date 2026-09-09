@@ -129,7 +129,8 @@
     "update_badge_tooltip": "Открыть страницу обновления",
     "doh_auto": "Авто",
     "linux_admin_open_unavailable": "Установите pkexec и графический текстовый редактор или запустите приложение от имени root.",
-    "macos_admin_open_unavailable": "Установите osascript или запустите приложение от имени администратора."
+    "macos_admin_open_unavailable": "Установите osascript или запустите приложение от имени администратора.",
+    "unlock_status_caption": "Обход блокировок"
   },
   "en": {
     "language_name": "English",
@@ -261,7 +262,8 @@
     "update_badge_tooltip": "Open update page",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Install pkexec and a graphical text editor, or run the app as root.",
-    "macos_admin_open_unavailable": "Install osascript or run the app as administrator."
+    "macos_admin_open_unavailable": "Install osascript or run the app as administrator.",
+    "unlock_status_caption": "Bypass status"
   },
   "de": {
     "language_name": "Deutsch",
@@ -393,7 +395,8 @@
     "update_badge_tooltip": "Update-Seite öffnen",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "Bypass-Status"
   },
   "uk": {
     "language_name": "Українська",
@@ -525,7 +528,8 @@
     "update_badge_tooltip": "Відкрити сторінку оновлення",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "Обхід блокувань"
   },
   "be": {
     "language_name": "Беларуская",
@@ -657,7 +661,8 @@
     "update_badge_tooltip": "Адкрыць старонку абнаўлення",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "Абыход блакіровак"
   },
   "kk": {
     "language_name": "Қазақша",
@@ -789,7 +794,8 @@
     "update_badge_tooltip": "Жаңарту бетін ашу",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "Айналып өту"
   },
   "fr": {
     "language_name": "Français",
@@ -921,7 +927,8 @@
     "update_badge_tooltip": "Ouvrir la page de mise à jour",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "Contournement"
   },
   "pl": {
     "language_name": "Polski",
@@ -1053,7 +1060,8 @@
     "update_badge_tooltip": "Otwórz stronę aktualizacji",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "Obejście blokad"
   },
   "es": {
     "language_name": "Español",
@@ -1185,7 +1193,8 @@
     "update_badge_tooltip": "Abrir página de actualización",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "Bypass"
   },
   "pt": {
     "language_name": "Português",
@@ -1317,7 +1326,8 @@
     "update_badge_tooltip": "Abrir página de atualização",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "Bypass"
   },
   "it": {
     "language_name": "Italiano",
@@ -1449,7 +1459,8 @@
     "update_badge_tooltip": "Apri la pagina di aggiornamento",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "Bypass"
   },
   "tr": {
     "language_name": "Türkçe",
@@ -1581,7 +1592,8 @@
     "update_badge_tooltip": "Güncelleme sayfasını aç",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "Atlama"
   },
   "zh": {
     "language_name": "中文",
@@ -1713,7 +1725,8 @@
     "update_badge_tooltip": "打开更新页面",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "绕过状态"
   },
   "ja": {
     "language_name": "日本語",
@@ -1845,7 +1858,8 @@
     "update_badge_tooltip": "更新ページを開く",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "バイパス"
   },
   "ko": {
     "language_name": "한국어",
@@ -1977,7 +1991,8 @@
     "update_badge_tooltip": "업데이트 페이지 열기",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "우회"
   },
   "cs": {
     "language_name": "Čeština",
@@ -2109,7 +2124,8 @@
     "update_badge_tooltip": "Otevřít stránku aktualizace",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "Obcházení"
   },
   "nl": {
     "language_name": "Nederlands",
@@ -2241,7 +2257,8 @@
     "update_badge_tooltip": "Updatepagina openen",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "Bypass"
   },
   "sv": {
     "language_name": "Svenska",
@@ -2373,6 +2390,7 @@
     "update_badge_tooltip": "Öppna uppdateringssidan",
     "doh_auto": "Auto",
     "linux_admin_open_unavailable": "Enter the root password when prompted.",
-    "macos_admin_open_unavailable": "Enter the root password when prompted."
+    "macos_admin_open_unavailable": "Enter the root password when prompted.",
+    "unlock_status_caption": "Bypass"
   }
 }

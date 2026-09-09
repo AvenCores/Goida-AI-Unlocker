@@ -107,10 +107,32 @@ class HomePage(QWidget):
         )
         self.dns_provider_combo.currentIndexChanged.connect(self._on_dns_provider_changed)
 
-        self.textinformer = QLabel()
-        self.textinformer.setTextFormat(Qt.TextFormat.RichText)
-        self.textinformer.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.textinformer.setWordWrap(True)
+        # Статус обхода — компактная пара «подпись + состояние» вместо одной
+        # длинной строки: короткие части не упираются в ширину карточки
+        # и не переносятся даже на широких шрифтах Linux
+        self.status_row = QWidget()
+        status_row_layout = QHBoxLayout(self.status_row)
+        status_row_layout.setContentsMargins(
+            ui_scaled(12), ui_scaled(8), ui_scaled(12), ui_scaled(8)
+        )
+        status_row_layout.setSpacing(0)
+        status_row_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_caption = QLabel()
+        self.status_caption.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        # Без переноса: подписи короткие во всех языках, а с переносом
+        # sizeHint схлопывается до самого длинного слова и подпись
+        # превращается в узкий столбик
+        self.status_caption.setWordWrap(False)
+        self.status_state = QLabel()
+        self.status_state.setTextFormat(Qt.TextFormat.RichText)
+        self.status_state.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        self.status_state.setWordWrap(True)
+        status_row_layout.addWidget(self.status_caption)
+        status_row_layout.addWidget(self.status_state)
 
         self.version_label = QLabel(tr("version_checking"))
         self.version_label.setTextFormat(Qt.TextFormat.RichText)
@@ -135,7 +157,7 @@ class HomePage(QWidget):
         # Кнопка открытия сайта/репозитория — справа от комбобокса провайдера
         status_vbox.addLayout(self._row_with_button(self.provider_combo, self.provider_repo_button))
         status_vbox.addLayout(self._row_with_button(self.dns_provider_combo, self.dns_site_button))
-        status_vbox.addWidget(self.textinformer)
+        status_vbox.addWidget(self.status_row)
         status_vbox.addWidget(self.version_label)
         status_vbox.addWidget(self.update_date_label)
 
@@ -294,7 +316,7 @@ class HomePage(QWidget):
         перед замером высоты окна (метрики шрифтов актуальны только
         после полировки стилей при показе).
         """
-        for lbl in (self.textinformer, self.version_label, self.update_date_label):
+        for lbl in (self.status_caption, self.status_state, self.version_label, self.update_date_label):
             try:
                 if not lbl.isVisibleTo(self):
                     # Страница скрыта (процессинг/сообщение): старые минимумы
@@ -328,6 +350,16 @@ class HomePage(QWidget):
                     lbl.setMinimumHeight(need)
                 except RuntimeError:
                     pass
+        # Строка статуса (контейнер с подписью и состоянием): фиксируем её
+        # минимум по лейауту, иначе vbox при нехватке места ужимает строку
+        # ниже высоты детей — подпись и состояние наезжают друг на друга
+        try:
+            lay = self.status_row.layout()
+            if lay is not None:
+                lay.invalidate()
+                self.status_row.setMinimumHeight(lay.totalMinimumSize().height())
+        except RuntimeError:
+            pass
 
     def update_status_label(self):
         if self.current_mechanism == DNS_PROVIDER_ID:
@@ -338,7 +370,10 @@ class HomePage(QWidget):
             installed = self.hosts_manager.is_installed(self.current_provider)
         color = COLOR_SUCCESS if installed else COLOR_ERROR
         key = "status_installed" if installed else "status_not_installed"
-        self.textinformer.setText(tr("unlock_status", status=tr(key), color=color))
+        self.status_caption.setText(tr("unlock_status_caption") + " - ")
+        self.status_state.setText(
+            f"<span style='color:{color}; font-weight:bold;'>{tr(key)}</span>"
+        )
         self.sync_status_label_heights()
         self.home_content_changed.emit()
 
@@ -442,7 +477,9 @@ class HomePage(QWidget):
     def apply_theme_styles(self):
         self.app_title_label.setStyleSheet(self.styles["about_title_style"])
         self.app_title_label.setText(self.styles["about_title_html"])
-        self.textinformer.setStyleSheet(self.styles["label"])
+        self.status_caption.setStyleSheet(self.styles["status_caption"])
+        self.status_state.setStyleSheet(self.styles["status_state"])
+        self.status_row.setStyleSheet(self.styles["status_row"])
         self.version_label.setStyleSheet(self.styles["label"])
         self.update_date_label.setStyleSheet(self.styles["update_date_label"])
         self.status_container.setStyleSheet(self.styles["status_card"])

@@ -230,6 +230,19 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
             f"QLabel {{ font-size: 16px; padding: 12px 8px 6px 8px;"
             f" color: {p['text']}; font-weight: 500; }}"
         ),
+        # Строка статуса обхода: подпись + цветное состояние.
+        # background/border заданы явно: иначе метки наследуют неселекторный
+        # стиль карточки-родителя и рисуют собственные рамки.
+        "status_caption": (
+            f"QLabel {{ font-size: 16px; padding: 0px 0px 0px 0px;"
+            f" color: {p['text']}; font-weight: 500;"
+            " background: transparent; border: none; }"
+        ),
+        "status_state": (
+            f"QLabel {{ font-size: 16px; padding: 0px 0px 0px 0px;"
+            f" color: {p['text']}; font-weight: 700;"
+            " background: transparent; border: none; }"
+        ),
         "message_card": (
             f"background:{p['card_bg']}; border:2.5px solid {p['card_border']};"
             "border-radius:12px;"
@@ -257,6 +270,9 @@ def _build_stylesheet(dark: bool, language: str) -> dict[str, str]:
         "title_close_button": title_close_button,
         "title_label": title_label,
         "status_card": status_card,
+        # Строка статуса обхода — та же рамка, что у соседних строк
+        # (те рисуют её через наследование неселекторного стиля карточки)
+        "status_row": status_card,
         "update_date_label": update_date_label,
         "editor": editor,
         "page_title": (
