@@ -23,7 +23,7 @@ class DohPopup(QWidget):
     """Попап DoH-резолвера: переключатель и выбор DNS (стиль ScalePopup).
 
     Первая строка — тумблер включения DoH-фолбэка HTTP-клиента, остальные —
-    провайдеры; выбор провайдера автоматически включает DoH.
+    провайдеры; пока DoH выключен, провайдеры недоступны для выбора.
     """
 
     toggled = Signal(bool)
@@ -99,10 +99,13 @@ class DohPopup(QWidget):
             item_rect_h = self._item_height - gap
 
             is_toggle = i == 0
+            # Провайдеры недоступны, пока DoH выключен: ховер не подсвечиваем,
+            # чтобы не вводить в заблуждение кликабельностью
+            is_disabled_row = (not is_toggle) and not self.enabled
             # Выбранный провайдер подсвечен и при выключенном DoH — подсказка,
             # какой резолвер включится обратно
             is_selected = (not is_toggle) and self._options[i - 1][0] == self.current_provider
-            is_hovered = i == self._hover_index
+            is_hovered = i == self._hover_index and not is_disabled_row
 
             if is_selected:
                 accent = QColor("#246cf0") if self.dark_theme else QColor("#0078d4")
@@ -168,6 +171,9 @@ class DohPopup(QWidget):
 
     def mouseMoveEvent(self, event):
         idx = self._index_at(event.position().toPoint().y())
+        # Заблокированные строки провайдеров не подсвечиваем и курсор не меняем
+        if idx > 0 and not self.enabled:
+            idx = -1
         if idx != self._hover_index:
             self._hover_index = idx
             self.update()
@@ -180,9 +186,16 @@ class DohPopup(QWidget):
         idx = self._index_at(event.position().toPoint().y())
         if idx == 0:
             self.enabled = not self.enabled
+            # Сброс ховера: при выключении курсор мог стоять над провайдером
+            if not self.enabled:
+                self._hover_index = -1
+                self.setCursor(Qt.CursorShape.ArrowCursor)
             self.update()
             self.toggled.emit(self.enabled)
         elif idx > 0:
+            # Пока DoH выключен, выбор провайдера запрещён
+            if not self.enabled:
+                return
             value, _label = self._options[idx - 1]
             self.current_provider = value
             self.enabled = True
