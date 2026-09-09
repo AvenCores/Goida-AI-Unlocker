@@ -104,7 +104,7 @@ jobs:
 
       - name: Setup MSVC dev cmd (Windows ARM64 / VS2026)
         if: matrix.name == 'Windows ARM64'
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: TheMrMilchmann/setup-msvc-dev@v4
         with:
           arch: arm64
 
