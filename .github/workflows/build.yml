@@ -21,6 +21,7 @@ jobs:
         include:
           - name: Windows
             os: windows-latest
+            python-arch: x64
             artifact: python-windows
             path: source/dist/Goida_AI_Unlocker_Windows.exe
             build_args: >
@@ -31,7 +32,8 @@ jobs:
               --add-data "assets;assets"
               --add-data "app;app"
           - name: Windows ARM64
-            os: windows-11-arm
+            os: windows-11-vs2026-arm
+            python-arch: arm64
             artifact: python-windows-arm64
             path: source/dist/Goida_AI_Unlocker_Windows_ARM64.exe
             build_args: >
@@ -43,6 +45,7 @@ jobs:
               --add-data "app;app"
           - name: Linux
             os: ubuntu-latest
+            python-arch: x64
             artifact: python-linux
             path: source/dist/Goida_AI_Unlocker_Linux
             build_args: >
@@ -52,6 +55,7 @@ jobs:
               --add-data "app:app"
           - name: Linux ARM64
             os: ubuntu-24.04-arm
+            python-arch: arm64
             artifact: python-linux-arm64
             path: source/dist/Goida_AI_Unlocker_Linux_ARM64
             build_args: >
@@ -61,6 +65,7 @@ jobs:
               --add-data "app:app"
           - name: macOS Intel
             os: macos-15-intel
+            python-arch: x64
             artifact: python-macos-x86_64
             path: source/dist/Goida_AI_Unlocker_macOS_x86_64.app
             build_args: >
@@ -73,6 +78,7 @@ jobs:
               --add-data "app:app"
           - name: macOS Apple Silicon
             os: macos-15
+            python-arch: arm64
             artifact: python-macos-arm64
             path: source/dist/Goida_AI_Unlocker_macOS_arm64.app
             build_args: >
@@ -92,11 +98,27 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+          architecture: ${{ matrix.python-arch }}
           cache: pip
           cache-dependency-path: source/requirements.txt
 
+      - name: Setup MSVC dev cmd (Windows ARM64 / VS2026)
+        if: matrix.name == 'Windows ARM64'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: arm64
+
+      - name: Verify interpreter arch (Windows ARM64)
+        if: matrix.name == 'Windows ARM64'
+        run: |
+          python -c "import platform, sys; print(platform.machine()); print(sys.version)"
+          python -c "import platform; assert platform.machine() == 'ARM64', platform.machine()"
+        working-directory: source
+
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
         working-directory: source
 
       - name: Build with PyInstaller
